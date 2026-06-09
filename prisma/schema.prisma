@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  name            String
+  gender          String?
+  birthDate       DateTime?
+  phone           String?
+  email           String?
+  lineId          String?
+  address         String?
+  occupation      String?
+  referralSource  String?
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  consultations   Consultation[]
+  labTests        LabTest[]
+  prescriptions   Prescription[]
+  tasks           Task[]
+  lineTrackings   LineTracking[]
+  doctorNotes     DoctorNote[]
+  healthPlans     HealthPlan[]
+
+  @@index([name])
+}
+
+model Consultation {
+  id             String   @id @default(cuid())
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date           DateTime @default(now())
+  chiefComplaint String?
+  content        String?
+  doctorAdvice   String?
+  nextSteps      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LabTest {
+  id                   String    @id @default(cuid())
+  clientId             String
+  client               Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  testDate             DateTime?
+  testType             String
+  status               String    @default("scheduled")
+  reportUrl            String?
+  findings             String?
+  doctorInterpretation String?
+  staffExplanation     String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model Prescription {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  items       String
+  totalDays   Int?
+  runOutDate  DateTime?
+  status      String   @default("active")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  dueDate     DateTime?
+  priority    String   @default("medium")
+  status      String   @default("pending")
+  assignedTo  String?
+  category    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LineTracking {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  content         String
+  response        String?
+  followUpNeeded  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
+model DoctorNote {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date         DateTime  @default(now())
+  diagnosis    String?
+  treatment    String?
+  prescription String?
+  notes        String?
+  nextVisit    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model HealthPlan {
+  id        String    @id @default(cuid())
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title     String
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  goals     String?
+  actions   String?
+  status    String    @default("active")
+  progress  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}

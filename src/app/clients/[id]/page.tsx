@@ -110,11 +110,11 @@ export default async function ClientDetailPage({ params }: Params) {
       <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex gap-6">
         {[
           { label: "諮詢記錄", value: sortedClient.consultations.length },
+          { label: "醫師處置", value: sortedClient.doctorNotes.length },
           { label: "檢測", value: sortedClient.labTests.length },
           { label: "保健品處方", value: sortedClient.prescriptions.length },
           { label: "待辦任務", value: sortedClient.tasks.filter((t: { status: string }) => t.status !== "done").length },
           { label: "LINE 追蹤", value: sortedClient.lineTrackings.length },
-          { label: "醫師處置", value: sortedClient.doctorNotes.length },
         ].map((stat) => (
           <div key={stat.label} className="text-center">
             <p className="text-lg font-bold text-slate-800">{stat.value}</p>

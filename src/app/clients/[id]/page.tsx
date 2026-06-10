@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import { formatDateTime, calculateAge } from "@/lib/utils";
-import { ArrowLeft, Phone, Mail, MapPin, Briefcase } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Briefcase, Pencil } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import ClientTabs from "@/components/ClientTabs";
@@ -68,7 +68,13 @@ export default async function ClientDetailPage({ params }: Params) {
               <p className="text-xs text-slate-400 mt-0.5">建立於 {formatDateTime(client.createdAt)}</p>
             </div>
           </div>
-          <AISummaryButton clientId={client.id} />
+          <div className="flex items-center gap-2">
+            <Link href={`/clients/${client.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <Pencil className="w-3.5 h-3.5" />編輯資料
+            </Link>
+            <AISummaryButton clientId={client.id} />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-4 mt-3 ml-8">

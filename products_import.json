@@ -1,0 +1,952 @@
+[
+  {
+    "name": "Betaine Plus 衛樂膠囊",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "隨餐食用，每次1顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Biocidin常俊液態膠囊",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "空腹食用，初期每天1次1顆，食用一周後可增至每天2次，1次1顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "D drop+K 滴佳K",
+    "brand": "瀚仕",
+    "category": "維生素",
+    "spec": null,
+    "dosage": "餐後食用，每天1滴",
+    "unit": "滴",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "DopaPlus 多巴寧膠囊",
+    "brand": "瀚仕",
+    "category": "神經認知",
+    "spec": null,
+    "dosage": "隨餐食用，每天2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "EstroBalance 麗妍膠囊",
+    "brand": "瀚仕",
+    "category": "荷爾蒙平衡",
+    "spec": null,
+    "dosage": "餐後食用，每次2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "GI detox 利腸淨膠囊",
+    "brand": "瀚仕",
+    "category": "排毒代謝",
+    "spec": null,
+    "dosage": "1#QN",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "LVR d-Tox 速體淨膠囊",
+    "brand": "瀚仕",
+    "category": "排毒代謝",
+    "spec": null,
+    "dosage": "餐後食用，每天2-4顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Mito-ATP 粒能康膠囊",
+    "brand": "瀚仕",
+    "category": "細胞能量",
+    "spec": null,
+    "dosage": "隨餐食用，每天2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "NeuroPlus 神立寧膠囊",
+    "brand": "瀚仕",
+    "category": "神經認知",
+    "spec": null,
+    "dosage": "隨餐食用，每天2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "SB-Lynside 布拉益膠囊",
+    "brand": "瀚仕",
+    "category": "益生菌",
+    "spec": null,
+    "dosage": "餐前或隨餐食用，每天1-2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "SeroPlus 寧舒美膠囊",
+    "brand": "瀚仕",
+    "category": "神經認知",
+    "spec": null,
+    "dosage": "隨餐食用，每天2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "UNDER-CH3 低甲基",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "1#QD/am",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "OVER-CH3 高甲基",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "3#QD/am",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "AnBolic 精活/ProstaBalance",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "1#BID",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Ultrazyme 暢活",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "停產",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "MEGA Mucosa 常益康",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "3# BID (早晚)",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Mela-somber 美多寧",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "1~2#QN",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "uniq-D+K2 優康DK",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "10000IU/first month，5000IU/second month。",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "MEGA SporeBiotic 常孢俊",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "GI zyme",
+    "brand": "瀚仕",
+    "category": "腸胃消化",
+    "spec": "膠囊",
+    "dosage": "1#隨餐",
+    "unit": "顆",
+    "description": "1.提供完整的消化酵素 幫助食物消化，改善因消化不良引起的腸胃道不適。\n2.促進醣分及脂肪消化、幫助蛋白質分解。\n3.减缓食物過敏反應，阻止過敏原進入腸胃道减缓食物過敏反應。",
+    "notes": null
+  },
+  {
+    "name": "MenoPhyto",
+    "brand": "瀚仕",
+    "category": "荷爾蒙平衡",
+    "spec": null,
+    "dosage": "餐後食用，每次1顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "TheaCalm",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "隨餐食用，每天2顆",
+    "unit": "顆",
+    "description": "1.茶胺酸有助於促進多巴胺等神經傳導物質釋放，穩定情緒並提升大腦放鬆狀態。\n2.能調節神經興奮活性，有助於改善入睡困難與淺眠問題。\n",
+    "notes": null
+  },
+  {
+    "name": "菸鹼酸 Niatab",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": "錠劑",
+    "dosage": "每天2次，每次1顆",
+    "unit": "顆",
+    "description": "1.緩釋型菸鹼酸，不易造成皮膚潮紅\n2.降低膽固醇，提升高密度脂蛋白膽固醇(HDL)\n3.幫助能量代謝降低心血管疾病風險",
+    "notes": null
+  },
+  {
+    "name": "Cortiset-C",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": "膠囊",
+    "dosage": "餐後食用，每天2顆",
+    "unit": "顆",
+    "description": "舒緩長期壓力，促進腎上腺功能，改善疲勞體質",
+    "notes": null
+  },
+  {
+    "name": "prostabalance",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每天2次，每次1顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Phyto-Inflam 植妍消",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "餐後食用，每天3顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Lipitrol",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每天1次(晚餐後服用)，每次1-2顆",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "奈米薑黃 Nanocurnin-500",
+    "brand": "瀚仕",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每天1次，每次1-4顆",
+    "unit": "顆",
+    "description": "1. 改善慢性發炎- 抑制體內NF-κB產生，改善慢性發炎。\n2.提升肝臟代謝機能，同時也有助於酒精代謝。\n3. 提升抗氧化能力－預防自由基形成及破壞已形成的自\n由基。\n4.維護心血管及血糖健康－減緩過高的氧化壓力與發炎，\n減緩心血管代謝疾病發生。\n",
+    "notes": null
+  },
+  {
+    "name": "Adreset 彩色好心情加強膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 2 顆,每天 2 次,一日請勿超過四顆,多食無益",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "BioPure Protein 濃縮乳清蛋白粉狀食品",
+    "brand": "中華生醫",
+    "category": "排毒代謝",
+    "spec": null,
+    "dosage": "每天 1 次, 每次 2 匙 (共 23 公克),以冷水或飲料 300 毫升調和使用",
+    "unit": "份",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Cortico B5B6 B5B6 複合雙效錠狀食品",
+    "brand": "中華生醫",
+    "category": "維生素",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "E Complex 1:1 E 多膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 2 顆，每天 1 次，隨餐食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Phosphatidylserine 健知匯膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 2 次，隨餐食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "SPM Active 新 SPM 勁舒能加強膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 2 顆，每天 1 次，餐後食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Ultra Potent-C 1000 C1000加強錠狀食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1-2 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "UltraFlora IB 活性益生菌淨能加強膠囊食品",
+    "brand": "中華生醫",
+    "category": "益生菌",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1-2 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Zinc A.G. 螯合鋅錠狀食品",
+    "brand": "中華生醫",
+    "category": "礦物質",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1-2 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Glutagenics 補體健粉狀食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 平匙 (約 4.41 公克)，每天 1-3 次，加入飲用水調和飲用",
+    "unit": "份",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Herbulk 優纖沖泡粉狀食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 平匙(10 公克)，加入 240-360 毫升飲用水、果汁或飲料調和飲用",
+    "unit": "份",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Mag Glycinate 優鎂錠狀食品",
+    "brand": "中華生醫",
+    "category": "礦物質",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 3 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "UltraInflamX Plus 360 成人關懷配方粉狀食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "取 2 平匙（43 g），加入 240-300 mL 飲用水或果汁中，攪拌混和飲用。每天 2 次，請於沖泡後10分鐘內飲用完畢",
+    "unit": "份",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "CoQ-10 ST CoQ-10 ST膠囊食品 （舊）",
+    "brand": "中華生醫",
+    "category": "細胞能量",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Thyrosol 新益典素膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 3 次，隨餐食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "UltraFlora Spectrum 活性生菌體健膠囊食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Hemagenics 優利鐵加強錠狀食品",
+    "brand": "中華生醫",
+    "category": "礦物質",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "OmegaGenics 1000 TG 優質魚油 1000 膠囊食品",
+    "brand": "中華生醫",
+    "category": "Omega 脂肪酸",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1-3 次，隨餐食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "PhytoMulti 新活力草本360維他錠狀食品",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1-2 顆，每天 1 次，餐後食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Omega3（舊）大1000",
+    "brand": "中華生醫",
+    "category": "Omega 脂肪酸",
+    "spec": null,
+    "dosage": "1#TID",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Omega3（舊）小",
+    "brand": "中華生醫",
+    "category": "Omega 脂肪酸",
+    "spec": null,
+    "dosage": "1#TID",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Candibactin-AR",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 3 次，餐前或隨餐食用，配合一杯飲用水",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "UltraMeal Advanced Protein",
+    "brand": "中華生醫",
+    "category": "營養粉劑",
+    "spec": "粉劑",
+    "dosage": "每次 2 平匙 (42 g)，每天 1 次，加入 240-300 mL飲用水調和飲用",
+    "unit": "份",
+    "description": "提高肌肉量的綜合營養配方\n 1. 每份（2匙)提供20g蛋白質。\n 2. 多種人體必需營養素，利於增加肌肉量、保護心血管和情緒健康。\n 3. 提供益生菌良好的食物來源，促進腸道健康，增強免疫功能。",
+    "notes": null
+  },
+  {
+    "name": "SpectraZyme Complete",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 2 顆，每天 3 次，餐後食用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "L-Carnitine",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": "1.促進脂肪代謝、提升能量產生：L-Carnitine 是運送長鏈脂肪酸進入粒線體的關鍵營養素，有助將脂肪轉化為能量。\n2.增進運動表現：可減少乳酸堆積、降低運動後疲勞感，加速肌肉修復與恢復。",
+    "notes": null
+  },
+  {
+    "name": "UltraFlora® Control",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": "1.專利益生菌B420™：每顆含100億活性菌，臨床實證有助控制體重、體脂與腹部肥胖。\n2.改善腸道菌叢、調節代謝：提升腸道黏膜完整性、增強tight junction、抑制發炎反應，協助打破肥胖與代謝失衡的惡性循環。\n\n",
+    "notes": null
+  },
+  {
+    "name": "glycogenics",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": "錠劑",
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": "為高效能的完整維生素B 群配方,提供Metafolin甲基化葉酸,並內含生化代謝參與所\n需的營養素,可滿足人體代謝需求",
+    "notes": null
+  },
+  {
+    "name": "Vasotensin",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": "錠劑",
+    "dosage": "每天 2 次，每次 2 顆，餐後食用",
+    "unit": "顆",
+    "description": "1.天然鰹魚專利活性胜肽，可幫助調節血壓。\n2.活性胜肽能抑制血管收縮素II（angiotensin II）的生成，有助於支持正常血壓與血管健康功能",
+    "notes": null
+  },
+  {
+    "name": "Licorice Plus",
+    "brand": "中華生醫",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": "包含四種適應原：甘草 (Licorice)、南非醉茄 (Ashwagandha)、地黃 (Rehmannia)、山藥\n(Chinese yam)，能促進活力、免疫力及各項機能，幫助身體適應各種壓力，減少壓力帶來負\n面之影響。",
+    "notes": null
+  },
+  {
+    "name": "OmegaGenics Neuro 1000",
+    "brand": "中華生醫",
+    "category": "Omega 脂肪酸",
+    "spec": null,
+    "dosage": "每次 1 顆，每天 1-2 次，餐後食用",
+    "unit": "顆",
+    "description": "1.維持心血管健康支持腦部與認知功能\n2.幫助維持眼睛健康",
+    "notes": null
+  },
+  {
+    "name": "Vitamin B-Complex",
+    "brand": "中華生醫",
+    "category": "維生素",
+    "spec": "錠劑",
+    "dosage": "每次 1 顆，每天 1 次",
+    "unit": "顆",
+    "description": "1. 提供甲基化葉酸，讓具有葉酸代謝酵素MTHFR 活性較低的基因多型性者能直接利用，得到完整的葉酸供給。\n2. 維持正常的同半胱胺酸代謝，促進健康的心血管及腦部功能。",
+    "notes": null
+  },
+  {
+    "name": "CoQmax Ubiquinol 60c 輔酶 Q10",
+    "brand": "亞星",
+    "category": "細胞能量",
+    "spec": null,
+    "dosage": "每日服用1到2顆軟膠囊",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "T-150",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": "膠囊",
+    "dosage": "每日1顆膠囊，配開水服用(空腹時)",
+    "unit": "顆",
+    "description": "1.墨角藻Bladderwrack (Fucus vesiculosus)，紅皮藻dulse，海帶和愛爾蘭苔蘚，kelp, and Irish moss\n是天然來源的碘，可支持內源性甲狀腺激素的生產。\n2.T-150 結合重要原素和支持性營養物質的搭配，提供全方位的甲狀腺照顧。",
+    "notes": null
+  },
+  {
+    "name": "Saccharomycin DF",
+    "brand": "亞星",
+    "category": "益生菌",
+    "spec": "膠囊",
+    "dosage": "每日2顆膠囊",
+    "unit": "顆",
+    "description": "1. 支維持健康的腸道菌叢，提高免疫力，改善脹氣、便秘，維持排便的規律性。\n2. 布拉酵母菌支持其他的益生菌生存，抑制白色念珠菌生長，改善過敏。",
+    "notes": null
+  },
+  {
+    "name": "Calcium D-Glucarate",
+    "brand": "亞星",
+    "category": "礦物質",
+    "spec": "膠囊",
+    "dosage": "每日兩次，每次1顆膠囊",
+    "unit": "顆",
+    "description": "提供專利形式的補充 D-葡萄糖酸，增加葡萄醣醛酸化支持化學物質、類固醇激素（雌激素、雄性激素）和脂溶性毒素的解毒和消除。\n",
+    "notes": null
+  },
+  {
+    "name": "ALAmax CR",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": "錠狀",
+    "dosage": "早餐及晚餐前30分鐘各服1錠",
+    "unit": "顆",
+    "description": "提供全身、多功能的抗氧化劑活性，以幫助維持健康、良好運作的細胞",
+    "notes": null
+  },
+  {
+    "name": "HistDAO抑食敏",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": null,
+    "dosage": "在攝取富含組織胺食品前15分鐘內服用1到2顆膠囊",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "5-HTP CR 迦納籽萃取",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每次服用1錠，每日最多兩次，隨餐服用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "DHEA Micronized 10 mg",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": null,
+    "dosage": "每天兩次，每次服用1粒",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Liver Protect",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": "膠囊",
+    "dosage": "服用1顆膠囊，每天兩次",
+    "unit": "顆",
+    "description": "維持肝臟健康，能夠促進抗氧化活性與細胞健康，幫助身體面對外來刺激。",
+    "notes": null
+  },
+  {
+    "name": "Methyl Protect™",
+    "brand": "亞星",
+    "category": "維生素",
+    "spec": null,
+    "dosage": "每日1到2顆膠囊",
+    "unit": "顆",
+    "description": "1.支持心血管與神經系統健康，維持健康的同型半胱胺酸濃度。\n2.促進荷爾蒙、神經傳導物質與毒素代謝的甲基化反應。\n3.選用身體可直接利用的活性B群，無需轉化即可發揮作用，提升能量、情緒與代謝機能。",
+    "notes": null
+  },
+  {
+    "name": "NAC",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": "膠囊",
+    "dosage": "每天兩次，兩餐之間服用1到2粒膠囊",
+    "unit": "顆",
+    "description": "1.支持穀胱甘肽合成，排除環境毒素和污染物\n2.幫助身體細胞中抗氧化劑活性\n",
+    "notes": null
+  },
+  {
+    "name": "Quercetin 20× Plus",
+    "brand": "亞星",
+    "category": "其他",
+    "spec": "膠囊",
+    "dosage": "每日2顆膠囊",
+    "unit": "顆",
+    "description": "1.提供呼吸支持和鼻部舒適感\n2.維生素 C 與槲皮素共同提供強力抗氧化力，幫助對抗自由基，支持免疫系統功能",
+    "notes": null
+  },
+  {
+    "name": "真茄膠囊",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": "膠囊",
+    "dosage": "2#QD 早上",
+    "unit": "顆",
+    "description": "1.專利KSM-66®，幫助調節壓力，降低壓力知覺（PSS score)。\n2. 添加珍珠粉，遵循古法炮製結合奈米科技，細度達26.1nm，提升人體吸收活性鈣等人體所需微量元素，幫助凝神提神睡眠。",
+    "notes": null
+  },
+  {
+    "name": "黃連素",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": "膠囊",
+    "dosage": "1#TID 隨餐",
+    "unit": "顆",
+    "description": "1.小蘗鹼可提高胰島素敏感性，調節及穩定血糖平衡\n2.小檜鹼有助於維持消化系統及腸道菌叢整體平衡，提升整體免疫力。",
+    "notes": null
+  },
+  {
+    "name": "新腸融薑黃素",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD 隨餐",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "白腎豆桑葉",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#BID隨餐",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "MSM",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": "膠囊",
+    "dosage": "2#BID",
+    "unit": "顆",
+    "description": "1. 支持身體的自然排毒，幫助清除有害物質，促進整體健康。\n2. 促進穀胱甘肽生成，幫助身體抗氧化，同時幫助體內清除重金屬和其他毒素。",
+    "notes": null
+  },
+  {
+    "name": "綠藻錠",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "5#QN",
+    "unit": "顆",
+    "description": "1.綠藻含有豐富的葉綠素和纖維，有助於清除體內的毒素和重金屬，支持肝臟和腎臟的排毒功能。\n2.幫助腸道清理，改善排便不順狀況。",
+    "notes": null
+  },
+  {
+    "name": "L-theanine",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "每日 1 至 2 次，每次 1 粒，建議空腹服用，可按需服用",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "p5p",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "L-pheylalanine",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "黑種草油",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "2#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "磷脂膽鹼",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#BID",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "st. john's",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "L.serine",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "水飛棘",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "2#TID",
+    "unit": "顆",
+    "description": "具有抗氧化和抗炎特性，能幫助修復肝細胞損傷。",
+    "notes": null
+  },
+  {
+    "name": "Swanson E-400",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Nature's Way 活性碳",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "每次 2 粒，每日兩到三次",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "NAC",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": "膠囊",
+    "dosage": "每次 1 顆，每日 1 至 3 次。",
+    "unit": "顆",
+    "description": "1.支持穀胱甘肽合成，排除環境毒素和污染物\n2.幫助身體細胞中抗氧化劑活性\n",
+    "notes": null
+  },
+  {
+    "name": "ALA-600",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#隨餐",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Methyl care",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#BID",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Gut flow",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Serrapeptase",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": "膠囊",
+    "dosage": "2#QD",
+    "unit": "顆",
+    "description": "1.破壞病原體的生物膜，對抗真菌和細菌通度生長，減少發炎作用及促進新陳代謝。\n2.促進健康的血液流動，加速愈合過程，支持整體健康，維持身體活力。",
+    "notes": null
+  },
+  {
+    "name": "Tri-butyrin",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "2#BID",
+    "unit": "顆",
+    "description": "1.短鏈脂肪酸，增強腸道內緊密連接的完整性，改善腸道屏障功能。\n2.後生元可預防腸漏綜合癥，支持消化健康，並管理與腸道滲透性受損相關的疾病。",
+    "notes": null
+  },
+  {
+    "name": "Quercetin",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "1#QD",
+    "unit": "顆",
+    "description": null,
+    "notes": null
+  },
+  {
+    "name": "Professional Strength  liquid oxygen  nasal spray (Liquid Oxygen 3X 鼻腔噴霧)",
+    "brand": "意一堂",
+    "category": "意一堂自有品牌",
+    "spec": null,
+    "dosage": "使用前請充分搖勻。\n頭部保持直立，每側鼻孔噴 1–2 下，同時用鼻深吸一口氣。\n若鼻腔乾燥、發炎或阻塞，可依需求每日多次使用，以達最佳效果。",
+    "unit": "顆",
+    "description": "3X 鼻腔噴霧有助於維持鼻腔舒適，減少因環境刺激所造成的鼻腔不適，並支持呼吸順暢。\n本產品採用 100% 天然來源的氧氣濃縮配方，可快速經鼻腔補充氧氣，作為日常健康保養與身心機能支持的一環。",
+    "notes": null
+  }
+]

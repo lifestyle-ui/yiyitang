@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Heart, Plus, X, ChevronDown,
+  Pencil, Trash2,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -77,15 +78,52 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "tasks" && <TasksTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
-        {activeTab === "healthPlans" && <HealthPlansTab client={client} />}
+        {activeTab === "healthPlans" && <HealthPlansTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
       </div>
     </div>
   );
 }
 
-// ===== 諮詢記錄 =====
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+async function deleteRecord(url: string, onRefresh: () => void) {
+  if (!confirm("確定要刪除這筆記錄嗎？")) return;
+  await fetch(url, { method: "DELETE" });
+  onRefresh();
+}
+
+function CardActions({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="編輯">
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+      <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="刪除">
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-slate-400 mb-0.5">{label}</p>
+      <p className="text-slate-700 whitespace-pre-wrap">{value}</p>
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return <div className="py-16 text-center text-slate-400 text-sm">{label}</div>;
+}
+
+// ─── 諮詢記錄 ─────────────────────────────────────────────────────────────────
+
 function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
+  const [editForm, setEditForm] = useState({ date: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -93,6 +131,17 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     setLoading(false); setShowForm(false); onRefresh();
+  };
+
+  const startEdit = (c: Consultation) => {
+    setEditForm({ date: c.date.slice(0, 10), chiefComplaint: c.chiefComplaint || "", content: c.content || "", doctorAdvice: c.doctorAdvice || "", nextSteps: c.nextSteps || "" });
+    setEditingId(c.id);
+  };
+
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/consultations/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
   };
 
   return (
@@ -120,28 +169,52 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
       {client.consultations.length === 0 && !showForm && <EmptyState label="尚無諮詢記錄" />}
       {client.consultations.map((c) => (
         <Card key={c.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{formatDate(c.date)}</CardTitle>
-              {c.chiefComplaint && <Badge variant="info">{c.chiefComplaint}</Badge>}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 text-sm">
-              {c.content && <Field label="諮詢內容" value={c.content} />}
-              {c.doctorAdvice && <Field label="醫師建議" value={c.doctorAdvice} />}
-              {c.nextSteps && <Field label="後續步驟" value={c.nextSteps} />}
-            </div>
-          </CardContent>
+          {editingId === c.id ? (
+            <CardContent className="pt-4">
+              <div className="flex flex-col gap-4">
+                <Input label="諮詢日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                <Textarea label="主訴 / 症狀" value={editForm.chiefComplaint} onChange={(e) => setEditForm((f) => ({ ...f, chiefComplaint: e.target.value }))} rows={2} />
+                <Textarea label="諮詢內容" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
+                <Textarea label="醫師建議" value={editForm.doctorAdvice} onChange={(e) => setEditForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
+                <Textarea label="後續步驟" value={editForm.nextSteps} onChange={(e) => setEditForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                  <Button onClick={() => saveEdit(c.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{formatDate(c.date)}</CardTitle>
+                    {c.chiefComplaint && <Badge variant="info">{c.chiefComplaint}</Badge>}
+                  </div>
+                  <CardActions onEdit={() => startEdit(c)} onDelete={() => deleteRecord(`/api/clients/${client.id}/consultations/${c.id}`, onRefresh)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3 text-sm">
+                  {c.content && <Field label="諮詢內容" value={c.content} />}
+                  {c.doctorAdvice && <Field label="醫師建議" value={c.doctorAdvice} />}
+                  {c.nextSteps && <Field label="後續步驟" value={c.nextSteps} />}
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
       ))}
     </div>
   );
 }
 
-// ===== 醫師處置 =====
+// ─── 醫師處置 ─────────────────────────────────────────────────────────────────
+
 function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), diagnosis: "", treatment: "", prescription: "", notes: "", nextVisit: "" });
+  const [editForm, setEditForm] = useState({ date: "", diagnosis: "", treatment: "", prescription: "", notes: "", nextVisit: "" });
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -149,6 +222,17 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
     setLoading(true);
     await fetch(`/api/clients/${client.id}/doctor-notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     setLoading(false); setShowForm(false); onRefresh();
+  };
+
+  const startEdit = (n: DoctorNote) => {
+    setEditForm({ date: n.date.slice(0, 10), diagnosis: n.diagnosis || "", treatment: n.treatment || "", prescription: n.prescription || "", notes: n.notes || "", nextVisit: n.nextVisit ? n.nextVisit.slice(0, 10) : "" });
+    setEditingId(n.id);
+  };
+
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/doctor-notes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
   };
 
   return (
@@ -177,27 +261,50 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
       {client.doctorNotes.length === 0 && !showForm && <EmptyState label="尚無醫師處置記錄" />}
       {client.doctorNotes.map((n) => (
         <Card key={n.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{formatDate(n.date)}</CardTitle>
-              {n.nextVisit && <Badge variant="info">下次回診：{formatDate(n.nextVisit)}</Badge>}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 text-sm">
-              {n.diagnosis && <Field label="診斷" value={n.diagnosis} />}
-              {n.treatment && <Field label="治療方式" value={n.treatment} />}
-              {n.prescription && <Field label="處方" value={n.prescription} />}
-              {n.notes && <Field label="備註" value={n.notes} />}
-            </div>
-          </CardContent>
+          {editingId === n.id ? (
+            <CardContent className="pt-4">
+              <div className="flex flex-col gap-4">
+                <Input label="處置日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                <Textarea label="診斷" value={editForm.diagnosis} onChange={(e) => setEditForm((f) => ({ ...f, diagnosis: e.target.value }))} rows={2} />
+                <Textarea label="治療方式" value={editForm.treatment} onChange={(e) => setEditForm((f) => ({ ...f, treatment: e.target.value }))} rows={3} />
+                <Textarea label="開立處方" value={editForm.prescription} onChange={(e) => setEditForm((f) => ({ ...f, prescription: e.target.value }))} rows={2} />
+                <Textarea label="備註" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+                <Input label="下次回診日期" type="date" value={editForm.nextVisit} onChange={(e) => setEditForm((f) => ({ ...f, nextVisit: e.target.value }))} />
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                  <Button onClick={() => saveEdit(n.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{formatDate(n.date)}</CardTitle>
+                    {n.nextVisit && <Badge variant="info">下次回診：{formatDate(n.nextVisit)}</Badge>}
+                  </div>
+                  <CardActions onEdit={() => startEdit(n)} onDelete={() => deleteRecord(`/api/clients/${client.id}/doctor-notes/${n.id}`, onRefresh)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3 text-sm">
+                  {n.diagnosis && <Field label="診斷" value={n.diagnosis} />}
+                  {n.treatment && <Field label="治療方式" value={n.treatment} />}
+                  {n.prescription && <Field label="處方" value={n.prescription} />}
+                  {n.notes && <Field label="備註" value={n.notes} />}
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
       ))}
     </div>
   );
 }
 
-// ===== 檢測（支援從目錄選擇）=====
+// ─── 檢測 ─────────────────────────────────────────────────────────────────────
+
 function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<TestItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; custom?: boolean }[]>([]);
@@ -206,6 +313,8 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
   const [loading, setLoading] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ testDate: "", testType: "", status: "", findings: "", doctorInterpretation: "", staffExplanation: "" });
 
   useEffect(() => {
     if (showForm) {
@@ -214,9 +323,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
   }, [showForm]);
 
   const toggleItem = (item: TestItem) => {
-    setSelectedItems((prev) =>
-      prev.find((i) => i.id === item.id) ? prev.filter((i) => i.id !== item.id) : [...prev, { id: item.id, name: item.name }]
-    );
+    setSelectedItems((prev) => prev.find((i) => i.id === item.id) ? prev.filter((i) => i.id !== item.id) : [...prev, { id: item.id, name: item.name }]);
   };
 
   const addCustom = () => {
@@ -229,28 +336,28 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
     e.preventDefault();
     if (selectedItems.length === 0) { alert("請至少選擇一個檢測項目"); return; }
     setLoading(true);
-
     for (const item of selectedItems) {
-      await fetch(`/api/clients/${client.id}/lab-tests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, testType: item.name }),
-      });
+      await fetch(`/api/clients/${client.id}/lab-tests`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, testType: item.name }) });
     }
-
     setLoading(false); setShowForm(false); setSelectedItems([]); onRefresh();
   };
 
-  const filteredCatalog = catalog.filter((t) =>
-    t.name.toLowerCase().includes(catSearch.toLowerCase()) ||
-    (t.category || "").toLowerCase().includes(catSearch.toLowerCase())
-  );
+  const startEdit = (t: LabTest) => {
+    setEditForm({ testDate: t.testDate ? t.testDate.slice(0, 10) : "", testType: t.testType, status: t.status, findings: t.findings || "", doctorInterpretation: t.doctorInterpretation || "", staffExplanation: t.staffExplanation || "" });
+    setEditingId(t.id);
+  };
 
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/lab-tests/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
+  };
+
+  const filteredCatalog = catalog.filter((t) =>
+    t.name.toLowerCase().includes(catSearch.toLowerCase()) || (t.category || "").toLowerCase().includes(catSearch.toLowerCase())
+  );
   const grouped = filteredCatalog.reduce((acc, t) => {
-    const cat = t.category || "其他";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(t);
-    return acc;
+    const cat = t.category || "其他"; if (!acc[cat]) acc[cat] = []; acc[cat].push(t); return acc;
   }, {} as Record<string, TestItem[]>);
 
   return (
@@ -270,80 +377,55 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
                 <Select label="狀態" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
                   options={[{ value: "scheduled", label: "已安排" }, { value: "completed", label: "已完成" }, { value: "interpreted", label: "已判讀" }]} />
               </div>
-
-              {/* 選擇檢測項目 */}
               <div>
                 <p className="text-xs font-medium text-slate-600 mb-2">選擇檢測項目</p>
-
-                {/* 已選項目 */}
                 {selectedItems.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3 p-3 bg-blue-50 rounded-lg">
                     {selectedItems.map((item) => (
                       <span key={item.id} className="flex items-center gap-1 bg-white text-sm text-blue-700 border border-blue-200 rounded-full px-3 py-1">
                         {item.name}
-                        {item.custom && <span className="text-xs text-slate-400">自訂</span>}
-                        <button type="button" onClick={() => setSelectedItems((p) => p.filter((i) => i.id !== item.id))}>
-                          <X className="w-3 h-3" />
-                        </button>
+                        <button type="button" onClick={() => setSelectedItems((p) => p.filter((i) => i.id !== item.id))}><X className="w-3 h-3" /></button>
                       </span>
                     ))}
                   </div>
                 )}
-
-                {/* 從目錄選擇 */}
                 <button type="button" onClick={() => setShowCatalog(!showCatalog)}
                   className="w-full flex items-center justify-between px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 mb-2">
                   <span className="text-slate-600">從目錄選擇檢測項目</span>
                   <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", showCatalog && "rotate-180")} />
                 </button>
-
                 {showCatalog && (
                   <div className="border border-slate-200 rounded-lg max-h-64 overflow-y-auto mb-2">
                     <div className="sticky top-0 bg-white p-2 border-b border-slate-100">
-                      <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)}
-                        placeholder="搜尋項目..." className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="搜尋項目..."
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                     {Object.entries(grouped).sort().map(([cat, items]) => (
                       <div key={cat}>
                         <p className="px-3 py-1 text-xs font-semibold text-slate-400 bg-slate-50">{cat}</p>
-                        {items.map((item) => {
-                          const selected = selectedItems.find((i) => i.id === item.id);
-                          return (
-                            <label key={item.id} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer">
-                              <input type="checkbox" checked={!!selected} onChange={() => toggleItem(item)}
-                                className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-                              <div>
-                                <p className="text-sm text-slate-800">{item.name}</p>
-                                {item.code && <p className="text-xs text-slate-400">{item.code}</p>}
-                              </div>
-                            </label>
-                          );
-                        })}
+                        {items.map((item) => (
+                          <label key={item.id} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" checked={!!selectedItems.find((i) => i.id === item.id)} onChange={() => toggleItem(item)} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                            <div><p className="text-sm text-slate-800">{item.name}</p>{item.code && <p className="text-xs text-slate-400">{item.code}</p>}</div>
+                          </label>
+                        ))}
                       </div>
                     ))}
                     {filteredCatalog.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">無符合項目</p>}
                   </div>
                 )}
-
-                {/* 手動新增 */}
                 <div className="flex gap-2">
-                  <input value={customItem} onChange={(e) => setCustomItem(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
+                  <input value={customItem} onChange={(e) => setCustomItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
                     placeholder="手動輸入項目名稱..."
                     className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <Button type="button" variant="secondary" size="sm" onClick={addCustom}>
-                    <Plus className="w-4 h-4" />新增
-                  </Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={addCustom}><Plus className="w-4 h-4" />新增</Button>
                 </div>
               </div>
-
               <Textarea label="檢測結果" placeholder="結果摘要..." value={form.findings} onChange={(e) => setForm((f) => ({ ...f, findings: e.target.value }))} rows={2} />
               <Textarea label="醫師判讀" placeholder="醫師判讀內容..." value={form.doctorInterpretation} onChange={(e) => setForm((f) => ({ ...f, doctorInterpretation: e.target.value }))} rows={2} />
               <Textarea label="健管師解說" placeholder="健管師解說內容..." value={form.staffExplanation} onChange={(e) => setForm((f) => ({ ...f, staffExplanation: e.target.value }))} rows={2} />
               <div className="flex justify-end">
-                <Button type="submit" disabled={loading || selectedItems.length === 0}>
-                  {loading ? "儲存中..." : `儲存 ${selectedItems.length > 0 ? `(${selectedItems.length} 項)` : ""}`}
-                </Button>
+                <Button type="submit" disabled={loading || selectedItems.length === 0}>{loading ? "儲存中..." : `儲存 ${selectedItems.length > 0 ? `(${selectedItems.length} 項)` : ""}`}</Button>
               </div>
             </form>
           </CardContent>
@@ -352,31 +434,55 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
       {client.labTests.length === 0 && !showForm && <EmptyState label="尚無檢測記錄" />}
       {client.labTests.map((t) => (
         <Card key={t.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{t.testType}</CardTitle>
-              <div className="flex items-center gap-2">
-                {t.testDate && <span className="text-sm text-slate-500">{formatDate(t.testDate)}</span>}
-                <Badge variant={t.status === "completed" ? "success" : t.status === "scheduled" ? "info" : "default"}>
-                  {STATUS_LABELS[t.status] || t.status}
-                </Badge>
+          {editingId === t.id ? (
+            <CardContent className="pt-4">
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="檢測日期" type="date" value={editForm.testDate} onChange={(e) => setEditForm((f) => ({ ...f, testDate: e.target.value }))} />
+                  <Select label="狀態" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                    options={[{ value: "scheduled", label: "已安排" }, { value: "completed", label: "已完成" }, { value: "interpreted", label: "已判讀" }]} />
+                </div>
+                <Input label="檢測項目" value={editForm.testType} onChange={(e) => setEditForm((f) => ({ ...f, testType: e.target.value }))} />
+                <Textarea label="檢測結果" value={editForm.findings} onChange={(e) => setEditForm((f) => ({ ...f, findings: e.target.value }))} rows={2} />
+                <Textarea label="醫師判讀" value={editForm.doctorInterpretation} onChange={(e) => setEditForm((f) => ({ ...f, doctorInterpretation: e.target.value }))} rows={2} />
+                <Textarea label="健管師解說" value={editForm.staffExplanation} onChange={(e) => setEditForm((f) => ({ ...f, staffExplanation: e.target.value }))} rows={2} />
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                  <Button onClick={() => saveEdit(t.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 text-sm">
-              {t.findings && <Field label="檢測結果" value={t.findings} />}
-              {t.doctorInterpretation && <Field label="醫師判讀" value={t.doctorInterpretation} />}
-              {t.staffExplanation && <Field label="健管師解說" value={t.staffExplanation} />}
-            </div>
-          </CardContent>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle>{t.testType}</CardTitle>
+                    {t.testDate && <span className="text-sm text-slate-500">{formatDate(t.testDate)}</span>}
+                    <Badge variant={t.status === "completed" ? "success" : t.status === "scheduled" ? "info" : "default"}>
+                      {STATUS_LABELS[t.status] || t.status}
+                    </Badge>
+                  </div>
+                  <CardActions onEdit={() => startEdit(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3 text-sm">
+                  {t.findings && <Field label="檢測結果" value={t.findings} />}
+                  {t.doctorInterpretation && <Field label="醫師判讀" value={t.doctorInterpretation} />}
+                  {t.staffExplanation && <Field label="健管師解說" value={t.staffExplanation} />}
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
       ))}
     </div>
   );
 }
 
-// ===== 保健品處方（支援從目錄選擇）=====
+// ─── 保健品處方 ───────────────────────────────────────────────────────────────
+
 function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; dosage: string; custom?: boolean }[]>([]);
@@ -385,24 +491,19 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [loading, setLoading] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editItems, setEditItems] = useState<{ id: string; name: string; dosage: string }[]>([]);
+  const [editForm, setEditForm] = useState({ date: "", totalDays: "", runOutDate: "", status: "", notes: "" });
 
   useEffect(() => {
-    if (showForm) {
-      fetch("/api/products").then((r) => r.json()).then((d) => setCatalog(Array.isArray(d) ? d : []));
-    }
+    if (showForm) fetch("/api/products").then((r) => r.json()).then((d) => setCatalog(Array.isArray(d) ? d : []));
   }, [showForm]);
 
   const toggleProduct = (p: Product) => {
-    setSelectedItems((prev) =>
-      prev.find((i) => i.id === p.id)
-        ? prev.filter((i) => i.id !== p.id)
-        : [...prev, { id: p.id, name: p.name, dosage: p.dosage || "" }]
-    );
+    setSelectedItems((prev) => prev.find((i) => i.id === p.id) ? prev.filter((i) => i.id !== p.id) : [...prev, { id: p.id, name: p.name, dosage: p.dosage || "" }]);
   };
 
-  const updateDosage = (id: string, dosage: string) => {
-    setSelectedItems((prev) => prev.map((i) => i.id === id ? { ...i, dosage } : i));
-  };
+  const updateDosage = (id: string, dosage: string) => setSelectedItems((prev) => prev.map((i) => i.id === id ? { ...i, dosage } : i));
 
   const addCustom = () => {
     if (!customItem.name.trim()) return;
@@ -414,26 +515,29 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     e.preventDefault();
     if (selectedItems.length === 0) { alert("請至少選擇一個保健品"); return; }
     setLoading(true);
-    const items = selectedItems.map((i) => ({ name: i.name, dosage: i.dosage }));
-    await fetch(`/api/clients/${client.id}/prescriptions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, items }),
-    });
+    await fetch(`/api/clients/${client.id}/prescriptions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, items: selectedItems.map((i) => ({ name: i.name, dosage: i.dosage })) }) });
     setLoading(false); setShowForm(false); setSelectedItems([]); onRefresh();
   };
 
-  const filteredCatalog = catalog.filter((p) =>
-    p.name.toLowerCase().includes(catSearch.toLowerCase()) ||
-    (p.category || "").toLowerCase().includes(catSearch.toLowerCase()) ||
-    (p.brand || "").toLowerCase().includes(catSearch.toLowerCase())
-  );
+  const startEdit = (p: Prescription) => {
+    let items: { name: string; dosage: string }[] = [];
+    try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string; dosage?: string }[]) || []; } catch { items = []; }
+    setEditItems(items.map((i) => ({ id: crypto.randomUUID(), name: i.name, dosage: i.dosage || "" })));
+    setEditForm({ date: p.date.slice(0, 10), totalDays: p.totalDays?.toString() || "", runOutDate: p.runOutDate ? p.runOutDate.slice(0, 10) : "", status: p.status, notes: p.notes || "" });
+    setEditingId(p.id);
+  };
 
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/prescriptions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, items: editItems.map((i) => ({ name: i.name, dosage: i.dosage })) }) });
+    setLoading(false); setEditingId(null); onRefresh();
+  };
+
+  const filteredCatalog = catalog.filter((p) =>
+    p.name.toLowerCase().includes(catSearch.toLowerCase()) || (p.category || "").toLowerCase().includes(catSearch.toLowerCase()) || (p.brand || "").toLowerCase().includes(catSearch.toLowerCase())
+  );
   const grouped = filteredCatalog.reduce((acc, p) => {
-    const cat = p.category || "其他";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(p);
-    return acc;
+    const cat = p.category || "其他"; if (!acc[cat]) acc[cat] = []; acc[cat].push(p); return acc;
   }, {} as Record<string, Product[]>);
 
   return (
@@ -449,84 +553,60 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
           <CardContent>
             <form onSubmit={submit} className="flex flex-col gap-4">
               <Input label="開立日期" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-
-              {/* 選擇保健品 */}
               <div>
                 <p className="text-xs font-medium text-slate-600 mb-2">選擇保健品</p>
-
-                {/* 已選項目 */}
                 {selectedItems.length > 0 && (
                   <div className="mb-3 p-3 bg-blue-50 rounded-lg flex flex-col gap-2">
                     {selectedItems.map((item) => (
                       <div key={item.id} className="flex items-center gap-2">
                         <span className="flex-1 text-sm font-medium text-slate-700">{item.name}</span>
-                        <input value={item.dosage} onChange={(e) => updateDosage(item.id, e.target.value)}
-                          placeholder="用法（如：每日2顆，飯後）"
+                        <input value={item.dosage} onChange={(e) => updateDosage(item.id, e.target.value)} placeholder="用法（如：每日2顆，飯後）"
                           className="w-48 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                        <button type="button" onClick={() => setSelectedItems((p) => p.filter((i) => i.id !== item.id))}>
-                          <X className="w-4 h-4 text-slate-400 hover:text-red-500" />
-                        </button>
+                        <button type="button" onClick={() => setSelectedItems((p) => p.filter((i) => i.id !== item.id))}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
                       </div>
                     ))}
                   </div>
                 )}
-
                 <button type="button" onClick={() => setShowCatalog(!showCatalog)}
                   className="w-full flex items-center justify-between px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 mb-2">
                   <span className="text-slate-600">從保健品目錄選擇</span>
                   <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", showCatalog && "rotate-180")} />
                 </button>
-
                 {showCatalog && (
                   <div className="border border-slate-200 rounded-lg max-h-64 overflow-y-auto mb-2">
                     <div className="sticky top-0 bg-white p-2 border-b border-slate-100">
-                      <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)}
-                        placeholder="搜尋保健品..." className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none" />
+                      <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="搜尋保健品..."
+                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none" />
                     </div>
                     {Object.entries(grouped).sort().map(([cat, products]) => (
                       <div key={cat}>
                         <p className="px-3 py-1 text-xs font-semibold text-slate-400 bg-slate-50">{cat}</p>
-                        {products.map((p) => {
-                          const selected = selectedItems.find((i) => i.id === p.id);
-                          return (
-                            <label key={p.id} className="flex items-start gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer">
-                              <input type="checkbox" checked={!!selected} onChange={() => toggleProduct(p)}
-                                className="w-4 h-4 mt-0.5 rounded border-slate-300 text-blue-600" />
-                              <div>
-                                <p className="text-sm text-slate-800">{p.name}</p>
-                                <p className="text-xs text-slate-400">{[p.brand, p.spec, p.dosage].filter(Boolean).join(" · ")}</p>
-                              </div>
-                            </label>
-                          );
-                        })}
+                        {products.map((p) => (
+                          <label key={p.id} className="flex items-start gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" checked={!!selectedItems.find((i) => i.id === p.id)} onChange={() => toggleProduct(p)} className="w-4 h-4 mt-0.5 rounded border-slate-300 text-blue-600" />
+                            <div><p className="text-sm text-slate-800">{p.name}</p><p className="text-xs text-slate-400">{[p.brand, p.spec, p.dosage].filter(Boolean).join(" · ")}</p></div>
+                          </label>
+                        ))}
                       </div>
                     ))}
                     {filteredCatalog.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">無符合項目</p>}
                   </div>
                 )}
-
                 <div className="flex gap-2">
-                  <input value={customItem.name} onChange={(e) => setCustomItem((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="自訂保健品名稱..."
+                  <input value={customItem.name} onChange={(e) => setCustomItem((f) => ({ ...f, name: e.target.value }))} placeholder="自訂保健品名稱..."
                     className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input value={customItem.dosage} onChange={(e) => setCustomItem((f) => ({ ...f, dosage: e.target.value }))}
-                    placeholder="用法..."
+                  <input value={customItem.dosage} onChange={(e) => setCustomItem((f) => ({ ...f, dosage: e.target.value }))} placeholder="用法..."
                     className="w-36 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <Button type="button" variant="secondary" size="sm" onClick={addCustom}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={addCustom}><Plus className="w-4 h-4" /></Button>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <Input label="總天數" type="number" placeholder="30" value={form.totalDays} onChange={(e) => setForm((f) => ({ ...f, totalDays: e.target.value }))} />
                 <Input label="預計用完日" type="date" value={form.runOutDate} onChange={(e) => setForm((f) => ({ ...f, runOutDate: e.target.value }))} />
               </div>
               <Textarea label="備註" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
               <div className="flex justify-end">
-                <Button type="submit" disabled={loading || selectedItems.length === 0}>
-                  {loading ? "儲存中..." : `儲存 ${selectedItems.length > 0 ? `(${selectedItems.length} 項)` : ""}`}
-                </Button>
+                <Button type="submit" disabled={loading || selectedItems.length === 0}>{loading ? "儲存中..." : `儲存 ${selectedItems.length > 0 ? `(${selectedItems.length} 項)` : ""}`}</Button>
               </div>
             </form>
           </CardContent>
@@ -539,29 +619,69 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
         const isExpiringSoon = p.runOutDate && new Date(p.runOutDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         return (
           <Card key={p.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>開立日期：{formatDate(p.date)}</CardTitle>
-                <div className="flex items-center gap-2">
-                  {p.runOutDate && <Badge variant={isExpiringSoon ? "warning" : "default"}>用完：{formatDate(p.runOutDate)}</Badge>}
-                  <Badge variant={p.status === "active" ? "success" : "default"}>{STATUS_LABELS[p.status] || p.status}</Badge>
+            {editingId === p.id ? (
+              <CardContent className="pt-4">
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="開立日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                    <Select label="狀態" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                      options={[{ value: "active", label: "使用中" }, { value: "completed", label: "已完成" }, { value: "cancelled", label: "已取消" }]} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 mb-2">保健品項目</p>
+                    <div className="flex flex-col gap-2 mb-2">
+                      {editItems.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <input value={item.name} onChange={(e) => setEditItems((prev) => prev.map((i) => i.id === item.id ? { ...i, name: e.target.value } : i))}
+                            className="flex-1 px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                          <input value={item.dosage} onChange={(e) => setEditItems((prev) => prev.map((i) => i.id === item.id ? { ...i, dosage: e.target.value } : i))}
+                            placeholder="用法" className="w-44 px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                          <button type="button" onClick={() => setEditItems((prev) => prev.filter((i) => i.id !== item.id))}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => setEditItems((prev) => [...prev, { id: crypto.randomUUID(), name: "", dosage: "" }])}
+                      className="text-sm text-blue-600 hover:underline flex items-center gap-1"><Plus className="w-3.5 h-3.5" />新增項目</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input label="總天數" type="number" value={editForm.totalDays} onChange={(e) => setEditForm((f) => ({ ...f, totalDays: e.target.value }))} />
+                    <Input label="預計用完日" type="date" value={editForm.runOutDate} onChange={(e) => setEditForm((f) => ({ ...f, runOutDate: e.target.value }))} />
+                  </div>
+                  <Textarea label="備註" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                    <Button onClick={() => saveEdit(p.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <table className="w-full text-sm mb-2">
-                <tbody>
-                  {items.map((item, i) => (
-                    <tr key={i} className="border-b border-slate-50 last:border-0">
-                      <td className="py-1.5 font-medium text-slate-700">{item.name}</td>
-                      <td className="py-1.5 text-slate-500 text-right">{item.dosage || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {p.totalDays && <p className="text-xs text-slate-400">共 {p.totalDays} 天</p>}
-              {p.notes && <p className="text-xs text-slate-500 mt-2">{p.notes}</p>}
-            </CardContent>
+              </CardContent>
+            ) : (
+              <>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>開立日期：{formatDate(p.date)}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      {p.runOutDate && <Badge variant={isExpiringSoon ? "warning" : "default"}>用完：{formatDate(p.runOutDate)}</Badge>}
+                      <Badge variant={p.status === "active" ? "success" : "default"}>{STATUS_LABELS[p.status] || p.status}</Badge>
+                      <CardActions onEdit={() => startEdit(p)} onDelete={() => deleteRecord(`/api/clients/${client.id}/prescriptions/${p.id}`, onRefresh)} />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <table className="w-full text-sm mb-2">
+                    <tbody>
+                      {items.map((item, i) => (
+                        <tr key={i} className="border-b border-slate-50 last:border-0">
+                          <td className="py-1.5 font-medium text-slate-700">{item.name}</td>
+                          <td className="py-1.5 text-slate-500 text-right">{item.dosage || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {p.totalDays && <p className="text-xs text-slate-400">共 {p.totalDays} 天</p>}
+                  {p.notes && <p className="text-xs text-slate-500 mt-2">{p.notes}</p>}
+                </CardContent>
+              </>
+            )}
           </Card>
         );
       })}
@@ -569,10 +689,13 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   );
 }
 
-// ===== 任務 =====
+// ─── 任務 ─────────────────────────────────────────────────────────────────────
+
 function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [form, setForm] = useState({ title: "", description: "", dueDate: "", priority: "medium", category: "" });
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", dueDate: "", priority: "", category: "" });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -585,6 +708,17 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
   const updateStatus = async (taskId: string, status: string) => {
     await fetch(`/api/tasks/${taskId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     onRefresh();
+  };
+
+  const startEdit = (task: Task) => {
+    setEditForm({ title: task.title, description: task.description || "", dueDate: task.dueDate ? task.dueDate.slice(0, 10) : "", priority: task.priority, category: task.category || "" });
+    setEditingId(task.id);
+  };
+
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
   };
 
   const pending = client.tasks.filter((t) => t.status !== "done");
@@ -621,24 +755,57 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
       {pending.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-medium text-slate-500">待處理 ({pending.length})</h3>
-          {pending.map((task) => <TaskCard key={task.id} task={task} onStatusChange={updateStatus} />)}
+          {pending.map((task) => (
+            <TaskCard key={task.id} task={task} editing={editingId === task.id} editForm={editForm} setEditForm={setEditForm}
+              onStatusChange={updateStatus} onEdit={() => startEdit(task)} onDelete={() => deleteRecord(`/api/tasks/${task.id}`, onRefresh)}
+              onSave={() => saveEdit(task.id)} onCancelEdit={() => setEditingId(null)} saving={loading} />
+          ))}
         </div>
       )}
       {done.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-medium text-slate-400">已完成 ({done.length})</h3>
-          {done.map((task) => <TaskCard key={task.id} task={task} onStatusChange={updateStatus} />)}
+          {done.map((task) => (
+            <TaskCard key={task.id} task={task} editing={editingId === task.id} editForm={editForm} setEditForm={setEditForm}
+              onStatusChange={updateStatus} onEdit={() => startEdit(task)} onDelete={() => deleteRecord(`/api/tasks/${task.id}`, onRefresh)}
+              onSave={() => saveEdit(task.id)} onCancelEdit={() => setEditingId(null)} saving={loading} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: string, status: string) => void; }) {
+function TaskCard({ task, editing, editForm, setEditForm, onStatusChange, onEdit, onDelete, onSave, onCancelEdit, saving }: {
+  task: Task; editing: boolean;
+  editForm: { title: string; description: string; dueDate: string; priority: string; category: string };
+  setEditForm: React.Dispatch<React.SetStateAction<{ title: string; description: string; dueDate: string; priority: string; category: string }>>;
+  onStatusChange: (id: string, status: string) => void;
+  onEdit: () => void; onDelete: () => void; onSave: () => void; onCancelEdit: () => void; saving: boolean;
+}) {
+  if (editing) {
+    return (
+      <div className="bg-white border border-blue-200 rounded-lg px-4 py-3 flex flex-col gap-3">
+        <Input label="標題" value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+        <Textarea label="說明" value={editForm.description} onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
+        <div className="grid grid-cols-3 gap-3">
+          <Input label="截止日期" type="date" value={editForm.dueDate} onChange={(e) => setEditForm((f) => ({ ...f, dueDate: e.target.value }))} />
+          <Select label="優先級" value={editForm.priority} onChange={(e) => setEditForm((f) => ({ ...f, priority: e.target.value }))}
+            options={[{ value: "high", label: "高" }, { value: "medium", label: "中" }, { value: "low", label: "低" }]} />
+          <Select label="類別" value={editForm.category} onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+            options={[{ value: "follow_up", label: "追蹤" }, { value: "lab_test", label: "檢測" }, { value: "prescription_refill", label: "補充" }, { value: "consultation", label: "諮詢" }]}
+            placeholder="請選擇" />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onCancelEdit}>取消</Button>
+          <Button size="sm" onClick={onSave} disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={cn("bg-white border rounded-lg px-4 py-3 flex items-start gap-3", task.status === "done" ? "border-slate-100 opacity-60" : "border-slate-200")}>
-      <input type="checkbox" checked={task.status === "done"}
-        onChange={() => onStatusChange(task.id, task.status === "done" ? "pending" : "done")}
+      <input type="checkbox" checked={task.status === "done"} onChange={() => onStatusChange(task.id, task.status === "done" ? "pending" : "done")}
         className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -649,13 +816,17 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: s
         {task.description && <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>}
         {task.dueDate && <p className="text-xs text-slate-400 mt-0.5">截止：{formatDate(task.dueDate)}</p>}
       </div>
+      <CardActions onEdit={onEdit} onDelete={onDelete} />
     </div>
   );
 }
 
-// ===== LINE 追蹤 =====
+// ─── LINE 追蹤 ────────────────────────────────────────────────────────────────
+
 function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), content: "", response: "", followUpNeeded: false });
+  const [editForm, setEditForm] = useState({ date: "", content: "", response: "", followUpNeeded: false });
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -664,6 +835,17 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(true);
     await fetch(`/api/clients/${client.id}/line-trackings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     setLoading(false); setShowForm(false); onRefresh();
+  };
+
+  const startEdit = (t: LineTracking) => {
+    setEditForm({ date: t.date.slice(0, 10), content: t.content, response: t.response || "", followUpNeeded: t.followUpNeeded });
+    setEditingId(t.id);
+  };
+
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/line-trackings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
   };
 
   return (
@@ -693,59 +875,143 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
       {client.lineTrackings.length === 0 && !showForm && <EmptyState label="尚無 LINE 追蹤記錄" />}
       {client.lineTrackings.map((t) => (
         <Card key={t.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{formatDate(t.date)}</CardTitle>
-              {t.followUpNeeded && <Badge variant="warning">需追蹤</Badge>}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2 text-sm">
-              <Field label="內容" value={t.content} />
-              {t.response && <Field label="客戶回應" value={t.response} />}
-            </div>
-          </CardContent>
+          {editingId === t.id ? (
+            <CardContent className="pt-4">
+              <div className="flex flex-col gap-4">
+                <Input label="日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                <Textarea label="追蹤內容 *" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={3} />
+                <Textarea label="客戶回應" value={editForm.response} onChange={(e) => setEditForm((f) => ({ ...f, response: e.target.value }))} rows={2} />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editForm.followUpNeeded} onChange={(e) => setEditForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                  需要後續追蹤
+                </label>
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                  <Button onClick={() => saveEdit(t.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{formatDate(t.date)}</CardTitle>
+                    {t.followUpNeeded && <Badge variant="warning">需追蹤</Badge>}
+                  </div>
+                  <CardActions onEdit={() => startEdit(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/line-trackings/${t.id}`, onRefresh)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-2 text-sm">
+                  <Field label="內容" value={t.content} />
+                  {t.response && <Field label="客戶回應" value={t.response} />}
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
       ))}
     </div>
   );
 }
 
-// ===== 健康計畫 =====
-function HealthPlansTab({ client }: { client: Client }) {
+// ─── 健康計畫 ─────────────────────────────────────────────────────────────────
+
+function HealthPlansTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", startDate: new Date().toISOString().slice(0, 10), endDate: "", goals: "", status: "active", progress: "" });
+  const [editForm, setEditForm] = useState({ title: "", startDate: "", endDate: "", goals: "", status: "", progress: "" });
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/health-plans`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    setLoading(false); setShowForm(false); onRefresh();
+  };
+
+  const startEdit = (plan: HealthPlan) => {
+    setEditForm({ title: plan.title, startDate: plan.startDate.slice(0, 10), endDate: plan.endDate ? plan.endDate.slice(0, 10) : "", goals: plan.goals || "", status: plan.status, progress: plan.progress || "" });
+    setEditingId(plan.id);
+  };
+
+  const saveEdit = async (id: string) => {
+    setLoading(true);
+    await fetch(`/api/clients/${client.id}/health-plans/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    setLoading(false); setEditingId(null); onRefresh();
+  };
+
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      {client.healthPlans.length === 0 && <EmptyState label="尚無健康計畫" />}
+      <div className="flex justify-end">
+        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
+          {showForm ? "取消" : "+ 新增健康計畫"}
+        </Button>
+      </div>
+      {showForm && (
+        <Card>
+          <CardHeader><CardTitle>新增健康計畫</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={submit} className="flex flex-col gap-4">
+              <Input label="計畫名稱 *" placeholder="例：三個月體重管理計畫" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="開始日期" type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} />
+                <Input label="結束日期" type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} />
+              </div>
+              <Select label="狀態" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                options={[{ value: "active", label: "進行中" }, { value: "completed", label: "已完成" }, { value: "paused", label: "暫停" }]} />
+              <Textarea label="目標" placeholder="計畫目標與方向..." value={form.goals} onChange={(e) => setForm((f) => ({ ...f, goals: e.target.value }))} rows={3} />
+              <Textarea label="執行進度" placeholder="目前執行情況..." value={form.progress} onChange={(e) => setForm((f) => ({ ...f, progress: e.target.value }))} rows={2} />
+              <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button></div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+      {client.healthPlans.length === 0 && !showForm && <EmptyState label="尚無健康計畫" />}
       {client.healthPlans.map((plan) => (
         <Card key={plan.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>{plan.title}</CardTitle>
-              <Badge variant={plan.status === "active" ? "success" : "default"}>{STATUS_LABELS[plan.status] || plan.status}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs text-slate-400">{formatDate(plan.startDate)}{plan.endDate && ` — ${formatDate(plan.endDate)}`}</p>
-              {plan.goals && <Field label="目標" value={plan.goals} />}
-              {plan.progress && <Field label="執行進度" value={plan.progress} />}
-            </div>
-          </CardContent>
+          {editingId === plan.id ? (
+            <CardContent className="pt-4">
+              <div className="flex flex-col gap-4">
+                <Input label="計畫名稱 *" value={editForm.title} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="開始日期" type="date" value={editForm.startDate} onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))} />
+                  <Input label="結束日期" type="date" value={editForm.endDate} onChange={(e) => setEditForm((f) => ({ ...f, endDate: e.target.value }))} />
+                </div>
+                <Select label="狀態" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
+                  options={[{ value: "active", label: "進行中" }, { value: "completed", label: "已完成" }, { value: "paused", label: "暫停" }]} />
+                <Textarea label="目標" value={editForm.goals} onChange={(e) => setEditForm((f) => ({ ...f, goals: e.target.value }))} rows={3} />
+                <Textarea label="執行進度" value={editForm.progress} onChange={(e) => setEditForm((f) => ({ ...f, progress: e.target.value }))} rows={2} />
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                  <Button onClick={() => saveEdit(plan.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{plan.title}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={plan.status === "active" ? "success" : "default"}>{STATUS_LABELS[plan.status] || plan.status}</Badge>
+                    <CardActions onEdit={() => startEdit(plan)} onDelete={() => deleteRecord(`/api/clients/${client.id}/health-plans/${plan.id}`, onRefresh)} />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-2 text-sm">
+                  <p className="text-xs text-slate-400">{formatDate(plan.startDate)}{plan.endDate && ` — ${formatDate(plan.endDate)}`}</p>
+                  {plan.goals && <Field label="目標" value={plan.goals} />}
+                  {plan.progress && <Field label="執行進度" value={plan.progress} />}
+                </div>
+              </CardContent>
+            </>
+          )}
         </Card>
       ))}
     </div>
   );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-slate-400 mb-0.5">{label}</p>
-      <p className="text-slate-700 whitespace-pre-wrap">{value}</p>
-    </div>
-  );
-}
-
-function EmptyState({ label }: { label: string }) {
-  return <div className="py-16 text-center text-slate-400 text-sm">{label}</div>;
 }

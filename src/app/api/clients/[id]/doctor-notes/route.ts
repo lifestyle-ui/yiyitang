@@ -1,23 +1,30 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   const data = await req.json();
+  const now = new Date().toISOString();
 
-  const note = await prisma.doctorNote.create({
-    data: {
+  const { data: note, error } = await supabase
+    .from("DoctorNote")
+    .insert({
+      id: crypto.randomUUID(),
       clientId: id,
-      date: data.date ? new Date(data.date) : new Date(),
+      date: data.date ? new Date(data.date).toISOString() : now,
       diagnosis: data.diagnosis || null,
       treatment: data.treatment || null,
       prescription: data.prescription || null,
       notes: data.notes || null,
-      nextVisit: data.nextVisit ? new Date(data.nextVisit) : null,
-    },
-  });
+      nextVisit: data.nextVisit ? new Date(data.nextVisit).toISOString() : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select()
+    .single();
 
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(note, { status: 201 });
 }

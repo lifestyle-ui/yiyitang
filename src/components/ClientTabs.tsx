@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Plus, X, ChevronDown, ChevronRight,
-  Pencil, Trash2,
+  Pencil, Trash2, Calendar,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -146,48 +146,93 @@ function TaskConfirmBanner({ tasks, onConfirm, onDismiss }: { tasks: { title: st
 
 // ─── 諮詢記錄 ─────────────────────────────────────────────────────────────────
 
+type InlineTask = { id: string; title: string; dueDate: string; priority: string };
+
+function emptyTask(): InlineTask {
+  return { id: crypto.randomUUID(), title: "", dueDate: "", priority: "medium" };
+}
+
+function InlineTaskList({ tasks, onChange }: { tasks: InlineTask[]; onChange: (tasks: InlineTask[]) => void }) {
+  const update = (id: string, field: keyof InlineTask, value: string) =>
+    onChange(tasks.map((t) => t.id === id ? { ...t, [field]: value } : t));
+  const remove = (id: string) => onChange(tasks.filter((t) => t.id !== id));
+  const add = () => onChange([...tasks, emptyTask()]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-slate-600">後續任務（存檔時一起建立）</p>
+        <button type="button" onClick={add} className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+          <Plus className="w-3 h-3" />新增任務
+        </button>
+      </div>
+      {tasks.length === 0 ? (
+        <button type="button" onClick={add}
+          className="w-full py-2 border border-dashed border-slate-200 rounded-lg text-xs text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
+          + 新增後續任務
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {tasks.map((task) => (
+            <div key={task.id} className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
+              <input
+                value={task.title}
+                onChange={(e) => update(task.id, "title", e.target.value)}
+                placeholder="任務內容..."
+                className="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
+              />
+              <input
+                type="date"
+                value={task.dueDate}
+                onChange={(e) => update(task.id, "dueDate", e.target.value)}
+                className="bg-white text-xs text-slate-600 border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+              <select
+                value={task.priority}
+                onChange={(e) => update(task.id, "priority", e.target.value)}
+                className="bg-white text-xs text-slate-600 border border-slate-200 rounded px-1.5 py-1 focus:outline-none"
+              >
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+              </select>
+              <button type="button" onClick={() => remove(task.id)} className="text-slate-300 hover:text-red-400">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
+  const [inlineTasks, setInlineTasks] = useState<InlineTask[]>([]);
   const [editForm, setEditForm] = useState({ date: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
+  const [editInlineTasks, setEditInlineTasks] = useState<InlineTask[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState<{ title: string; dueDate?: string }[] | null>(null);
-  const [pendingClientId, setPendingClientId] = useState<string | null>(null);
 
   const toggleExpand = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setExpandedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setLoading(false); setShowForm(false);
-
-    // 若有後續步驟，提示建立任務
-    if (form.nextSteps.trim()) {
-      const lines = form.nextSteps.split(/[\n。；;]+/).map(s => s.trim()).filter(Boolean);
-      setPendingTasks(lines.map(title => ({ title })));
-      setPendingClientId(client.id);
+    for (const t of inlineTasks.filter((t) => t.title.trim())) {
+      await createTask(client.id, { title: t.title.trim(), dueDate: t.dueDate || undefined, priority: t.priority, category: "follow_up" });
     }
-    onRefresh();
-  };
-
-  const confirmTasks = async () => {
-    if (!pendingTasks || !pendingClientId) return;
-    for (const t of pendingTasks) {
-      await createTask(pendingClientId, { title: t.title, category: "follow_up" });
-    }
-    setPendingTasks(null); onRefresh();
+    setLoading(false); setShowForm(false); setInlineTasks([]); onRefresh();
   };
 
   const startEdit = (c: Consultation) => {
     setEditForm({ date: c.date.slice(0, 10), chiefComplaint: c.chiefComplaint || "", content: c.content || "", doctorAdvice: c.doctorAdvice || "", nextSteps: c.nextSteps || "" });
+    setEditInlineTasks([]);
     setEditingId(c.id);
     setExpandedIds((prev) => new Set([...prev, c.id]));
   };
@@ -195,27 +240,21 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   const saveEdit = async (id: string) => {
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
-    setLoading(false); setEditingId(null);
-
-    if (editForm.nextSteps.trim()) {
-      const lines = editForm.nextSteps.split(/[\n。；;]+/).map(s => s.trim()).filter(Boolean);
-      setPendingTasks(lines.map(title => ({ title })));
-      setPendingClientId(client.id);
+    for (const t of editInlineTasks.filter((t) => t.title.trim())) {
+      await createTask(client.id, { title: t.title.trim(), dueDate: t.dueDate || undefined, priority: t.priority, category: "follow_up" });
     }
-    onRefresh();
+    setLoading(false); setEditingId(null); setEditInlineTasks([]); onRefresh();
   };
+
+  const resetForm = () => { setShowForm(false); setInlineTasks([]); };
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
       <div className="flex justify-end">
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
+        <Button onClick={() => showForm ? resetForm() : setShowForm(true)} variant={showForm ? "secondary" : "primary"}>
           {showForm ? "取消" : "+ 新增諮詢記錄"}
         </Button>
       </div>
-
-      {pendingTasks && (
-        <TaskConfirmBanner tasks={pendingTasks} onConfirm={confirmTasks} onDismiss={() => setPendingTasks(null)} />
-      )}
 
       {showForm && (
         <Card>
@@ -226,8 +265,16 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
               <Input label="主訴 / 症狀" placeholder="客戶主要訴求（摘要顯示）" value={form.chiefComplaint} onChange={(e) => setForm((f) => ({ ...f, chiefComplaint: e.target.value }))} />
               <Textarea label="諮詢內容" placeholder="詳細討論內容..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
               <Textarea label="醫師建議" placeholder="醫師的建議與處置..." value={form.doctorAdvice} onChange={(e) => setForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
-              <Textarea label="後續步驟（每行一項，存檔後可轉成任務）" placeholder={"例：\n安排下次血液檢查\n三週後電話追蹤"} value={form.nextSteps} onChange={(e) => setForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={3} />
-              <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button></div>
+              <Textarea label="備註" placeholder="其他備注..." value={form.nextSteps} onChange={(e) => setForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
+              <div className="border-t border-slate-100 pt-4">
+                <InlineTaskList tasks={inlineTasks} onChange={setInlineTasks} />
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-xs text-slate-400">
+                  {inlineTasks.filter(t => t.title.trim()).length > 0 && `將建立 ${inlineTasks.filter(t => t.title.trim()).length} 個任務`}
+                </p>
+                <Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -240,20 +287,13 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
         const isEditing = editingId === c.id;
         return (
           <Card key={c.id} className={cn(isEditing && "border-blue-300")}>
-            {/* 卡片標題列：永遠顯示 */}
             <div
               className={cn("flex items-center justify-between px-5 py-3 cursor-pointer select-none", !isEditing && "hover:bg-slate-50")}
               onClick={() => !isEditing && toggleExpand(c.id)}>
               <div className="flex items-center gap-3 min-w-0">
-                {!isEditing && (
-                  expanded
-                    ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                )}
+                {!isEditing && (expanded ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />)}
                 <span className="text-sm font-semibold text-slate-700">{formatDate(c.date)}</span>
-                {c.chiefComplaint && !expanded && !isEditing && (
-                  <span className="text-sm text-slate-500 truncate">{c.chiefComplaint}</span>
-                )}
+                {c.chiefComplaint && !expanded && !isEditing && <span className="text-sm text-slate-500 truncate">{c.chiefComplaint}</span>}
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -261,8 +301,6 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
                 </div>
               )}
             </div>
-
-            {/* 展開內容 */}
             {(expanded || isEditing) && (
               <CardContent className="pt-0 border-t border-slate-100">
                 {isEditing ? (
@@ -271,9 +309,12 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <Input label="主訴 / 症狀" value={editForm.chiefComplaint} onChange={(e) => setEditForm((f) => ({ ...f, chiefComplaint: e.target.value }))} />
                     <Textarea label="諮詢內容" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
                     <Textarea label="醫師建議" value={editForm.doctorAdvice} onChange={(e) => setEditForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
-                    <Textarea label="後續步驟" value={editForm.nextSteps} onChange={(e) => setEditForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={3} />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
+                    <Textarea label="備註" value={editForm.nextSteps} onChange={(e) => setEditForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
+                    <div className="border-t border-slate-100 pt-3">
+                      <InlineTaskList tasks={editInlineTasks} onChange={setEditInlineTasks} />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button variant="secondary" onClick={() => { setEditingId(null); setEditInlineTasks([]); }}>取消</Button>
                       <Button onClick={() => saveEdit(c.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
                     </div>
                   </div>
@@ -282,7 +323,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
                     {c.chiefComplaint && <Field label="主訴" value={c.chiefComplaint} />}
                     {c.content && <Field label="諮詢內容" value={c.content} />}
                     {c.doctorAdvice && <Field label="醫師建議" value={c.doctorAdvice} />}
-                    {c.nextSteps && <Field label="後續步驟" value={c.nextSteps} />}
+                    {c.nextSteps && <Field label="備註" value={c.nextSteps} />}
                   </div>
                 )}
               </CardContent>
@@ -363,7 +404,14 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
               <Textarea label="診斷" placeholder="診斷結果..." value={form.diagnosis} onChange={(e) => setForm((f) => ({ ...f, diagnosis: e.target.value }))} rows={2} />
               <Textarea label="治療方式" placeholder="治療方式與處置..." value={form.treatment} onChange={(e) => setForm((f) => ({ ...f, treatment: e.target.value }))} rows={3} />
               <Textarea label="備註" placeholder="其他備注..." value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
-              <Input label="下次回診日期（自動建立回診任務）" type="date" value={form.nextVisit} onChange={(e) => setForm((f) => ({ ...f, nextVisit: e.target.value }))} />
+              <div>
+                <Input label="下次回診日期" type="date" value={form.nextVisit} onChange={(e) => setForm((f) => ({ ...f, nextVisit: e.target.value }))} />
+                {form.nextVisit && (
+                  <p className="mt-1.5 text-xs text-blue-600 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />存檔時自動建立任務：回診提醒 — {client.name}（{form.nextVisit}）
+                  </p>
+                )}
+              </div>
               <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button></div>
             </form>
           </CardContent>
@@ -398,7 +446,14 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
                     <Textarea label="診斷" value={editForm.diagnosis} onChange={(e) => setEditForm((f) => ({ ...f, diagnosis: e.target.value }))} rows={2} />
                     <Textarea label="治療方式" value={editForm.treatment} onChange={(e) => setEditForm((f) => ({ ...f, treatment: e.target.value }))} rows={3} />
                     <Textarea label="備註" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
-                    <Input label="下次回診日期" type="date" value={editForm.nextVisit} onChange={(e) => setEditForm((f) => ({ ...f, nextVisit: e.target.value }))} />
+                    <div>
+                      <Input label="下次回診日期" type="date" value={editForm.nextVisit} onChange={(e) => setEditForm((f) => ({ ...f, nextVisit: e.target.value }))} />
+                      {editForm.nextVisit && (
+                        <p className="mt-1.5 text-xs text-blue-600 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />存檔時自動建立任務：回診提醒 — {client.name}（{editForm.nextVisit}）
+                        </p>
+                      )}
+                    </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
                       <Button onClick={() => saveEdit(n.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>

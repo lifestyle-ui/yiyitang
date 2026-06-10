@@ -14,16 +14,16 @@ async function getDashboardData() {
   const [todayTasks, overdueTasks, recentClients, totalClients] = await Promise.all([
     prisma.task.findMany({
       where: {
-        status: { not: "done" },
+        status: { notIn: ["done"] },
         dueDate: { lte: today },
       },
       include: { client: { select: { id: true, name: true } } },
-      orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
+      orderBy: [{ dueDate: "asc" }],
       take: 20,
     }),
     prisma.task.count({
       where: {
-        status: { not: "done" },
+        status: { notIn: ["done"] },
         dueDate: { lt: new Date(new Date().setHours(0, 0, 0, 0)) },
       },
     }),
@@ -32,7 +32,7 @@ async function getDashboardData() {
       orderBy: { updatedAt: "desc" },
       take: 5,
       include: {
-        _count: { select: { tasks: { where: { status: { not: "done" } } } } },
+        _count: { select: { tasks: true } },
       },
     }),
     prisma.client.count({ where: { isActive: true } }),

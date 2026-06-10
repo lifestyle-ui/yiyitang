@@ -23,7 +23,7 @@ async function getClients(search: string) {
       _count: {
         select: {
           consultations: true,
-          tasks: { where: { status: { not: "done" } } },
+          tasks: true,
         },
       },
     },

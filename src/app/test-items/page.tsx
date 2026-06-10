@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FlaskConical, Plus, Upload, Search, X } from "lucide-react";
+import { FlaskConical, Plus, Sparkles, Search, X } from "lucide-react";
+import SmartImport from "@/components/SmartImport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export default function TestItemsPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
@@ -103,23 +105,20 @@ export default function TestItemsPage() {
           <p className="text-sm text-slate-500 mt-0.5">共 {items.length} 項檢測</p>
         </div>
         <div className="flex items-center gap-2">
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
-          <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
-            <Upload className="w-4 h-4" />
-            {importing ? "匯入中..." : "匯入 CSV"}
+          <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
+            <Sparkles className="w-4 h-4 text-blue-500" />
+            AI 智慧匯入
           </Button>
           <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "取消" : "新增檢測項目"}
+            {showForm ? "取消" : "手動新增"}
           </Button>
         </div>
       </div>
 
-      <div className="mb-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
-        <strong>CSV 匯入格式：</strong>欄位名稱：
-        <code className="ml-1 bg-blue-100 px-1 rounded">name, category, code, description, price, turnaround, notes</code>
-        <br />範例：<code>血脂四項,血液常規,LIPID,總膽固醇等四項,500,3天,空腹採血</code>
-      </div>
+      {showImport && (
+        <SmartImport type="testItem" onImported={() => fetchItems()} onClose={() => setShowImport(false)} />
+      )}
 
       {showForm && (
         <Card className="mb-5">

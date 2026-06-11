@@ -211,12 +211,9 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
-  const [inlineTasks, setInlineTasks] = useState<InlineTask[]>([]);
+  const [taskLines, setTaskLines] = useState("");
   const [editForm, setEditForm] = useState({ date: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
-  const [editInlineTasks, setEditInlineTasks] = useState<InlineTask[]>([]);
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState<{ title: string; dueDate: string; priority: string }[] | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
@@ -226,23 +223,16 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
     e.preventDefault();
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setLoading(false); setShowForm(false); setInlineTasks([]);
+    const lines = taskLines.split("\n").map((l) => l.trim()).filter(Boolean);
+    for (const title of lines) {
+      await createTask(client.id, { title, category: "follow_up", priority: "medium" });
+    }
+    setLoading(false); setShowForm(false); setTaskLines("");
     onRefresh();
-    // AI 自動擷取任務
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai/extract-tasks", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, clientName: client.name }),
-      });
-      const { tasks } = await res.json();
-      if (tasks && tasks.length > 0) setPendingTasks(tasks);
-    } finally { setAiLoading(false); }
   };
 
   const startEdit = (c: Consultation) => {
     setEditForm({ date: c.date.slice(0, 10), chiefComplaint: c.chiefComplaint || "", content: c.content || "", doctorAdvice: c.doctorAdvice || "", nextSteps: c.nextSteps || "" });
-    setEditInlineTasks([]);
     setEditingId(c.id);
     setExpandedIds((prev) => new Set([...prev, c.id]));
   };
@@ -250,21 +240,11 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   const saveEdit = async (id: string) => {
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
-    setLoading(false); setEditingId(null); setEditInlineTasks([]);
+    setLoading(false); setEditingId(null);
     onRefresh();
-    // AI 自動擷取任務
-    setAiLoading(true);
-    try {
-      const res = await fetch("/api/ai/extract-tasks", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...editForm, clientName: client.name }),
-      });
-      const { tasks } = await res.json();
-      if (tasks && tasks.length > 0) setPendingTasks(tasks);
-    } finally { setAiLoading(false); }
   };
 
-  const resetForm = () => { setShowForm(false); setInlineTasks([]); };
+  const resetForm = () => { setShowForm(false); setTaskLines(""); };
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
@@ -274,50 +254,6 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
         </Button>
       </div>
 
-      {/* AI 分析中 */}
-      {aiLoading && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-          <svg className="animate-spin w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-          </svg>
-          AI 正在分析諮詢內容，自動擷取後續任務...
-        </div>
-      )}
-
-      {/* AI 建議任務確認 */}
-      {pendingTasks && pendingTasks.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <ClipboardList className="w-4 h-4 text-blue-600" />
-            <p className="text-sm font-semibold text-blue-800">AI 從諮詢內容擷取到 {pendingTasks.length} 個後續任務</p>
-          </div>
-          <div className="flex flex-col gap-2 mb-3">
-            {pendingTasks.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-blue-100">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-700">{t.title}</p>
-                  {t.dueDate && <p className="text-xs text-slate-400 mt-0.5">截止：{t.dueDate}</p>}
-                </div>
-                <Badge variant={t.priority === "high" ? "danger" : t.priority === "medium" ? "warning" : "info"}>
-                  {t.priority === "high" ? "高" : t.priority === "medium" ? "中" : "低"}
-                </Badge>
-                <button onClick={() => setPendingTasks(pendingTasks.filter((_, j) => j !== i))}
-                  className="text-slate-300 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={async () => {
-              for (const t of pendingTasks) {
-                await createTask(client.id, { title: t.title, dueDate: t.dueDate || undefined, priority: t.priority, category: "follow_up" });
-              }
-              setPendingTasks(null); onRefresh();
-            }}>建立所有任務</Button>
-            <Button size="sm" variant="secondary" onClick={() => setPendingTasks(null)}>略過</Button>
-          </div>
-        </div>
-      )}
 
       {showForm && (
         <Card>
@@ -329,8 +265,10 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
               <Textarea label="諮詢內容" placeholder="詳細討論內容..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
               <Textarea label="醫師建議" placeholder="醫師的建議與處置..." value={form.doctorAdvice} onChange={(e) => setForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
               <Textarea label="備註" placeholder="其他備注..." value={form.nextSteps} onChange={(e) => setForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-slate-400">儲存後 AI 將自動分析並建議後續任務</p>
+              <div>
+                <Textarea label="後續待辦任務" placeholder={"每行一個任務，存檔時自動新增到任務清單\n例如：安排下次回診\n例如：追蹤血壓數值"} value={taskLines} onChange={(e) => setTaskLines(e.target.value)} rows={3} />
+              </div>
+              <div className="flex justify-end pt-1">
                 <Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
               </div>
             </form>
@@ -369,7 +307,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <Textarea label="醫師建議" value={editForm.doctorAdvice} onChange={(e) => setEditForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
                     <Textarea label="備註" value={editForm.nextSteps} onChange={(e) => setEditForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
                     <div className="flex justify-end gap-2 pt-1">
-                      <Button variant="secondary" onClick={() => { setEditingId(null); setEditInlineTasks([]); }}>取消</Button>
+                      <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
                       <Button onClick={() => saveEdit(c.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
                     </div>
                   </div>

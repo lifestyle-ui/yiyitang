@@ -15,6 +15,7 @@ export default function NewClientPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
+    medicalRecordNumber: "",
     gender: "",
     birthDate: "",
     phone: "",
@@ -64,13 +65,10 @@ export default function NewClientPage() {
             <CardTitle>基本資料</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Input
-              label="姓名 *"
-              placeholder="請輸入客戶姓名"
-              value={form.name}
-              onChange={set("name")}
-              required
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="姓名 *" placeholder="請輸入客戶姓名" value={form.name} onChange={set("name")} required />
+              <Input label="病歷號碼" placeholder="例：MR-2024-001" value={form.medicalRecordNumber} onChange={set("medicalRecordNumber")} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Select
                 label="性別"

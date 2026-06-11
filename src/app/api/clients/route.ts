@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     .insert({
       id: crypto.randomUUID(),
       name: data.name,
+      medicalRecordNumber: data.medicalRecordNumber || null,
       gender: data.gender || null,
       birthDate: data.birthDate || null,
       phone: data.phone || null,

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FlaskConical, Plus, Sparkles, Search, X } from "lucide-react";
-import SmartImport from "@/components/SmartImport";
+import { FlaskConical, Plus, Upload, Download, Search, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,6 @@ export default function TestItemsPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
@@ -105,20 +103,24 @@ export default function TestItemsPage() {
           <p className="text-sm text-slate-500 mt-0.5">共 {items.length} 項檢測</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
-            <Sparkles className="w-4 h-4 text-blue-500" />
-            AI 智慧匯入
+          <Button variant="secondary" size="sm" onClick={() => {
+            const csv = "name,category,code,description,price,turnaround,notes\n血脂四項,生化代謝,LIPID,總膽固醇/三酸甘油酯/HDL/LDL,500,3個工作天,需空腹採血\n血糖,生化代謝,GLU,空腹血糖,150,1個工作天,需空腹採血";
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = "檢測項目範本.csv"; a.click();
+          }}>
+            <Download className="w-4 h-4" />下載範本
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
+            <Upload className="w-4 h-4" />{importing ? "匯入中..." : "CSV 匯入"}
+          </Button>
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
           <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {showForm ? "取消" : "手動新增"}
           </Button>
         </div>
       </div>
-
-      {showImport && (
-        <SmartImport type="testItem" onImported={() => fetchItems()} onClose={() => setShowImport(false)} />
-      )}
 
       {showForm && (
         <Card className="mb-5">

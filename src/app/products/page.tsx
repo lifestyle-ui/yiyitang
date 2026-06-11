@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Pill, Plus, Sparkles, Search, X } from "lucide-react";
+import { Pill, Plus, Upload, Download, Search, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import SmartImport from "@/components/SmartImport";
 
 type Product = {
   id: string;
@@ -28,7 +26,6 @@ export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: "", category: "", brand: "", spec: "", dosage: "", unit: "顆", price: "", notes: "",
@@ -107,20 +104,24 @@ export default function ProductsPage() {
           <p className="text-sm text-slate-500 mt-0.5">共 {products.length} 項保健品</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
-            <Sparkles className="w-4 h-4 text-blue-500" />
-            AI 智慧匯入
+          <Button variant="secondary" size="sm" onClick={() => {
+            const csv = "name,category,brand,spec,dosage,unit,price,notes\n魚油,Omega 脂肪酸,Nordic Naturals,1000mg,每日2顆飯後,顆,800,\n維生素D3,維生素,,2000IU,每日1顆,顆,500,";
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = "保健品範本.csv"; a.click();
+          }}>
+            <Download className="w-4 h-4" />下載範本
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
+            <Upload className="w-4 h-4" />{importing ? "匯入中..." : "CSV 匯入"}
+          </Button>
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
           <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {showForm ? "取消" : "手動新增"}
           </Button>
         </div>
       </div>
-
-      {showImport && (
-        <SmartImport type="product" onImported={() => fetchProducts()} onClose={() => setShowImport(false)} />
-      )}
 
       {showForm && (
         <Card className="mb-5">

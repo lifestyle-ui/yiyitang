@@ -34,6 +34,7 @@ export async function PATCH(_req: Request, { params }: Params) {
     .from("Client")
     .update({
       name: data.name,
+      medicalRecordNumber: data.medicalRecordNumber || null,
       gender: data.gender || null,
       birthDate: data.birthDate || null,
       phone: data.phone || null,

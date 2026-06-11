@@ -64,6 +64,7 @@ export default async function ClientDetailPage({ params }: Params) {
                 <h1 className="text-xl font-bold text-slate-800">{client.name}</h1>
                 {client.gender && <Badge variant="outline">{client.gender}</Badge>}
                 {age && <Badge variant="outline">{age} 歲</Badge>}
+                {client.medicalRecordNumber && <Badge variant="outline" className="font-mono text-xs">#{client.medicalRecordNumber}</Badge>}
               </div>
               <p className="text-xs text-slate-400 mt-0.5">建立於 {formatDateTime(client.createdAt)}</p>
             </div>

@@ -11,10 +11,11 @@ datasource db {
 
 model Client {
   id              String   @id @default(cuid())
-  name            String
-  gender          String?
-  birthDate       DateTime?
-  phone           String?
+  name                String
+  medicalRecordNumber String?
+  gender              String?
+  birthDate           DateTime?
+  phone               String?
   email           String?
   lineId          String?
   address         String?

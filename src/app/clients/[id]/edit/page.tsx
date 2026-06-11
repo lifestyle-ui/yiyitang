@@ -16,7 +16,7 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [form, setForm] = useState({
-    name: "", gender: "", birthDate: "", phone: "",
+    name: "", medicalRecordNumber: "", gender: "", birthDate: "", phone: "",
     email: "", lineId: "", address: "", occupation: "",
     referralSource: "", notes: "",
   });
@@ -27,6 +27,7 @@ export default function EditClientPage() {
       .then((data) => {
         setForm({
           name: data.name || "",
+          medicalRecordNumber: data.medicalRecordNumber || "",
           gender: data.gender || "",
           birthDate: data.birthDate ? data.birthDate.slice(0, 10) : "",
           phone: data.phone || "",
@@ -77,7 +78,10 @@ export default function EditClientPage() {
         <Card>
           <CardHeader><CardTitle>基本資料</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Input label="姓名 *" placeholder="請輸入客戶姓名" value={form.name} onChange={set("name")} required />
+            <div className="grid grid-cols-2 gap-4">
+              <Input label="姓名 *" placeholder="請輸入客戶姓名" value={form.name} onChange={set("name")} required />
+              <Input label="病歷號碼" placeholder="例：MR-2024-001" value={form.medicalRecordNumber} onChange={set("medicalRecordNumber")} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Select label="性別" value={form.gender} onChange={set("gender")}
                 options={[{ value: "男", label: "男" }, { value: "女", label: "女" }, { value: "其他", label: "其他" }]}

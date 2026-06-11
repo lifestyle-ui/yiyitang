@@ -59,7 +59,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="text-left px-5 py-3 text-xs font-medium text-slate-500">姓名</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-slate-500">病歷號碼</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">姓名</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">性別 / 年齡</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">聯絡方式</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-slate-500">最後更新</th>
@@ -68,7 +69,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             <tbody className="divide-y divide-slate-100">
               {clients.map((client) => (
                 <tr key={client.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 text-slate-500 text-xs font-mono">
+                    {client.medicalRecordNumber || "—"}
+                  </td>
+                  <td className="px-4 py-3">
                     <Link href={`/clients/${client.id}`} className="font-medium text-blue-700 hover:underline">{client.name}</Link>
                   </td>
                   <td className="px-4 py-3 text-slate-600">

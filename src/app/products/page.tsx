@@ -65,26 +65,29 @@ export default function ProductsPage() {
     if (!file) return;
     setImporting(true);
 
-    const text = await file.text();
-    const lines = text.split("\n").filter(Boolean);
-    const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+    try {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = (XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[])
+        .map((r) => {
+          const row: Record<string, string> = {};
+          for (const k in r) row[k.trim()] = String(r[k] ?? "").trim();
+          return row;
+        })
+        .filter((r) => r.name);
 
-    const rows = lines.slice(1).map((line) => {
-      const values = line.split(",").map((v) => v.trim().replace(/"/g, ""));
-      const obj: Record<string, string> = {};
-      headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-      return obj;
-    }).filter((r) => r.name);
-
-    await fetch("/api/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rows),
-    });
-
-    setImporting(false);
-    if (fileRef.current) fileRef.current.value = "";
-    fetchProducts();
+      await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rows),
+      });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+      fetchProducts();
+    }
   };
 
   const grouped = filtered.reduce((acc, p) => {
@@ -115,7 +118,7 @@ export default function ProductsPage() {
           <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={importing}>
             <Upload className="w-4 h-4" />{importing ? "匯入中..." : "CSV 匯入"}
           </Button>
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
           <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {showForm ? "取消" : "手動新增"}

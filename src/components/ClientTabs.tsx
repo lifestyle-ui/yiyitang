@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -1170,29 +1170,29 @@ function TimelineTab({ client }: { client: Client }) {
   const events: TimelineEvent[] = [];
 
   client.consultations.forEach((c) => {
-    events.push({ date: c.date, type: "consultation", label: c.visitType || "�Ը߰O��", sub: c.chiefComplaint || undefined, color: "bg-blue-500" });
+    events.push({ date: c.date, type: "consultation", label: c.visitType || "諮詢記錄", sub: c.chiefComplaint || undefined, color: "bg-blue-500" });
   });
 
   client.doctorNotes.forEach((d) => {
-    if (d.nextVisit) events.push({ date: d.nextVisit, type: "nextVisit", label: "�w�p�^�E", sub: d.diagnosis || undefined, color: "bg-purple-500" });
+    if (d.nextVisit) events.push({ date: d.nextVisit, type: "nextVisit", label: "預計回診", sub: d.diagnosis || undefined, color: "bg-purple-500" });
   });
 
   client.labTests.forEach((l) => {
-    if (l.testDate) events.push({ date: l.testDate, type: "labTest", label: `�˴��G${l.testType}`, sub: l.status, color: "bg-teal-500" });
+    if (l.testDate) events.push({ date: l.testDate, type: "labTest", label: `檢驗：${l.testType}`, sub: l.status, color: "bg-teal-500" });
   });
 
   client.prescriptions.forEach((p) => {
-    events.push({ date: p.date, type: "prescription", label: "�}�߫O���~�B��", sub: p.runOutDate ? `�w�p�ɳf�G${formatDate(p.runOutDate)}` : undefined, color: "bg-green-500" });
-    if (p.runOutDate) events.push({ date: p.runOutDate, type: "prescription", label: "�O���~�ɳf��", color: "bg-orange-400" });
+    events.push({ date: p.date, type: "prescription", label: "開立保健品處方", sub: p.runOutDate ? `預計補貨：${formatDate(p.runOutDate)}` : undefined, color: "bg-green-500" });
+    if (p.runOutDate) events.push({ date: p.runOutDate, type: "prescription", label: "保健品補貨日", color: "bg-orange-400" });
   });
 
   client.tasks.forEach((t) => {
-    if (t.dueDate && t.status !== "done") events.push({ date: t.dueDate, type: "task", label: t.title, sub: t.status === "in_progress" ? "�i�椤" : "�ݳB�z", color: "bg-amber-500" });
+    if (t.dueDate && t.status !== "done") events.push({ date: t.dueDate, type: "task", label: t.title, sub: t.status === "in_progress" ? "進行中" : "待處理", color: "bg-amber-500" });
   });
 
   events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  if (events.length === 0) return <EmptyState label="�|�L�ɶ��b�O���A�Х��s�W�ԸߩΥ��" />;
+  if (events.length === 0) return <EmptyState label="尚無時間軸記錄，請先新增諮詢或任務" />;
 
   const today = new Date().toISOString().slice(0, 10);
   const future = events.filter(e => e.date >= today);

@@ -1,26 +1,28 @@
-export const dynamic = "force-dynamic";
+"use client";
 
-import { supabase } from "@/lib/supabase";
-import { Settings, Users, ClipboardList, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Users, ClipboardList, MessageSquare, ListChecks } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import OptionManager from "@/components/OptionManager";
 
-async function getStats() {
-  const [clients, tasks, consultations, prescriptions] = await Promise.all([
-    supabase.from("Client").select("id", { count: "exact" }).eq("isActive", true),
-    supabase.from("Task").select("id", { count: "exact" }),
-    supabase.from("Consultation").select("id", { count: "exact" }),
-    supabase.from("Prescription").select("id", { count: "exact" }),
-  ]);
-  return {
-    totalClients: clients.count || 0,
-    totalTasks: tasks.count || 0,
-    totalConsultations: consultations.count || 0,
-    totalPrescriptions: prescriptions.count || 0,
-  };
-}
+type Stats = { totalClients: number; totalTasks: number; totalConsultations: number; totalPrescriptions: number };
 
-export default async function AdminPage() {
-  const stats = await getStats();
+export default function AdminPage() {
+  const [stats, setStats] = useState<Stats>({ totalClients: 0, totalTasks: 0, totalConsultations: 0, totalPrescriptions: 0 });
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/clients").then(r => r.json()),
+      fetch("/api/tasks").then(r => r.json()),
+    ]).then(([clients, tasks]) => {
+      setStats({
+        totalClients: Array.isArray(clients) ? clients.length : 0,
+        totalTasks: Array.isArray(tasks) ? tasks.length : 0,
+        totalConsultations: 0,
+        totalPrescriptions: 0,
+      });
+    });
+  }, []);
 
   return (
     <div className="p-6 max-w-4xl mx-auto w-full">
@@ -28,10 +30,10 @@ export default async function AdminPage() {
         <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
           <Settings className="w-5 h-5 text-blue-600" />管理設定
         </h1>
-        <p className="text-sm text-slate-500 mt-0.5">系統概覽與設定</p>
+        <p className="text-sm text-slate-500 mt-0.5">系統概覽、選項管理</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           { icon: Users, label: "客戶總數", value: stats.totalClients, color: "text-blue-600", bg: "bg-blue-50" },
           { icon: ClipboardList, label: "任務總數", value: stats.totalTasks, color: "text-amber-600", bg: "bg-amber-50" },
@@ -49,6 +51,22 @@ export default async function AdminPage() {
         })}
       </div>
 
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ListChecks className="w-4 h-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-700">下拉選項管理</h2>
+          <p className="text-xs text-slate-400">— 所有選單都在這裡新增、編輯、刪除</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <OptionManager category="visitType" title="諮詢類型" />
+          <OptionManager category="labTestType" title="檢測類型" />
+          <OptionManager category="prescriptionStatus" title="處方狀態" />
+          <OptionManager category="taskCategory" title="任務類別" />
+          <OptionManager category="referralSource" title="轉介來源" />
+          <OptionManager category="occupation" title="職業類別" />
+        </div>
+      </div>
+
       <Card>
         <CardHeader><CardTitle>系統資訊</CardTitle></CardHeader>
         <CardContent>
@@ -57,11 +75,10 @@ export default async function AdminPage() {
               { label: "系統名稱", value: "意一堂健康管理客戶系統" },
               { label: "版本", value: "v1.0.0 MVP" },
               { label: "主標題", value: "找回健康的根本力量" },
-              { label: "副標題", value: "融合中醫與功能醫學，從根源改善健康問題，陪伴您打造長久健康人生。" },
             ].map((item) => (
               <div key={item.label} className="flex justify-between py-2 border-b border-slate-100 last:border-0">
                 <span className="text-slate-500">{item.label}</span>
-                <span className="font-medium text-right max-w-xs">{item.value}</span>
+                <span className="font-medium">{item.value}</span>
               </div>
             ))}
           </div>

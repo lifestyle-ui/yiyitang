@@ -10,6 +10,7 @@ export async function PATCH(req: Request, { params }: Params) {
     .from("Consultation")
     .update({
       date: data.date ? new Date(data.date).toISOString() : undefined,
+      visitType: data.visitType || null,
       chiefComplaint: data.chiefComplaint || null,
       content: data.content || null,
       doctorAdvice: data.doctorAdvice || null,

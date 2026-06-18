@@ -42,6 +42,7 @@ model Consultation {
   clientId       String
   client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   date           DateTime @default(now())
+  visitType      String?
   chiefComplaint String?
   content        String?
   doctorAdvice   String?
@@ -132,4 +133,14 @@ model HealthPlan {
   progress  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model OptionConfig {
+  id         String   @id @default(cuid())
+  category   String
+  label      String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([category])
 }

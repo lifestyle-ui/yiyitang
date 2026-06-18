@@ -14,6 +14,7 @@ export async function POST(req: Request, { params }: Params) {
       id: crypto.randomUUID(),
       clientId: id,
       date: data.date ? new Date(data.date).toISOString() : now,
+      visitType: data.visitType || null,
       chiefComplaint: data.chiefComplaint || null,
       content: data.content || null,
       doctorAdvice: data.doctorAdvice || null,

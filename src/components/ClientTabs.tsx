@@ -22,7 +22,7 @@ type Client = {
   lineTrackings: LineTracking[]; doctorNotes: DoctorNote[];
   healthPlans: unknown[];
 };
-type Consultation = { id: string; date: string; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
+type Consultation = { id: string; date: string; visitType: string | null; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
 type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; };
 type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; };
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
@@ -38,6 +38,7 @@ const TABS = [
   { key: "prescriptions", label: "‰øùÂÅ•ÂìÅËôïÊñπ", icon: Pill },
   { key: "tasks", label: "‰ªªÂãô", icon: ClipboardList },
   { key: "lineTrackings", label: "LINE ËøΩËπ§", icon: MessageCircle },
+  { key: "timeline", label: "ÊôÇÈñìËª∏", icon: Calendar },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -54,7 +55,8 @@ export default function ClientTabs({ client }: { client: Client }) {
       <div className="bg-white border-b border-slate-200 px-6 flex gap-1 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const count = (client[tab.key as keyof Client] as unknown[]).length;
+          const isTimeline = tab.key === "timeline";
+          const count = isTimeline ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
           return (
             <button key={tab.key}
               onClick={() => { setActiveTab(tab.key); setShowForm(false); }}
@@ -76,6 +78,7 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "tasks" && <TasksTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
+        {activeTab === "timeline" && <TimelineTab client={client} />}
       </div>
     </div>
   );
@@ -210,10 +213,15 @@ function InlineTaskList({ tasks, onChange }: { tasks: InlineTask[]; onChange: (t
 function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), visitType: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
   const [taskLines, setTaskLines] = useState("");
-  const [editForm, setEditForm] = useState({ date: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
+  const [editForm, setEditForm] = useState({ date: "", visitType: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
   const [loading, setLoading] = useState(false);
+  const [visitTypeOptions, setVisitTypeOptions] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/options?category=visitType").then(r => r.json()).then(d => setVisitTypeOptions(Array.isArray(d) ? d : []));
+  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
@@ -232,7 +240,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   };
 
   const startEdit = (c: Consultation) => {
-    setEditForm({ date: c.date.slice(0, 10), chiefComplaint: c.chiefComplaint || "", content: c.content || "", doctorAdvice: c.doctorAdvice || "", nextSteps: c.nextSteps || "" });
+    setEditForm({ date: c.date.slice(0, 10), visitType: c.visitType || "", chiefComplaint: c.chiefComplaint || "", content: c.content || "", doctorAdvice: c.doctorAdvice || "", nextSteps: c.nextSteps || "" });
     setEditingId(c.id);
     setExpandedIds((prev) => new Set([...prev, c.id]));
   };
@@ -260,7 +268,17 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
           <CardHeader><CardTitle>Êñ∞Â¢ûË´ÆË©¢Ë®òÈåÑ</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={submit} className="flex flex-col gap-4">
-              <Input label="Ë´ÆË©¢Êó•Êúü" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Ë´ÆË©¢Êó•Êúü" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-slate-600">Ë´ÆË©¢È°ûÂûã</label>
+                  <select value={form.visitType} onChange={(e) => setForm((f) => ({ ...f, visitType: e.target.value }))}
+                    className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Ë´ãÈÅ∏Êìá</option>
+                    {visitTypeOptions.map(o => <option key={o.id} value={o.label}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
               <Input label="‰∏ªË®¥ / ÁóáÁãÄ" placeholder="ÂÆ¢Êà∂‰∏ªË¶ÅË®¥Ê±ÇÔºàÊëòË¶ÅÈ°ØÁ§∫Ôºâ" value={form.chiefComplaint} onChange={(e) => setForm((f) => ({ ...f, chiefComplaint: e.target.value }))} />
               <Textarea label="Ë´ÆË©¢ÂÖßÂÆπ" placeholder="Ë©≥Á¥∞Ë®éË´ñÂÖßÂÆπ..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
               <Textarea label="ÈÜ´Â∏´Âª∫Ë≠∞" placeholder="ÈÜ´Â∏´ÁöÑÂª∫Ë≠∞ËàáËôïÁΩÆ..." value={form.doctorAdvice} onChange={(e) => setForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
@@ -289,6 +307,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
               <div className="flex items-center gap-3 min-w-0">
                 {!isEditing && (expanded ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />)}
                 <span className="text-sm font-semibold text-slate-700">{formatDate(c.date)}</span>
+                {c.visitType && <Badge variant="outline" className="text-xs">{c.visitType}</Badge>}
                 {c.chiefComplaint && !expanded && !isEditing && <span className="text-sm text-slate-500 truncate">{c.chiefComplaint}</span>}
               </div>
               {!isEditing && (
@@ -301,7 +320,17 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
               <CardContent className="pt-0 border-t border-slate-100">
                 {isEditing ? (
                   <div className="flex flex-col gap-4 pt-4">
-                    <Input label="Ë´ÆË©¢Êó•Êúü" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="Ë´ÆË©¢Êó•Êúü" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-slate-600">Ë´ÆË©¢È°ûÂûã</label>
+                        <select value={editForm.visitType} onChange={(e) => setEditForm((f) => ({ ...f, visitType: e.target.value }))}
+                          className="px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="">Ë´ãÈÅ∏Êìá</option>
+                          {visitTypeOptions.map(o => <option key={o.id} value={o.label}>{o.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
                     <Input label="‰∏ªË®¥ / ÁóáÁãÄ" value={editForm.chiefComplaint} onChange={(e) => setEditForm((f) => ({ ...f, chiefComplaint: e.target.value }))} />
                     <Textarea label="Ë´ÆË©¢ÂÖßÂÆπ" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
                     <Textarea label="ÈÜ´Â∏´Âª∫Ë≠∞" value={editForm.doctorAdvice} onChange={(e) => setEditForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
@@ -313,6 +342,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 text-sm pt-3">
+                    {c.visitType && <Field label="Ë´ÆË©¢È°ûÂûã" value={c.visitType} />}
                     {c.chiefComplaint && <Field label="‰∏ªË®¥" value={c.chiefComplaint} />}
                     {c.content && <Field label="Ë´ÆË©¢ÂÖßÂÆπ" value={c.content} />}
                     {c.doctorAdvice && <Field label="ÈÜ´Â∏´Âª∫Ë≠∞" value={c.doctorAdvice} />}
@@ -1122,6 +1152,79 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+// ¢w¢w¢w Æ…∂°∂b ¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+
+type TimelineEvent = {
+  date: string;
+  type: "consultation" | "labTest" | "prescription" | "task" | "nextVisit";
+  label: string;
+  sub?: string;
+  color: string;
+};
+
+function TimelineTab({ client }: { client: Client }) {
+  const events: TimelineEvent[] = [];
+
+  client.consultations.forEach((c) => {
+    events.push({ date: c.date, type: "consultation", label: c.visitType || "ø‘∏ﬂ∞Oø˝", sub: c.chiefComplaint || undefined, color: "bg-blue-500" });
+  });
+
+  client.doctorNotes.forEach((d) => {
+    if (d.nextVisit) events.push({ date: d.nextVisit, type: "nextVisit", label: "πw≠p¶^∂E", sub: d.diagnosis || undefined, color: "bg-purple-500" });
+  });
+
+  client.labTests.forEach((l) => {
+    if (l.testDate) events.push({ date: l.testDate, type: "labTest", label: `¿À¥˙°G${l.testType}`, sub: l.status, color: "bg-teal-500" });
+  });
+
+  client.prescriptions.forEach((p) => {
+    events.push({ date: p.date, type: "prescription", label: "∂}•ﬂ´O∞∑´~≥B§Ë", sub: p.runOutDate ? `πw≠p∏…≥f°G${formatDate(p.runOutDate)}` : undefined, color: "bg-green-500" });
+    if (p.runOutDate) events.push({ date: p.runOutDate, type: "prescription", label: "´O∞∑´~∏…≥f§È", color: "bg-orange-400" });
+  });
+
+  client.tasks.forEach((t) => {
+    if (t.dueDate && t.status !== "done") events.push({ date: t.dueDate, type: "task", label: t.title, sub: t.status === "in_progress" ? "∂i¶Ê§§" : "´›≥B≤z", color: "bg-amber-500" });
+  });
+
+  events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (events.length === 0) return <EmptyState label="©|µLÆ…∂°∂b∞Oø˝°AΩ–•˝∑sºWø‘∏ﬂ©Œ•Ù∞»" />;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const future = events.filter(e => e.date >= today);
+  const past = events.filter(e => e.date < today);
+
+  const renderGroup = (title: string, items: TimelineEvent[]) => items.length === 0 ? null : (
+    <div>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">{title}</p>
+      <div className="relative">
+        <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-200" />
+        <div className="flex flex-col gap-4">
+          {items.map((e, i) => (
+            <div key={i} className="flex items-start gap-4 pl-8 relative">
+              <div className={`absolute left-1.5 top-1 w-3 h-3 rounded-full border-2 border-white ${e.color} flex-shrink-0`} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">{formatDate(e.date)}</span>
+                  <span className="text-sm font-medium text-slate-700">{e.label}</span>
+                </div>
+                {e.sub && <p className="text-xs text-slate-500 mt-0.5">{e.sub}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-2xl flex flex-col gap-6">
+      {renderGroup("ßY±N®Ï®”", future)}
+      {renderGroup("πL•h∞Oø˝", past)}
     </div>
   );
 }

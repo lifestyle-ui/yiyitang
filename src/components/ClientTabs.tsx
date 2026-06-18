@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -1156,7 +1156,7 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
   );
 }
 
-// ¢w¢w¢w ®É¶¡¶b ¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w¢w
+// ï¿½wï¿½wï¿½w ï¿½É¶ï¿½ï¿½b ï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½wï¿½w
 
 type TimelineEvent = {
   date: string;
@@ -1170,29 +1170,29 @@ function TimelineTab({ client }: { client: Client }) {
   const events: TimelineEvent[] = [];
 
   client.consultations.forEach((c) => {
-    events.push({ date: c.date, type: "consultation", label: c.visitType || "¿Ô¸ß°O¿ý", sub: c.chiefComplaint || undefined, color: "bg-blue-500" });
+    events.push({ date: c.date, type: "consultation", label: c.visitType || "ï¿½Ô¸ß°Oï¿½ï¿½", sub: c.chiefComplaint || undefined, color: "bg-blue-500" });
   });
 
   client.doctorNotes.forEach((d) => {
-    if (d.nextVisit) events.push({ date: d.nextVisit, type: "nextVisit", label: "¹w­p¦^¶E", sub: d.diagnosis || undefined, color: "bg-purple-500" });
+    if (d.nextVisit) events.push({ date: d.nextVisit, type: "nextVisit", label: "ï¿½wï¿½pï¿½^ï¿½E", sub: d.diagnosis || undefined, color: "bg-purple-500" });
   });
 
   client.labTests.forEach((l) => {
-    if (l.testDate) events.push({ date: l.testDate, type: "labTest", label: `ÀË´ú¡G${l.testType}`, sub: l.status, color: "bg-teal-500" });
+    if (l.testDate) events.push({ date: l.testDate, type: "labTest", label: `ï¿½Ë´ï¿½ï¿½G${l.testType}`, sub: l.status, color: "bg-teal-500" });
   });
 
   client.prescriptions.forEach((p) => {
-    events.push({ date: p.date, type: "prescription", label: "¶}¥ß«O°·«~³B¤è", sub: p.runOutDate ? `¹w­p¸É³f¡G${formatDate(p.runOutDate)}` : undefined, color: "bg-green-500" });
-    if (p.runOutDate) events.push({ date: p.runOutDate, type: "prescription", label: "«O°·«~¸É³f¤é", color: "bg-orange-400" });
+    events.push({ date: p.date, type: "prescription", label: "ï¿½}ï¿½ß«Oï¿½ï¿½ï¿½~ï¿½Bï¿½ï¿½", sub: p.runOutDate ? `ï¿½wï¿½pï¿½É³fï¿½G${formatDate(p.runOutDate)}` : undefined, color: "bg-green-500" });
+    if (p.runOutDate) events.push({ date: p.runOutDate, type: "prescription", label: "ï¿½Oï¿½ï¿½ï¿½~ï¿½É³fï¿½ï¿½", color: "bg-orange-400" });
   });
 
   client.tasks.forEach((t) => {
-    if (t.dueDate && t.status !== "done") events.push({ date: t.dueDate, type: "task", label: t.title, sub: t.status === "in_progress" ? "¶i¦æ¤¤" : "«Ý³B²z", color: "bg-amber-500" });
+    if (t.dueDate && t.status !== "done") events.push({ date: t.dueDate, type: "task", label: t.title, sub: t.status === "in_progress" ? "ï¿½iï¿½æ¤¤" : "ï¿½Ý³Bï¿½z", color: "bg-amber-500" });
   });
 
   events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  if (events.length === 0) return <EmptyState label="©|µL®É¶¡¶b°O¿ý¡A½Ð¥ý·s¼W¿Ô¸ß©Î¥ô°È" />;
+  if (events.length === 0) return <EmptyState label="ï¿½|ï¿½Lï¿½É¶ï¿½ï¿½bï¿½Oï¿½ï¿½ï¿½Aï¿½Ð¥ï¿½ï¿½sï¿½Wï¿½Ô¸ß©Î¥ï¿½ï¿½" />;
 
   const today = new Date().toISOString().slice(0, 10);
   const future = events.filter(e => e.date >= today);
@@ -1223,8 +1223,8 @@ function TimelineTab({ client }: { client: Client }) {
 
   return (
     <div className="max-w-2xl flex flex-col gap-6">
-      {renderGroup("§Y±N¨ì¨Ó", future)}
-      {renderGroup("¹L¥h°O¿ý", past)}
+      {renderGroup("ï¿½Yï¿½Nï¿½ï¿½ï¿½", future)}
+      {renderGroup("ï¿½Lï¿½hï¿½Oï¿½ï¿½", past)}
     </div>
   );
 }

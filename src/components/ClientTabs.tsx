@@ -38,9 +38,7 @@ const TABS = [
   { key: "doctorNotes", label: "醫師處置", icon: Stethoscope },
   { key: "labTests", label: "檢測", icon: FlaskConical },
   { key: "prescriptions", label: "保健品處方", icon: Pill },
-  { key: "tasks", label: "任務", icon: ClipboardList },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
-  { key: "timeline", label: "時間軸", icon: Calendar },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -79,10 +77,8 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "doctorNotes" && <DoctorNotesTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "labTests" && <LabTestsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
-        {activeTab === "tasks" && <TasksTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "overview" && <OverviewTab client={client} onRefresh={() => router.refresh()} />}
-        {activeTab === "timeline" && <TimelineTab client={client} />}
       </div>
     </div>
   );
@@ -1258,11 +1254,15 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const [fetching, setFetching] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [newType, setNewType] = useState("回診");
+  const [newNote, setNewNote] = useState("");
   const [creating, setCreating] = useState(false);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [previewSteps, setPreviewSteps] = useState<string[]>([]);
   const [editRisk, setEditRisk] = useState(false);
   const [riskLevel, setRiskLevel] = useState(client.riskLevel ?? "");
+  const [editingCycle, setEditingCycle] = useState<{ id: string; note: string } | null>(null);
+  const [editingStep, setEditingStep] = useState<{ id: string; cycleId: string; note: string; label: string } | null>(null);
+  const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
 
   const load = async () => {
     const data = await fetch(`/api/clients/${client.id}/cycles`).then((r) => r.json());
@@ -1297,9 +1297,52 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     setCreating(true);
     await fetch(`/api/clients/${client.id}/cycles`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: newType }),
+      body: JSON.stringify({ type: newType, notes: newNote || null }),
     });
-    setCreating(false); setShowNew(false); await load();
+    setCreating(false); setShowNew(false); setNewNote(""); await load();
+  };
+
+  const deleteCycle = async (cycleId: string) => {
+    if (!confirm("確認刪除此週期及所有步驟？")) return;
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}`, { method: "DELETE" });
+    await load();
+  };
+
+  const deleteStep = async (cycleId: string, stepId: string) => {
+    if (!confirm("確認刪除此步驟？")) return;
+    setCycles((prev) => prev.map((c) => c.id === cycleId ? { ...c, steps: c.steps.filter((s) => s.id !== stepId) } : c));
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${stepId}`, { method: "DELETE" });
+  };
+
+  const saveStepEdit = async () => {
+    if (!editingStep) return;
+    const { id, cycleId, note, label } = editingStep;
+    setCycles((prev) => prev.map((c) => c.id === cycleId
+      ? { ...c, steps: c.steps.map((s) => s.id === id ? { ...s, note: note || null, label } : s) }
+      : c));
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: note || null, label }),
+    });
+    setEditingStep(null);
+  };
+
+  const saveCycleNote = async () => {
+    if (!editingCycle) return;
+    await fetch(`/api/clients/${client.id}/cycles/${editingCycle.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: editingCycle.note || null }),
+    });
+    await load();
+    setEditingCycle(null);
+  };
+
+  const toggleExpandCycle = (id: string) => {
+    setExpandedCycles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   const toggleStep = async (cycleId: string, step: VisitCycleStep) => {
@@ -1330,32 +1373,29 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   };
 
   const activeCycle = cycles.find((c) => c.status === "active");
+  const pastCycles = cycles.filter((c) => c.status !== "active").sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
   const nextStep = activeCycle?.steps.find((s) => !s.isCompleted);
-  const activeCycleIdx = activeCycle ? cycles.findIndex((c) => c.id === activeCycle.id) : -1;
-  const cycleNumber = (i: number) => cycles.length - i;
+  const cycleNumber = (id: string) => cycles.length - cycles.findIndex((c) => c.id === id);
 
-  // Derive age from birthDate
   const age = client.birthDate
     ? Math.floor((Date.now() - new Date(client.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000))
     : null;
 
-  // Next visit from doctor notes
   const today = new Date().toISOString().slice(0, 10);
   const nextVisit = client.doctorNotes
     .flatMap((n) => n.nextVisit ? [n.nextVisit] : [])
     .filter((d) => d >= today).sort()[0] ?? null;
 
-  // Active prescriptions
   const activePrescriptions = client.prescriptions.filter((p) => p.status === "active");
 
-  if (fetching) return <div className="py-12 text-center text-sm text-slate-400">載入中...</div>;
+  if (fetching) return <div className="py-12 text-center text-sm" style={{ color: "#A8A5A0" }}>載入中...</div>;
 
   return (
     <div className="max-w-2xl flex flex-col gap-4">
 
       {/* 客戶摘要列 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500 pb-1 border-b border-slate-100">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm pb-1" style={{ borderBottom: "1px solid #ECEAE6", color: "#8A8580" }}>
         {client.gender && <span>{client.gender}</span>}
         {age !== null && <span>{age} 歲</span>}
         {nextVisit && <span className="font-medium rounded-sm px-2 py-0.5" style={{ color: "#2C4A3E", background: "#EFF4F1", border: "1px solid #C4D4CC" }}>下次回診 {formatDate(nextVisit)}</span>}
@@ -1366,14 +1406,14 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           {editRisk ? (
             <div className="flex items-center gap-2">
               <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}
-                className="text-xs border border-slate-200 rounded px-2 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                className="text-xs border rounded px-2 py-0.5 bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#ECEAE6" }}>
                 <option value="">未設定</option>
                 <option value="高風險">高風險</option>
                 <option value="中風險">中風險</option>
                 <option value="低風險">低風險</option>
               </select>
               <button onClick={saveRisk} className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>儲存</button>
-              <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs text-slate-400">取消</button>
+              <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs" style={{ color: "#A8A5A0" }}>取消</button>
             </div>
           ) : riskConf ? (
             <button onClick={() => setEditRisk(true)}
@@ -1381,61 +1421,134 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               ⚠ {riskLevel}
             </button>
           ) : (
-            <button onClick={() => setEditRisk(true)} className="text-xs text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-full px-2.5 py-1">
+            <button onClick={() => setEditRisk(true)} className="text-xs border border-dashed rounded-full px-2.5 py-1" style={{ color: "#A8A5A0", borderColor: "#DDDAD4" }}>
               設定風險等級
             </button>
           )}
         </div>
       </div>
 
-      {/* 進行中週期：步驟進度 */}
+      {/* 進行中週期 */}
       {activeCycle && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <span className="text-xs text-slate-400 font-medium">目前週期 #{cycleNumber(activeCycleIdx)} — </span>
-              <span className="text-sm font-semibold text-slate-800">{activeCycle.type}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide" style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>進行中</span>
+        <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#C4D4CC" }}>
+          <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
+            <span className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>週期 #{cycleNumber(activeCycle.id)}</span>
+            <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{activeCycle.type}</span>
+            <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide ml-1" style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>進行中</span>
+            <div className="ml-auto flex items-center gap-3">
+              <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })}
+                className="text-xs flex items-center gap-1" style={{ color: "#6A6560" }}>
+                <Pencil className="w-3 h-3" />備注
+              </button>
               <button onClick={() => completeCycle(activeCycle.id)}
-                className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-2 py-0.5">
+                className="text-xs border rounded-sm px-2 py-0.5" style={{ color: "#6A6560", borderColor: "#DDDAD4" }}>
                 結束
+              </button>
+              <button onClick={() => deleteCycle(activeCycle.id)}
+                className="text-xs flex items-center gap-1" style={{ color: "#B83232" }}>
+                <Trash2 className="w-3 h-3" />刪除
               </button>
             </div>
           </div>
 
           {/* 水平步驟器 */}
-          <div className="flex items-start overflow-x-auto pb-1">
-            {activeCycle.steps.map((step, i) => {
-              const currentIdx = activeCycle.steps.findIndex((s) => !s.isCompleted);
-              const isCurrent = i === currentIdx;
-              const isPast = step.isCompleted;
-              return (
-                <div key={step.id} className="flex items-start flex-shrink-0">
-                  <div className="flex flex-col items-center"
-                    style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
-                    <button
-                      onClick={() => toggleStep(activeCycle.id, step)}
-                      className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
-                      style={isPast
-                        ? { background: "#2C4A3E", borderColor: "#2C4A3E", color: "#fff", borderRadius: "50%" }
-                        : isCurrent
-                          ? { background: "#fff", borderColor: "#2C4A3E", color: "#2C4A3E", borderRadius: "50%", boxShadow: "0 0 0 3px #EFF4F1" }
-                          : { background: "#fff", borderColor: "#DDDAD4", color: "#C4C0BB", borderRadius: "50%" }}>
-                      {isPast ? <Check className="w-4 h-4" /> : i + 1}
-                    </button>
-                    <span className="text-[10px] mt-1 text-center leading-tight px-1"
-                      style={{ color: isPast ? "#2C4A3E" : isCurrent ? "#1A1A1A" : "#C4C0BB", fontWeight: isCurrent ? 500 : 400 }}>
-                      {step.label}</span>
+          <div className="px-4 pt-4 pb-2 overflow-x-auto">
+            <div className="flex items-start pb-1">
+              {activeCycle.steps.map((step, i) => {
+                const currentIdx = activeCycle.steps.findIndex((s) => !s.isCompleted);
+                const isCurrent = i === currentIdx;
+                const isPast = step.isCompleted;
+                return (
+                  <div key={step.id} className="flex items-start flex-shrink-0">
+                    <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
+                      <button onClick={() => toggleStep(activeCycle.id, step)}
+                        className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
+                        style={isPast
+                          ? { background: "#2C4A3E", borderColor: "#2C4A3E", color: "#fff", borderRadius: "50%" }
+                          : isCurrent
+                            ? { background: "#fff", borderColor: "#2C4A3E", color: "#2C4A3E", borderRadius: "50%", boxShadow: "0 0 0 3px #EFF4F1" }
+                            : { background: "#fff", borderColor: "#DDDAD4", color: "#C4C0BB", borderRadius: "50%" }}>
+                        {isPast ? <Check className="w-4 h-4" /> : i + 1}
+                      </button>
+                      <span className="text-[10px] mt-1 text-center leading-tight px-1"
+                        style={{ color: isPast ? "#2C4A3E" : isCurrent ? "#1A1A1A" : "#C4C0BB", fontWeight: isCurrent ? 500 : 400 }}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {i < activeCycle.steps.length - 1 && (
+                      <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: isPast ? "#2C4A3E" : "#DDDAD4" }} />
+                    )}
                   </div>
-                  {i < activeCycle.steps.length - 1 && (
-                    <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: isPast ? "#2C4A3E" : "#DDDAD4" }} />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          {/* 步驟列表（可編輯）*/}
+          <div style={{ borderTop: "1px solid #ECEAE6" }}>
+            {activeCycle.steps.map((step) => (
+              <div key={step.id}>
+                {editingStep?.id === step.id ? (
+                  <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
+                    <input value={editingStep.label}
+                      onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
+                      className="text-sm border rounded-sm px-2 py-1 w-full focus:outline-none focus:ring-1"
+                      style={{ borderColor: "#DDDAD4" }} placeholder="步驟名稱" />
+                    <input value={editingStep.note}
+                      onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
+                      className="text-sm border rounded-sm px-2 py-1 w-full focus:outline-none focus:ring-1"
+                      style={{ borderColor: "#DDDAD4" }} placeholder="備注（選填）" />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+                      <button onClick={saveStepEdit} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
+                    <div className={cn("w-2 h-2 rounded-full flex-shrink-0", step.isCompleted ? "bg-[#2C4A3E]" : "bg-[#DDDAD4]")} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm" style={{ color: step.isCompleted ? "#8A8580" : "#1A1A1A", textDecoration: step.isCompleted ? "line-through" : "none" }}>
+                        {step.label}
+                      </span>
+                      {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#A8A5A0" }}>{step.note}</p>}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
+                        className="p-1.5 rounded" style={{ color: "#8A8580" }}>
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#B83232" }}>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#A8A5A0" }}>{formatDate(step.completedAt)}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 週期備注 */}
+          {editingCycle?.id === activeCycle.id ? (
+            <div className="px-4 py-3 flex flex-col gap-2" style={{ borderTop: "1px solid #ECEAE6" }}>
+              <textarea value={editingCycle.note}
+                onChange={(e) => setEditingCycle({ ...editingCycle, note: e.target.value })}
+                className="text-sm border rounded-sm px-3 py-2 w-full focus:outline-none focus:ring-1 resize-none"
+                style={{ borderColor: "#DDDAD4" }} rows={3}
+                placeholder="週期備注（例如：以排毒方案為主，搭配...）" />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditingCycle(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+                <button onClick={saveCycleNote} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+              </div>
+            </div>
+          ) : activeCycle.notes ? (
+            <div className="px-4 py-2.5 flex items-start gap-2" style={{ borderTop: "1px solid #ECEAE6", background: "#F9F8F6" }}>
+              <span className="text-xs flex-1" style={{ color: "#6A6560" }}>{activeCycle.notes}</span>
+              <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })} style={{ color: "#A8A5A0" }}>
+                <Pencil className="w-3 h-3" />
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -1460,98 +1573,89 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           <Plus className="w-4 h-4" />開啟新診療週期
         </button>
       ) : (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-slate-700">選擇週期類型</p>
-          <div className="grid grid-cols-2 gap-2">
-            {availableTypes.map((t) => (
-              <button key={t} onClick={() => setNewType(t)}
-                className={cn("py-2 px-3 rounded-lg text-sm font-medium border transition-colors",
-                  newType === t ? "border-transparent" : "bg-white border-[#DDDAD4] text-[#6A6560] hover:border-[#2C4A3E]")}
-                  style={newType === t ? { background: "#2C4A3E", color: "#fff" } : {}}>
-                {t}
-              </button>
-            ))}
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
+          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增診療週期</p>
+          <div>
+            <p className="text-xs mb-1.5" style={{ color: "#8A8580" }}>週期類型</p>
+            <div className="grid grid-cols-2 gap-2">
+              {availableTypes.map((t) => (
+                <button key={t} onClick={() => setNewType(t)}
+                  className={cn("py-2 px-3 rounded-sm text-sm font-medium border transition-colors", newType !== t && "hover:border-[#2C4A3E]")}
+                  style={newType === t ? { background: "#2C4A3E", color: "#fff", borderColor: "#2C4A3E" } : { background: "#fff", color: "#6A6560", borderColor: "#DDDAD4" }}>
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
           {previewSteps.length > 0 && (
-            <p className="text-xs text-slate-400 leading-relaxed">步驟：{previewSteps.join(" → ")}</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#A8A5A0" }}>步驟：{previewSteps.join(" → ")}</p>
           )}
+          <div>
+            <p className="text-xs mb-1" style={{ color: "#8A8580" }}>備注（選填）</p>
+            <textarea value={newNote} onChange={(e) => setNewNote(e.target.value)}
+              className="w-full text-sm border rounded-sm px-3 py-2 focus:outline-none focus:ring-1 resize-none"
+              style={{ borderColor: "#DDDAD4" }} rows={2}
+              placeholder="例如：以排毒方案為主，搭配..." />
+          </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="secondary" size="sm" onClick={() => setShowNew(false)}>取消</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setShowNew(false); setNewNote(""); }}>取消</Button>
             <Button size="sm" onClick={createCycle} disabled={creating}>{creating ? "建立中..." : "開始此週期"}</Button>
           </div>
         </div>
       )}
 
-      {/* 完整時間軸 */}
-      {cycles.length > 0 && (
-        <div>
-          <div className="flex items-center gap-3 my-2">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 flex-shrink-0">完整時間軸（新→舊）</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {[...cycles].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map((cycle, ci) => {
-              const num = cycles.length - cycles.findIndex((c) => c.id === cycle.id);
-              const currentIdx = cycle.steps.findIndex((s) => !s.isCompleted);
-              const isActive = cycle.status === "active";
-              return (
-                <div key={cycle.id} className="flex flex-col gap-0">
-                  {/* 週期標題列 */}
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-t-sm"
-                    style={{ borderLeft: `2px solid ${isActive ? "#2C4A3E" : "#DDDAD4"}`, background: isActive ? "#F2F6F4" : "#F7F6F3" }}>
-                    <span className="text-xs font-bold text-slate-500">週期 #{num}</span>
-                    <span className="text-xs text-slate-400">{formatDate(cycle.startDate).slice(0, 7)} 起</span>
-                    <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-semibold ml-1",
-                      CYCLE_TYPE_COLORS[cycle.type] || "bg-slate-100 text-slate-600")}>{cycle.type}</span>
-                    <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
-                      isActive ? "text-[#2C4A3E] bg-[#EFF4F1]" : "text-[#8A8580] bg-[#ECEAE6]")}>
-                      {isActive ? "進行中" : "已完成"}
-                    </span>
-                  </div>
-
-                  {/* 步驟時間軸 */}
-                  <div className={cn("border border-t-0 rounded-b-xl divide-y divide-slate-100 overflow-hidden",
-                    isActive ? "border-[#D8E8E0]" : "border-[#ECEAE6]")}>
-                    {cycle.steps.map((step, si) => {
-                      const isCurrent = isActive && si === currentIdx;
-                      const status = stepStatusLabel(step.label, step.isCompleted, isCurrent);
-                      return (
-                        <div key={step.id}
-                          className={cn("flex items-center gap-3 px-4 py-2.5 transition-colors",
-                            isCurrent ? "bg-[#F2F6F4]" : step.isCompleted ? "bg-white" : "bg-white opacity-60",
-                            isActive && "cursor-pointer hover:bg-slate-50"
-                          )}
-                          onClick={() => isActive && toggleStep(cycle.id, step)}>
-                          <div className={cn("w-2 h-2 rounded-full flex-shrink-0",
-                            step.isCompleted ? "bg-[#2C4A3E]" : isCurrent ? "bg-[#4A7A6A]" : "bg-[#DDDAD4]")} />
-                          <div className="flex items-center gap-1.5 text-slate-600 flex-shrink-0">
-                            {stepIcon(step.label)}
-                          </div>
-                          <span className={cn("text-sm flex-1 font-medium",
-                            step.isCompleted ? "text-slate-600" : isCurrent ? "text-slate-800" : "text-slate-400")}>
-                            {step.label}
-                          </span>
-                          {step.note && (
-                            <span className="text-xs text-slate-400 mr-2 max-w-[180px] truncate hidden sm:block">
-                              {step.note}
-                            </span>
-                          )}
-                          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0", status.cls)}>
-                            {status.text}
-                          </span>
-                          {step.completedAt && (
-                            <span className="text-xs text-slate-400 flex-shrink-0">{formatDate(step.completedAt)}</span>
-                          )}
-                        </div>
-                      );
-                    })}
+      {/* 歷史週期 */}
+      {pastCycles.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[.08em]" style={{ color: "#A8A5A0" }}>歷史週期（{pastCycles.length}）</p>
+          {pastCycles.map((cycle) => {
+            const num = cycleNumber(cycle.id);
+            const completedCount = cycle.steps.filter((s) => s.isCompleted).length;
+            const expanded = expandedCycles.has(cycle.id);
+            return (
+              <div key={cycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
+                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#F9F8F6" }}>
+                  <span className="text-xs" style={{ color: "#8A8580" }}>#{num}</span>
+                  <span className="text-sm font-medium" style={{ color: "#3A3A3A" }}>{cycle.type}</span>
+                  <span className="text-xs" style={{ color: "#A8A5A0" }}>{formatDate(cycle.startDate).slice(0, 7)}</span>
+                  <span className="text-xs rounded-sm px-1.5 py-0.5" style={{ background: "#ECEAE6", color: "#8A8580" }}>
+                    {completedCount}/{cycle.steps.length} 完成
+                  </span>
+                  <div className="ml-auto flex items-center gap-3">
+                    <button onClick={() => toggleExpandCycle(cycle.id)}
+                      className="text-xs flex items-center gap-1" style={{ color: "#8A8580" }}>
+                      {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}步驟
+                    </button>
+                    <button onClick={() => deleteCycle(cycle.id)} className="flex items-center gap-1 text-xs" style={{ color: "#B83232" }}>
+                      <Trash2 className="w-3 h-3" />刪除
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                {expanded && (
+                  <div style={{ borderTop: "1px solid #ECEAE6" }}>
+                    {cycle.steps.map((step) => (
+                      <div key={step.id} className="flex items-center gap-3 px-4 py-2 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
+                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", step.isCompleted ? "bg-[#2C4A3E]" : "bg-[#DDDAD4]")} />
+                        <span className="text-sm flex-1" style={{ color: step.isCompleted ? "#8A8580" : "#3A3A3A", textDecoration: step.isCompleted ? "line-through" : "none" }}>
+                          {step.label}
+                        </span>
+                        {step.note && <span className="text-xs" style={{ color: "#A8A5A0" }}>{step.note}</span>}
+                        <button onClick={() => deleteStep(cycle.id, step.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "#B83232" }}>
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {cycle.notes && (
+                      <div className="px-4 py-2.5 text-xs" style={{ background: "#F9F8F6", borderTop: "1px solid #ECEAE6", color: "#6A6560" }}>
+                        備注：{cycle.notes}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

@@ -24,3 +24,11 @@ export async function PATCH(req: Request, { params }: Params) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
+
+export async function DELETE(_req: Request, { params }: Params) {
+  const { cid } = await params;
+  await supabase.from("VisitCycleStep").delete().eq("cycleId", cid);
+  const { error } = await supabase.from("VisitCycle").delete().eq("id", cid);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

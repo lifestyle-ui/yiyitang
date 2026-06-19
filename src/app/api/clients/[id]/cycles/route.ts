@@ -41,14 +41,14 @@ export async function GET(_req: Request, { params }: Params) {
 
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
-  const { type } = await req.json();
+  const { type, notes } = await req.json();
   const steps = await getStepsForType(type);
   const now = new Date().toISOString();
   const cycleId = crypto.randomUUID();
 
   const { error: ce } = await supabase
     .from("VisitCycle")
-    .insert({ id: cycleId, clientId: id, type, status: "active", startDate: now, createdAt: now });
+    .insert({ id: cycleId, clientId: id, type, status: "active", startDate: now, createdAt: now, notes: notes ?? null });
 
   if (ce) return NextResponse.json({ error: ce.message }, { status: 500 });
 

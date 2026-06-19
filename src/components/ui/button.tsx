@@ -6,13 +6,6 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "sm" | "md" | "lg";
 }
 
-const variantStyles = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700 border-transparent",
-  secondary: "bg-white text-slate-700 hover:bg-slate-50 border-slate-200",
-  ghost: "bg-transparent text-slate-600 hover:bg-slate-100 border-transparent",
-  danger: "bg-red-600 text-white hover:bg-red-700 border-transparent",
-};
-
 const sizeStyles = {
   sm: "px-3 py-1.5 text-xs",
   md: "px-4 py-2 text-sm",
@@ -20,16 +13,22 @@ const sizeStyles = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "primary", size = "md", className, children, ...props }, ref) => {
+  ({ variant = "primary", size = "md", className, style, children, ...props }, ref) => {
+    const variantStyle: React.CSSProperties =
+      variant === "primary" ? { background: "#2C4A3E", color: "#fff", border: "1px solid transparent" }
+      : variant === "secondary" ? { background: "#fff", color: "#3A3A3A", border: "1px solid #DDDAD4" }
+      : variant === "ghost" ? { background: "transparent", color: "#6A6560", border: "1px solid transparent" }
+      : { background: "#B83232", color: "#fff", border: "1px solid transparent" };
+
     return (
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-lg border font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed",
-          variantStyles[variant],
+          "inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-85",
           sizeStyles[size],
           className
         )}
+        style={{ ...variantStyle, ...style, ['--tw-ring-color' as string]: "#2C4A3E" }}
         {...props}
       >
         {children}

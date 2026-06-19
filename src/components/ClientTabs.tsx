@@ -54,20 +54,21 @@ export default function ClientTabs({ client }: { client: Client }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-slate-200 px-6 flex gap-1 overflow-x-auto">
+      <div className="bg-white px-6 flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid #ECEAE6" }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const noCount = tab.key === "timeline" || tab.key === "overview";
           const count = noCount ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
+          const active = activeTab === tab.key;
           return (
             <button key={tab.key}
               onClick={() => { setActiveTab(tab.key); setShowForm(false); }}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
-                activeTab === tab.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-700"
-              )}>
+              className="flex items-center gap-1.5 px-4 py-3 text-[12.5px] border-b-2 transition-colors whitespace-nowrap tracking-[.01em]"
+              style={active
+                ? { borderBottomColor: "#1A1A1A", color: "#1A1A1A", fontWeight: 500 }
+                : { borderBottomColor: "transparent", color: "#A8A5A0", fontWeight: 400 }}>
               <Icon className="w-3.5 h-3.5" />{tab.label}
-              {count > 0 && <span className="ml-1 text-xs bg-slate-100 text-slate-600 rounded-full px-1.5 py-0.5">{count}</span>}
+              {count > 0 && <span className="ml-1 text-[10.5px] rounded-sm px-1.5 py-0.5" style={{ background: "#F2F0EC", color: "#6A6560", border: "1px solid #DDDAD4" }}>{count}</span>}
             </button>
           );
         })}
@@ -1214,10 +1215,10 @@ const CYCLE_TYPES = ["初診", "回診", "專項檢測", "緊急評估"] as cons
 type CycleType = typeof CYCLE_TYPES[number];
 
 const CYCLE_TYPE_COLORS: Record<string, string> = {
-  "初診": "bg-blue-100 text-blue-700",
-  "回診": "bg-green-100 text-green-700",
-  "專項檢測": "bg-purple-100 text-purple-700",
-  "緊急評估": "bg-red-100 text-red-700",
+  "初診": "text-[#2C4A3E]",
+  "回診": "text-[#2C4A3E]",
+  "專項檢測": "text-[#3A4A5C]",
+  "緊急評估": "text-[#6B2C2C]",
 };
 
 const CYCLE_STEPS: Record<string, string[]> = {
@@ -1247,13 +1248,9 @@ function stepIcon(label: string) {
 }
 
 function stepStatusLabel(label: string, isCompleted: boolean, isCurrent: boolean): { text: string; cls: string } {
-  if (!isCompleted && !isCurrent) return { text: "未完成", cls: "text-slate-400 bg-slate-100" };
-  if (!isCompleted && isCurrent) return { text: "進行中", cls: "text-blue-700 bg-blue-100" };
-  if (label.includes("諮詢")) return { text: "諮詢完成", cls: "text-green-700 bg-green-100" };
-  if (label.includes("檢測") || label.includes("檢驗")) return { text: "檢測完成", cls: "text-teal-700 bg-teal-100" };
-  if (label.includes("報告") || label.includes("解讀")) return { text: "解讀完成", cls: "text-purple-700 bg-purple-100" };
-  if (label.includes("處方") || label.includes("保健品")) return { text: "處方完成", cls: "text-green-700 bg-green-100" };
-  return { text: "完成", cls: "text-green-700 bg-green-100" };
+  if (!isCompleted && !isCurrent) return { text: "未完成", cls: "text-[#A8A5A0] bg-[#F7F6F3] border border-[#ECEAE6]" };
+  if (!isCompleted && isCurrent) return { text: "進行中", cls: "text-[#1A1A1A] bg-[#F7F6F3] border border-[#DDDAD4]" };
+  return { text: "完成", cls: "text-[#2C4A3E] bg-[#EFF4F1] border border-[#C4D4CC]" };
 }
 
 function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => void }) {
@@ -1361,7 +1358,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500 pb-1 border-b border-slate-100">
         {client.gender && <span>{client.gender}</span>}
         {age !== null && <span>{age} 歲</span>}
-        {nextVisit && <span className="text-blue-600 font-medium">下次回診 {formatDate(nextVisit)}</span>}
+        {nextVisit && <span className="font-medium rounded-sm px-2 py-0.5" style={{ color: "#2C4A3E", background: "#EFF4F1", border: "1px solid #C4D4CC" }}>下次回診 {formatDate(nextVisit)}</span>}
         {activePrescriptions.length > 0 && (
           <span>服用中：{activePrescriptions.map((p) => p.items).join("、")}</span>
         )}
@@ -1375,7 +1372,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                 <option value="中風險">中風險</option>
                 <option value="低風險">低風險</option>
               </select>
-              <button onClick={saveRisk} className="text-xs text-blue-600 font-semibold">儲存</button>
+              <button onClick={saveRisk} className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>儲存</button>
               <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs text-slate-400">取消</button>
             </div>
           ) : riskConf ? (
@@ -1400,7 +1397,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               <span className="text-sm font-semibold text-slate-800">{activeCycle.type}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">進行中</span>
+              <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide" style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>進行中</span>
               <button onClick={() => completeCycle(activeCycle.id)}
                 className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-2 py-0.5">
                 結束
@@ -1420,20 +1417,20 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                     style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
                     <button
                       onClick={() => toggleStep(activeCycle.id, step)}
-                      className={cn(
-                        "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all",
-                        isPast ? "bg-green-500 border-green-500 text-white"
-                          : isCurrent ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100"
-                            : "bg-white border-slate-300 text-slate-400 hover:border-slate-400"
-                      )}>
+                      className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
+                      style={isPast
+                        ? { background: "#2C4A3E", borderColor: "#2C4A3E", color: "#fff", borderRadius: "50%" }
+                        : isCurrent
+                          ? { background: "#fff", borderColor: "#2C4A3E", color: "#2C4A3E", borderRadius: "50%", boxShadow: "0 0 0 3px #EFF4F1" }
+                          : { background: "#fff", borderColor: "#DDDAD4", color: "#C4C0BB", borderRadius: "50%" }}>
                       {isPast ? <Check className="w-4 h-4" /> : i + 1}
                     </button>
-                    <span className={cn("text-xs mt-1 text-center leading-tight px-1",
-                      isPast ? "text-green-600" : isCurrent ? "text-blue-600 font-semibold" : "text-slate-400"
-                    )}>{step.label}</span>
+                    <span className="text-[10px] mt-1 text-center leading-tight px-1"
+                      style={{ color: isPast ? "#2C4A3E" : isCurrent ? "#1A1A1A" : "#C4C0BB", fontWeight: isCurrent ? 500 : 400 }}>
+                      {step.label}</span>
                   </div>
                   {i < activeCycle.steps.length - 1 && (
-                    <div className={cn("h-0.5 mt-4 flex-shrink-0 w-6", isPast ? "bg-green-400" : "bg-slate-200")} />
+                    <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: isPast ? "#2C4A3E" : "#DDDAD4" }} />
                   )}
                 </div>
               );
@@ -1444,11 +1441,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
       {/* 下一步卡片 */}
       {activeCycle && nextStep && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-          <FileText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#EFF4F1", border: "1px solid #C4D4CC" }}>
+          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#2C4A3E" }} />
           <div>
-            <p className="text-sm font-semibold text-amber-800">下一步：{nextStep.label}</p>
-            {nextStep.note && <p className="text-xs text-amber-600 mt-0.5">{nextStep.note}</p>}
+            <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>下一步：{nextStep.label}</p>
+            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#7A8A82" }}>{nextStep.note}</p>}
           </div>
         </div>
       )}
@@ -1456,7 +1453,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
       {/* 開啟新週期 */}
       {!showNew ? (
         <button onClick={() => setShowNew(true)}
-          className="flex items-center justify-center gap-2 py-3 border border-dashed border-slate-300 rounded-xl text-sm text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors">
+          className="flex items-center justify-center gap-2 py-3 text-sm transition-colors rounded-sm"
+          style={{ border: "1px dashed #DDDAD4", color: "#A8A5A0" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#2C4A3E"; (e.currentTarget as HTMLElement).style.borderColor = "#2C4A3E"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#A8A5A0"; (e.currentTarget as HTMLElement).style.borderColor = "#DDDAD4"; }}>
           <Plus className="w-4 h-4" />開啟新診療週期
         </button>
       ) : (
@@ -1466,7 +1466,8 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             {availableTypes.map((t) => (
               <button key={t} onClick={() => setNewType(t)}
                 className={cn("py-2 px-3 rounded-lg text-sm font-medium border transition-colors",
-                  newType === t ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300")}>
+                  newType === t ? "border-transparent" : "bg-white border-[#DDDAD4] text-[#6A6560] hover:border-[#2C4A3E]")}
+                  style={newType === t ? { background: "#2C4A3E", color: "#fff" } : {}}>
                 {t}
               </button>
             ))}
@@ -1498,33 +1499,33 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               return (
                 <div key={cycle.id} className="flex flex-col gap-0">
                   {/* 週期標題列 */}
-                  <div className={cn("flex items-center gap-2 px-3 py-2 rounded-t-xl border-l-4",
-                    isActive ? "border-blue-500 bg-blue-50/60" : "border-slate-300 bg-slate-50")}>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-t-sm"
+                    style={{ borderLeft: `2px solid ${isActive ? "#2C4A3E" : "#DDDAD4"}`, background: isActive ? "#F2F6F4" : "#F7F6F3" }}>
                     <span className="text-xs font-bold text-slate-500">週期 #{num}</span>
                     <span className="text-xs text-slate-400">{formatDate(cycle.startDate).slice(0, 7)} 起</span>
                     <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-semibold ml-1",
                       CYCLE_TYPE_COLORS[cycle.type] || "bg-slate-100 text-slate-600")}>{cycle.type}</span>
                     <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
-                      isActive ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-200")}>
+                      isActive ? "text-[#2C4A3E] bg-[#EFF4F1]" : "text-[#8A8580] bg-[#ECEAE6]")}>
                       {isActive ? "進行中" : "已完成"}
                     </span>
                   </div>
 
                   {/* 步驟時間軸 */}
                   <div className={cn("border border-t-0 rounded-b-xl divide-y divide-slate-100 overflow-hidden",
-                    isActive ? "border-blue-100" : "border-slate-200")}>
+                    isActive ? "border-[#D8E8E0]" : "border-[#ECEAE6]")}>
                     {cycle.steps.map((step, si) => {
                       const isCurrent = isActive && si === currentIdx;
                       const status = stepStatusLabel(step.label, step.isCompleted, isCurrent);
                       return (
                         <div key={step.id}
                           className={cn("flex items-center gap-3 px-4 py-2.5 transition-colors",
-                            isCurrent ? "bg-blue-50" : step.isCompleted ? "bg-white" : "bg-white opacity-60",
+                            isCurrent ? "bg-[#F2F6F4]" : step.isCompleted ? "bg-white" : "bg-white opacity-60",
                             isActive && "cursor-pointer hover:bg-slate-50"
                           )}
                           onClick={() => isActive && toggleStep(cycle.id, step)}>
                           <div className={cn("w-2 h-2 rounded-full flex-shrink-0",
-                            step.isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-500" : "bg-slate-300")} />
+                            step.isCompleted ? "bg-[#2C4A3E]" : isCurrent ? "bg-[#4A7A6A]" : "bg-[#DDDAD4]")} />
                           <div className="flex items-center gap-1.5 text-slate-600 flex-shrink-0">
                             {stepIcon(step.label)}
                           </div>

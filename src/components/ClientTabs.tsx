@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Plus, X, ChevronDown, ChevronRight,
-  Pencil, Trash2, Calendar, LayoutDashboard,
+  Pencil, Trash2, Calendar, LayoutDashboard, Check, FileText, Activity,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/select";
 
 type Client = {
   id: string; name: string; riskLevel: string | null;
+  gender: string | null; birthDate: string | null;
   consultations: Consultation[]; labTests: LabTest[];
   prescriptions: Prescription[]; tasks: Task[];
   lineTrackings: LineTracking[]; doctorNotes: DoctorNote[];
@@ -1232,8 +1233,28 @@ const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; do
   "低風險": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", dot: "bg-green-500", label: "✓ 低風險穩定" },
 };
 
-type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null };
+type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null; note: string | null };
 type VisitCycle = { id: string; type: string; status: string; startDate: string; endDate: string | null; notes: string | null; steps: VisitCycleStep[] };
+
+function stepIcon(label: string) {
+  if (label.includes("問卷")) return <ClipboardList className="w-3.5 h-3.5" />;
+  if (label.includes("諮詢")) return <MessageSquare className="w-3.5 h-3.5" />;
+  if (label.includes("檢測") || label.includes("檢驗")) return <FlaskConical className="w-3.5 h-3.5" />;
+  if (label.includes("報告") || label.includes("解讀")) return <FileText className="w-3.5 h-3.5" />;
+  if (label.includes("處方") || label.includes("保健品")) return <Pill className="w-3.5 h-3.5" />;
+  if (label.includes("回診") || label.includes("安排")) return <Calendar className="w-3.5 h-3.5" />;
+  return <Activity className="w-3.5 h-3.5" />;
+}
+
+function stepStatusLabel(label: string, isCompleted: boolean, isCurrent: boolean): { text: string; cls: string } {
+  if (!isCompleted && !isCurrent) return { text: "未完成", cls: "text-slate-400 bg-slate-100" };
+  if (!isCompleted && isCurrent) return { text: "進行中", cls: "text-blue-700 bg-blue-100" };
+  if (label.includes("諮詢")) return { text: "諮詢完成", cls: "text-green-700 bg-green-100" };
+  if (label.includes("檢測") || label.includes("檢驗")) return { text: "檢測完成", cls: "text-teal-700 bg-teal-100" };
+  if (label.includes("報告") || label.includes("解讀")) return { text: "解讀完成", cls: "text-purple-700 bg-purple-100" };
+  if (label.includes("處方") || label.includes("保健品")) return { text: "處方完成", cls: "text-green-700 bg-green-100" };
+  return { text: "完成", cls: "text-green-700 bg-green-100" };
+}
 
 function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => void }) {
   const [cycles, setCycles] = useState<VisitCycle[]>([]);
@@ -1243,14 +1264,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const [creating, setCreating] = useState(false);
   const [editRisk, setEditRisk] = useState(false);
   const [riskLevel, setRiskLevel] = useState(client.riskLevel ?? "");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const load = async () => {
     const data = await fetch(`/api/clients/${client.id}/cycles`).then((r) => r.json());
-    const list: VisitCycle[] = Array.isArray(data) ? data : [];
-    setCycles(list);
-    const active = list.find((c) => c.status === "active");
-    if (active) setExpandedIds(new Set([active.id]));
+    setCycles(Array.isArray(data) ? data : []);
     setFetching(false);
   };
 
@@ -1293,93 +1310,122 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   };
 
   const activeCycle = cycles.find((c) => c.status === "active");
-  const pastCycles = cycles.filter((c) => c.status !== "active");
   const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
   const nextStep = activeCycle?.steps.find((s) => !s.isCompleted);
+  const activeCycleIdx = activeCycle ? cycles.findIndex((c) => c.id === activeCycle.id) : -1;
+  const cycleNumber = (i: number) => cycles.length - i;
+
+  // Derive age from birthDate
+  const age = client.birthDate
+    ? Math.floor((Date.now() - new Date(client.birthDate).getTime()) / (365.25 * 24 * 3600 * 1000))
+    : null;
+
+  // Next visit from doctor notes
+  const today = new Date().toISOString().slice(0, 10);
+  const nextVisit = client.doctorNotes
+    .flatMap((n) => n.nextVisit ? [n.nextVisit] : [])
+    .filter((d) => d >= today).sort()[0] ?? null;
+
+  // Active prescriptions
+  const activePrescriptions = client.prescriptions.filter((p) => p.status === "active");
 
   if (fetching) return <div className="py-12 text-center text-sm text-slate-400">載入中...</div>;
 
   return (
     <div className="max-w-2xl flex flex-col gap-4">
 
-      {/* 風險等級 */}
-      <div className={cn("rounded-xl border p-3.5 flex items-center justify-between", riskConf ? `${riskConf.bg} ${riskConf.border}` : "bg-slate-50 border-slate-200")}>
-        {editRisk ? (
-          <div className="flex items-center gap-2 flex-1">
-            <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}
-              className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">未設定</option>
-              <option value="高風險">高風險</option>
-              <option value="中風險">中風險</option>
-              <option value="低風險">低風險</option>
-            </select>
-            <Button size="sm" onClick={saveRisk}>儲存</Button>
-            <Button size="sm" variant="secondary" onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }}>取消</Button>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              {riskConf && <span className={cn("w-2 h-2 rounded-full flex-shrink-0", riskConf.dot)} />}
-              <span className={cn("text-sm font-semibold", riskConf ? riskConf.text : "text-slate-400")}>
-                {riskConf ? riskConf.label : "未設定風險等級"}
-              </span>
-            </div>
-            <button onClick={() => setEditRisk(true)} className="text-xs text-slate-400 hover:text-slate-600">設定</button>
-          </>
+      {/* 客戶摘要列 */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500 pb-1 border-b border-slate-100">
+        {client.gender && <span>{client.gender}</span>}
+        {age !== null && <span>{age} 歲</span>}
+        {nextVisit && <span className="text-blue-600 font-medium">下次回診 {formatDate(nextVisit)}</span>}
+        {activePrescriptions.length > 0 && (
+          <span>服用中：{activePrescriptions.map((p) => p.items).join("、")}</span>
         )}
+        <div className="ml-auto">
+          {editRisk ? (
+            <div className="flex items-center gap-2">
+              <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}
+                className="text-xs border border-slate-200 rounded px-2 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="">未設定</option>
+                <option value="高風險">高風險</option>
+                <option value="中風險">中風險</option>
+                <option value="低風險">低風險</option>
+              </select>
+              <button onClick={saveRisk} className="text-xs text-blue-600 font-semibold">儲存</button>
+              <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs text-slate-400">取消</button>
+            </div>
+          ) : riskConf ? (
+            <button onClick={() => setEditRisk(true)}
+              className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border", riskConf.bg, riskConf.border, riskConf.text)}>
+              ⚠ {riskLevel}
+            </button>
+          ) : (
+            <button onClick={() => setEditRisk(true)} className="text-xs text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-full px-2.5 py-1">
+              設定風險等級
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 下一步提示 */}
-      {activeCycle && nextStep && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">→</div>
-          <div>
-            <p className="text-xs font-semibold text-blue-600">下一步</p>
-            <p className="text-sm font-medium text-blue-900">{nextStep.label}</p>
+      {/* 進行中週期：步驟進度 */}
+      {activeCycle && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-xs text-slate-400 font-medium">目前週期 #{cycleNumber(activeCycleIdx)} — </span>
+              <span className="text-sm font-semibold text-slate-800">{activeCycle.type}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">進行中</span>
+              <button onClick={() => completeCycle(activeCycle.id)}
+                className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-2 py-0.5">
+                結束
+              </button>
+            </div>
+          </div>
+
+          {/* 水平步驟器 */}
+          <div className="flex items-start overflow-x-auto pb-1">
+            {activeCycle.steps.map((step, i) => {
+              const currentIdx = activeCycle.steps.findIndex((s) => !s.isCompleted);
+              const isCurrent = i === currentIdx;
+              const isPast = step.isCompleted;
+              return (
+                <div key={step.id} className="flex items-start flex-shrink-0">
+                  <div className="flex flex-col items-center"
+                    style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
+                    <button
+                      onClick={() => toggleStep(activeCycle.id, step)}
+                      className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all",
+                        isPast ? "bg-green-500 border-green-500 text-white"
+                          : isCurrent ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100"
+                            : "bg-white border-slate-300 text-slate-400 hover:border-slate-400"
+                      )}>
+                      {isPast ? <Check className="w-4 h-4" /> : i + 1}
+                    </button>
+                    <span className={cn("text-xs mt-1 text-center leading-tight px-1",
+                      isPast ? "text-green-600" : isCurrent ? "text-blue-600 font-semibold" : "text-slate-400"
+                    )}>{step.label}</span>
+                  </div>
+                  {i < activeCycle.steps.length - 1 && (
+                    <div className={cn("h-0.5 mt-4 flex-shrink-0 w-6", isPast ? "bg-green-400" : "bg-slate-200")} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* 進行中週期 */}
-      {activeCycle && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-4 pt-4 pb-3 border-b border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CYCLE_TYPE_COLORS[activeCycle.type] || "bg-slate-100 text-slate-600")}>
-                  {activeCycle.type}
-                </span>
-                <span className="text-xs text-slate-400">{formatDate(activeCycle.startDate)} 開始</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">{activeCycle.steps.filter((s) => s.isCompleted).length} / {activeCycle.steps.length}</span>
-                <button onClick={() => completeCycle(activeCycle.id)}
-                  className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-2 py-0.5">
-                  結束週期
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-1">
-              {activeCycle.steps.map((s) => (
-                <div key={s.id} title={s.label}
-                  className={cn("h-1.5 flex-1 rounded-full transition-colors", s.isCompleted ? "bg-blue-500" : "bg-slate-200")} />
-              ))}
-            </div>
-          </div>
-          <div className="p-3 flex flex-col gap-1">
-            {activeCycle.steps.map((step) => (
-              <div key={step.id}
-                className={cn("flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none",
-                  step.isCompleted ? "bg-green-50 hover:bg-green-100" : "hover:bg-slate-50")}
-                onClick={() => toggleStep(activeCycle.id, step)}>
-                <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold",
-                  step.isCompleted ? "bg-green-500 border-green-500 text-white" : "border-slate-300")}>
-                  {step.isCompleted ? "✓" : ""}
-                </div>
-                <span className={cn("text-sm flex-1", step.isCompleted ? "text-slate-400 line-through" : "text-slate-700")}>{step.label}</span>
-                {step.completedAt && <span className="text-xs text-green-500">{formatDate(step.completedAt)}</span>}
-              </div>
-            ))}
+      {/* 下一步卡片 */}
+      {activeCycle && nextStep && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+          <FileText className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">下一步：{nextStep.label}</p>
+            {nextStep.note && <p className="text-xs text-amber-600 mt-0.5">{nextStep.note}</p>}
           </div>
         </div>
       )}
@@ -1402,9 +1448,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            步驟：{(CYCLE_STEPS[newType] || []).join(" → ")}
-          </p>
+          <p className="text-xs text-slate-400 leading-relaxed">步驟：{(CYCLE_STEPS[newType] || []).join(" → ")}</p>
           <div className="flex gap-2 justify-end">
             <Button variant="secondary" size="sm" onClick={() => setShowNew(false)}>取消</Button>
             <Button size="sm" onClick={createCycle} disabled={creating}>{creating ? "建立中..." : "開始此週期"}</Button>
@@ -1412,37 +1456,72 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         </div>
       )}
 
-      {/* 過去週期 */}
-      {pastCycles.length > 0 && (
+      {/* 完整時間軸 */}
+      {cycles.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">過去週期</p>
-          <div className="flex flex-col gap-2">
-            {pastCycles.map((cycle) => {
-              const expanded = expandedIds.has(cycle.id);
-              const done = cycle.steps.filter((s) => s.isCompleted).length;
+          <div className="flex items-center gap-3 my-2">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 flex-shrink-0">完整時間軸（新→舊）</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {[...cycles].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).map((cycle, ci) => {
+              const num = cycles.length - cycles.findIndex((c) => c.id === cycle.id);
+              const currentIdx = cycle.steps.findIndex((s) => !s.isCompleted);
+              const isActive = cycle.status === "active";
               return (
-                <div key={cycle.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 select-none"
-                    onClick={() => setExpandedIds((prev) => { const n = new Set(prev); n.has(cycle.id) ? n.delete(cycle.id) : n.add(cycle.id); return n; })}>
-                    {expanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
-                    <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CYCLE_TYPE_COLORS[cycle.type] || "bg-slate-100 text-slate-600")}>{cycle.type}</span>
-                    <span className="text-sm text-slate-500">{formatDate(cycle.startDate)}</span>
-                    <span className="ml-auto text-xs text-slate-400">{done}/{cycle.steps.length} ✓</span>
+                <div key={cycle.id} className="flex flex-col gap-0">
+                  {/* 週期標題列 */}
+                  <div className={cn("flex items-center gap-2 px-3 py-2 rounded-t-xl border-l-4",
+                    isActive ? "border-blue-500 bg-blue-50/60" : "border-slate-300 bg-slate-50")}>
+                    <span className="text-xs font-bold text-slate-500">週期 #{num}</span>
+                    <span className="text-xs text-slate-400">{formatDate(cycle.startDate).slice(0, 7)} 起</span>
+                    <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-semibold ml-1",
+                      CYCLE_TYPE_COLORS[cycle.type] || "bg-slate-100 text-slate-600")}>{cycle.type}</span>
+                    <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full",
+                      isActive ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-200")}>
+                      {isActive ? "進行中" : "已完成"}
+                    </span>
                   </div>
-                  {expanded && (
-                    <div className="border-t border-slate-100 px-4 py-3 flex flex-col gap-1.5">
-                      {cycle.steps.map((step) => (
-                        <div key={step.id} className="flex items-center gap-2 text-sm">
-                          <span className={cn("w-4 h-4 rounded-full flex items-center justify-center text-xs flex-shrink-0",
-                            step.isCompleted ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400")}>
-                            {step.isCompleted ? "✓" : ""}
+
+                  {/* 步驟時間軸 */}
+                  <div className={cn("border border-t-0 rounded-b-xl divide-y divide-slate-100 overflow-hidden",
+                    isActive ? "border-blue-100" : "border-slate-200")}>
+                    {cycle.steps.map((step, si) => {
+                      const isCurrent = isActive && si === currentIdx;
+                      const status = stepStatusLabel(step.label, step.isCompleted, isCurrent);
+                      return (
+                        <div key={step.id}
+                          className={cn("flex items-center gap-3 px-4 py-2.5 transition-colors",
+                            isCurrent ? "bg-blue-50" : step.isCompleted ? "bg-white" : "bg-white opacity-60",
+                            isActive && "cursor-pointer hover:bg-slate-50"
+                          )}
+                          onClick={() => isActive && toggleStep(cycle.id, step)}>
+                          <div className={cn("w-2 h-2 rounded-full flex-shrink-0",
+                            step.isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-500" : "bg-slate-300")} />
+                          <div className="flex items-center gap-1.5 text-slate-600 flex-shrink-0">
+                            {stepIcon(step.label)}
+                          </div>
+                          <span className={cn("text-sm flex-1 font-medium",
+                            step.isCompleted ? "text-slate-600" : isCurrent ? "text-slate-800" : "text-slate-400")}>
+                            {step.label}
                           </span>
-                          <span className={step.isCompleted ? "text-slate-400" : "text-slate-700"}>{step.label}</span>
-                          {step.completedAt && <span className="text-xs text-slate-400 ml-auto">{formatDate(step.completedAt)}</span>}
+                          {step.note && (
+                            <span className="text-xs text-slate-400 mr-2 max-w-[180px] truncate hidden sm:block">
+                              {step.note}
+                            </span>
+                          )}
+                          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0", status.cls)}>
+                            {status.text}
+                          </span>
+                          {step.completedAt && (
+                            <span className="text-xs text-slate-400 flex-shrink-0">{formatDate(step.completedAt)}</span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
@@ -1457,7 +1536,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   );
 }
 // ─── 時間軸 ────────────────────────────────────────────────────────────────────
-// ─── 時間軸 ────────────────────────────────────────────────────────────────────�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w
+// ─── 時間軸 ────────────────────────────────────────────────────────────────────
 
 type TimelineEvent = {
   date: string;

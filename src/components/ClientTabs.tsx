@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Plus, X, ChevronDown, ChevronRight,
-  Pencil, Trash2, Calendar,
+  Pencil, Trash2, Calendar, ListChecks,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ const TABS = [
   { key: "tasks", label: "任務", icon: ClipboardList },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
   { key: "timeline", label: "時間軸", icon: Calendar },
+  { key: "checklist", label: "流程", icon: ListChecks },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -55,8 +56,8 @@ export default function ClientTabs({ client }: { client: Client }) {
       <div className="bg-white border-b border-slate-200 px-6 flex gap-1 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const isTimeline = tab.key === "timeline";
-          const count = isTimeline ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
+          const noCount = tab.key === "timeline" || tab.key === "checklist";
+          const count = noCount ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
           return (
             <button key={tab.key}
               onClick={() => { setActiveTab(tab.key); setShowForm(false); }}
@@ -79,6 +80,7 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "tasks" && <TasksTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "timeline" && <TimelineTab client={client} />}
+        {activeTab === "checklist" && <ChecklistTab client={client} />}
       </div>
     </div>
   );
@@ -218,6 +220,8 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [editForm, setEditForm] = useState({ date: "", visitType: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
   const [loading, setLoading] = useState(false);
   const [visitTypeOptions, setVisitTypeOptions] = useState<{ id: string; label: string }[]>([]);
+  const [suggestedTasks, setSuggestedTasks] = useState<string[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetch("/api/options?category=visitType").then(r => r.json()).then(d => setVisitTypeOptions(Array.isArray(d) ? d : []));
@@ -235,7 +239,14 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
     for (const title of lines) {
       await createTask(client.id, { title, category: "follow_up", priority: "medium" });
     }
+    const suggestions = extractSuggestedTasks([form.content, form.doctorAdvice, form.nextSteps]);
+    const manualSet = new Set(lines.map((l) => l.toLowerCase()));
+    const fresh = suggestions.filter((s) => !manualSet.has(s.toLowerCase()));
     setLoading(false); setShowForm(false); setTaskLines("");
+    if (fresh.length > 0) {
+      setSuggestedTasks(fresh);
+      setSelectedSuggestions(new Set(fresh.map((_, i) => i)));
+    }
     onRefresh();
   };
 
@@ -292,6 +303,36 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {suggestedTasks.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-2 mb-3">
+            <ClipboardList className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">從諮詢內容偵測到後續事項</p>
+              <p className="text-xs text-amber-600 mt-0.5">勾選要自動建立的任務</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 mb-3">
+            {suggestedTasks.map((task, i) => (
+              <label key={i} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={selectedSuggestions.has(i)}
+                  onChange={() => setSelectedSuggestions((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; })}
+                  className="rounded border-amber-300 accent-amber-600" />
+                <span className="text-sm text-amber-900">{task}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={async () => {
+              const toCreate = suggestedTasks.filter((_, i) => selectedSuggestions.has(i));
+              for (const title of toCreate) await createTask(client.id, { title, category: "follow_up", priority: "medium" });
+              setSuggestedTasks([]); onRefresh();
+            }}>建立選取的任務</Button>
+            <Button size="sm" variant="secondary" onClick={() => setSuggestedTasks([])}>略過</Button>
+          </div>
+        </div>
       )}
 
       {client.consultations.length === 0 && !showForm && <EmptyState label="尚無諮詢記錄" />}
@@ -1156,7 +1197,93 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
   );
 }
 
-// �w�w�w �ɶ��b �w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w
+// ─── 關鍵字擷取任務 ────────────────────────────────────────────────────────────
+
+function extractSuggestedTasks(texts: (string | null | undefined)[]): string[] {
+  const keywords = ['需要', '請', '安排', '追蹤', '記得', '通知', '預約', '確認', '提醒', '補充', '檢驗', '複診', '回診', '填寫', '聯絡', '告知'];
+  const combined = texts.filter(Boolean).join('\n');
+  const sentences = combined.split(/[。！？\n；;]+/).map((s) => s.trim()).filter((s) => s.length > 3);
+  const found = sentences.filter((s) => keywords.some((kw) => s.includes(kw)));
+  return [...new Set(found)];
+}
+
+// ─── 流程清單 ──────────────────────────────────────────────────────────────────
+
+type ChecklistStep = { label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null };
+
+function ChecklistTab({ client }: { client: Client }) {
+  const [steps, setSteps] = useState<ChecklistStep[]>([]);
+  const [fetching, setFetching] = useState(true);
+
+  const load = async () => {
+    const data = await fetch(`/api/clients/${client.id}/checklist`).then((r) => r.json());
+    setSteps(Array.isArray(data) ? data : []);
+    setFetching(false);
+  };
+
+  useEffect(() => { load(); }, [client.id]);
+
+  const toggle = async (label: string, current: boolean) => {
+    setSteps((prev) => prev.map((s) => s.label === label
+      ? { ...s, isCompleted: !current, completedAt: !current ? new Date().toISOString() : null }
+      : s
+    ));
+    await fetch(`/api/clients/${client.id}/checklist`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, isCompleted: !current }),
+    });
+  };
+
+  if (fetching) return <div className="py-8 text-center text-sm text-slate-400">載入中...</div>;
+  if (steps.length === 0) return <EmptyState label="尚無流程步驟，請先到「管理設定」新增「客戶流程步驟」" />;
+
+  const done = steps.filter((s) => s.isCompleted).length;
+  const pct = steps.length > 0 ? Math.round((done / steps.length) * 100) : 0;
+
+  return (
+    <div className="max-w-xl">
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-slate-700">整體進度</p>
+          <p className="text-sm font-bold text-blue-700">{done} / {steps.length} 步驟完成</p>
+        </div>
+        <div className="w-full bg-slate-100 rounded-full h-2.5">
+          <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {steps.map((step, idx) => (
+          <div key={step.label}
+            className={cn(
+              "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer select-none",
+              step.isCompleted ? "bg-green-50 border-green-200" : "bg-white border-slate-200 hover:border-blue-200 hover:bg-blue-50/30"
+            )}
+            onClick={() => toggle(step.label, step.isCompleted)}>
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold transition-colors",
+              step.isCompleted ? "bg-green-500 text-white" : "bg-slate-100 text-slate-500"
+            )}>
+              {step.isCompleted ? "✓" : idx + 1}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={cn("text-sm font-medium", step.isCompleted ? "text-green-800" : "text-slate-700")}>
+                {step.label}
+              </p>
+              {step.completedAt && (
+                <p className="text-xs text-green-600 mt-0.5">完成於 {formatDate(step.completedAt)}</p>
+              )}
+            </div>
+            {!step.isCompleted && <span className="text-xs text-slate-300 flex-shrink-0">點擊完成</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── 時間軸 ────────────────────────────────────────────────────────────────────�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w
 
 type TimelineEvent = {
   date: string;

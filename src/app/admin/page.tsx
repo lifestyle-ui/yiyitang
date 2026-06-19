@@ -64,6 +64,7 @@ export default function AdminPage() {
           <OptionManager category="taskCategory" title="任務類別" />
           <OptionManager category="referralSource" title="轉介來源" />
           <OptionManager category="occupation" title="職業類別" />
+          <OptionManager category="workflowStep" title="客戶流程步驟" />
         </div>
       </div>
 

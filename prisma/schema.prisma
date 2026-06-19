@@ -33,8 +33,22 @@ model Client {
   lineTrackings   LineTracking[]
   doctorNotes     DoctorNote[]
   healthPlans     HealthPlan[]
+  checklist       ClientChecklist[]
 
   @@index([name])
+}
+
+model ClientChecklist {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label       String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([clientId, label])
+  @@index([clientId])
 }
 
 model Consultation {

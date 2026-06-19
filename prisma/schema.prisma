@@ -34,8 +34,39 @@ model Client {
   doctorNotes     DoctorNote[]
   healthPlans     HealthPlan[]
   checklist       ClientChecklist[]
+  riskLevel       String?
+  cycles          VisitCycle[]
 
   @@index([name])
+}
+
+model VisitCycle {
+  id        String           @id @default(cuid())
+  clientId  String
+  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type      String
+  status    String           @default("active")
+  startDate DateTime         @default(now())
+  endDate   DateTime?
+  notes     String?
+  createdAt DateTime         @default(now())
+  steps     VisitCycleStep[]
+
+  @@index([clientId])
+}
+
+model VisitCycleStep {
+  id          String     @id @default(cuid())
+  cycleId     String
+  cycle       VisitCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  label       String
+  sortOrder   Int        @default(0)
+  isCompleted Boolean    @default(false)
+  completedAt DateTime?
+  note        String?
+  createdAt   DateTime   @default(now())
+
+  @@index([cycleId])
 }
 
 model ClientChecklist {

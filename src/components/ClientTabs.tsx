@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Plus, X, ChevronDown, ChevronRight,
-  Pencil, Trash2, Calendar, ListChecks,
+  Pencil, Trash2, Calendar, LayoutDashboard,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 
 type Client = {
-  id: string; name: string;
+  id: string; name: string; riskLevel: string | null;
   consultations: Consultation[]; labTests: LabTest[];
   prescriptions: Prescription[]; tasks: Task[];
   lineTrackings: LineTracking[]; doctorNotes: DoctorNote[];
@@ -32,6 +32,7 @@ type Product = { id: string; name: string; category: string | null; brand: strin
 type TestItem = { id: string; name: string; category: string | null; code: string | null; turnaround: string | null; };
 
 const TABS = [
+  { key: "overview", label: "總覽", icon: LayoutDashboard },
   { key: "consultations", label: "諮詢記錄", icon: MessageSquare },
   { key: "doctorNotes", label: "醫師處置", icon: Stethoscope },
   { key: "labTests", label: "檢測", icon: FlaskConical },
@@ -39,7 +40,6 @@ const TABS = [
   { key: "tasks", label: "任務", icon: ClipboardList },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
   { key: "timeline", label: "時間軸", icon: Calendar },
-  { key: "checklist", label: "流程", icon: ListChecks },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -47,7 +47,7 @@ const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
 };
 
 export default function ClientTabs({ client }: { client: Client }) {
-  const [activeTab, setActiveTab] = useState("consultations");
+  const [activeTab, setActiveTab] = useState("overview");
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
 
@@ -56,7 +56,7 @@ export default function ClientTabs({ client }: { client: Client }) {
       <div className="bg-white border-b border-slate-200 px-6 flex gap-1 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const noCount = tab.key === "timeline" || tab.key === "checklist";
+          const noCount = tab.key === "timeline" || tab.key === "overview";
           const count = noCount ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
           return (
             <button key={tab.key}
@@ -79,8 +79,8 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "tasks" && <TasksTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
+        {activeTab === "overview" && <OverviewTab client={client} onRefresh={() => router.refresh()} />}
         {activeTab === "timeline" && <TimelineTab client={client} />}
-        {activeTab === "checklist" && <ChecklistTab client={client} />}
       </div>
     </div>
   );
@@ -1207,78 +1207,252 @@ function extractSuggestedTasks(texts: (string | null | undefined)[]): string[] {
   return [...new Set(found)];
 }
 
-// ─── 流程清單 ──────────────────────────────────────────────────────────────────
+// ─── 診療週期總覽 ──────────────────────────────────────────────────────────────
 
-type ChecklistStep = { label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null };
+const CYCLE_TYPES = ["初診", "回診", "專項檢測", "緊急評估"] as const;
+type CycleType = typeof CYCLE_TYPES[number];
 
-function ChecklistTab({ client }: { client: Client }) {
-  const [steps, setSteps] = useState<ChecklistStep[]>([]);
+const CYCLE_TYPE_COLORS: Record<string, string> = {
+  "初診": "bg-blue-100 text-blue-700",
+  "回診": "bg-green-100 text-green-700",
+  "專項檢測": "bg-purple-100 text-purple-700",
+  "緊急評估": "bg-red-100 text-red-700",
+};
+
+const CYCLE_STEPS: Record<string, string[]> = {
+  "初診": ["健康問卷收集", "初診諮詢", "功能醫學檢測", "等待報告", "報告解讀", "開立保健品處方", "安排回診"],
+  "回診": ["回診諮詢", "狀況追蹤評估", "調整保健品處方", "安排下次回診"],
+  "專項檢測": ["諮詢說明", "安排專項檢測", "等待報告", "報告解讀", "處置與建議"],
+  "緊急評估": ["即時諮詢", "緊急檢測安排", "快速解讀", "處置方案"],
+};
+
+const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
+  "高風險": { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", dot: "bg-red-500", label: "⚠ 高風險追蹤" },
+  "中風險": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", dot: "bg-amber-500", label: "⚡ 中風險觀察" },
+  "低風險": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", dot: "bg-green-500", label: "✓ 低風險穩定" },
+};
+
+type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null };
+type VisitCycle = { id: string; type: string; status: string; startDate: string; endDate: string | null; notes: string | null; steps: VisitCycleStep[] };
+
+function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => void }) {
+  const [cycles, setCycles] = useState<VisitCycle[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [newType, setNewType] = useState<CycleType>("回診");
+  const [creating, setCreating] = useState(false);
+  const [editRisk, setEditRisk] = useState(false);
+  const [riskLevel, setRiskLevel] = useState(client.riskLevel ?? "");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const load = async () => {
-    const data = await fetch(`/api/clients/${client.id}/checklist`).then((r) => r.json());
-    setSteps(Array.isArray(data) ? data : []);
+    const data = await fetch(`/api/clients/${client.id}/cycles`).then((r) => r.json());
+    const list: VisitCycle[] = Array.isArray(data) ? data : [];
+    setCycles(list);
+    const active = list.find((c) => c.status === "active");
+    if (active) setExpandedIds(new Set([active.id]));
     setFetching(false);
   };
 
   useEffect(() => { load(); }, [client.id]);
 
-  const toggle = async (label: string, current: boolean) => {
-    setSteps((prev) => prev.map((s) => s.label === label
-      ? { ...s, isCompleted: !current, completedAt: !current ? new Date().toISOString() : null }
-      : s
-    ));
-    await fetch(`/api/clients/${client.id}/checklist`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label, isCompleted: !current }),
+  const createCycle = async () => {
+    setCreating(true);
+    await fetch(`/api/clients/${client.id}/cycles`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: newType }),
+    });
+    setCreating(false); setShowNew(false); await load();
+  };
+
+  const toggleStep = async (cycleId: string, step: VisitCycleStep) => {
+    setCycles((prev) => prev.map((c) => c.id === cycleId
+      ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, isCompleted: !s.isCompleted, completedAt: !s.isCompleted ? new Date().toISOString() : null } : s) }
+      : c));
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isCompleted: !step.isCompleted }),
     });
   };
 
-  if (fetching) return <div className="py-8 text-center text-sm text-slate-400">載入中...</div>;
-  if (steps.length === 0) return <EmptyState label="尚無流程步驟，請先到「管理設定」新增「客戶流程步驟」" />;
+  const completeCycle = async (cycleId: string) => {
+    if (!confirm("確認結束此週期？")) return;
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    await load();
+  };
 
-  const done = steps.filter((s) => s.isCompleted).length;
-  const pct = steps.length > 0 ? Math.round((done / steps.length) * 100) : 0;
+  const saveRisk = async () => {
+    await fetch(`/api/clients/${client.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ riskLevel: riskLevel || null }),
+    });
+    setEditRisk(false); onRefresh();
+  };
+
+  const activeCycle = cycles.find((c) => c.status === "active");
+  const pastCycles = cycles.filter((c) => c.status !== "active");
+  const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
+  const nextStep = activeCycle?.steps.find((s) => !s.isCompleted);
+
+  if (fetching) return <div className="py-12 text-center text-sm text-slate-400">載入中...</div>;
 
   return (
-    <div className="max-w-xl">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-slate-700">整體進度</p>
-          <p className="text-sm font-bold text-blue-700">{done} / {steps.length} 步驟完成</p>
-        </div>
-        <div className="w-full bg-slate-100 rounded-full h-2.5">
-          <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-        </div>
+    <div className="max-w-2xl flex flex-col gap-4">
+
+      {/* 風險等級 */}
+      <div className={cn("rounded-xl border p-3.5 flex items-center justify-between", riskConf ? `${riskConf.bg} ${riskConf.border}` : "bg-slate-50 border-slate-200")}>
+        {editRisk ? (
+          <div className="flex items-center gap-2 flex-1">
+            <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}
+              className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">未設定</option>
+              <option value="高風險">高風險</option>
+              <option value="中風險">中風險</option>
+              <option value="低風險">低風險</option>
+            </select>
+            <Button size="sm" onClick={saveRisk}>儲存</Button>
+            <Button size="sm" variant="secondary" onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }}>取消</Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              {riskConf && <span className={cn("w-2 h-2 rounded-full flex-shrink-0", riskConf.dot)} />}
+              <span className={cn("text-sm font-semibold", riskConf ? riskConf.text : "text-slate-400")}>
+                {riskConf ? riskConf.label : "未設定風險等級"}
+              </span>
+            </div>
+            <button onClick={() => setEditRisk(true)} className="text-xs text-slate-400 hover:text-slate-600">設定</button>
+          </>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3">
-        {steps.map((step, idx) => (
-          <div key={step.label}
-            className={cn(
-              "flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer select-none",
-              step.isCompleted ? "bg-green-50 border-green-200" : "bg-white border-slate-200 hover:border-blue-200 hover:bg-blue-50/30"
-            )}
-            onClick={() => toggle(step.label, step.isCompleted)}>
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold transition-colors",
-              step.isCompleted ? "bg-green-500 text-white" : "bg-slate-100 text-slate-500"
-            )}>
-              {step.isCompleted ? "✓" : idx + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={cn("text-sm font-medium", step.isCompleted ? "text-green-800" : "text-slate-700")}>
-                {step.label}
-              </p>
-              {step.completedAt && (
-                <p className="text-xs text-green-600 mt-0.5">完成於 {formatDate(step.completedAt)}</p>
-              )}
-            </div>
-            {!step.isCompleted && <span className="text-xs text-slate-300 flex-shrink-0">點擊完成</span>}
+      {/* 下一步提示 */}
+      {activeCycle && nextStep && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">→</div>
+          <div>
+            <p className="text-xs font-semibold text-blue-600">下一步</p>
+            <p className="text-sm font-medium text-blue-900">{nextStep.label}</p>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* 進行中週期 */}
+      {activeCycle && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CYCLE_TYPE_COLORS[activeCycle.type] || "bg-slate-100 text-slate-600")}>
+                  {activeCycle.type}
+                </span>
+                <span className="text-xs text-slate-400">{formatDate(activeCycle.startDate)} 開始</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500">{activeCycle.steps.filter((s) => s.isCompleted).length} / {activeCycle.steps.length}</span>
+                <button onClick={() => completeCycle(activeCycle.id)}
+                  className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-2 py-0.5">
+                  結束週期
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {activeCycle.steps.map((s) => (
+                <div key={s.id} title={s.label}
+                  className={cn("h-1.5 flex-1 rounded-full transition-colors", s.isCompleted ? "bg-blue-500" : "bg-slate-200")} />
+              ))}
+            </div>
+          </div>
+          <div className="p-3 flex flex-col gap-1">
+            {activeCycle.steps.map((step) => (
+              <div key={step.id}
+                className={cn("flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors select-none",
+                  step.isCompleted ? "bg-green-50 hover:bg-green-100" : "hover:bg-slate-50")}
+                onClick={() => toggleStep(activeCycle.id, step)}>
+                <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold",
+                  step.isCompleted ? "bg-green-500 border-green-500 text-white" : "border-slate-300")}>
+                  {step.isCompleted ? "✓" : ""}
+                </div>
+                <span className={cn("text-sm flex-1", step.isCompleted ? "text-slate-400 line-through" : "text-slate-700")}>{step.label}</span>
+                {step.completedAt && <span className="text-xs text-green-500">{formatDate(step.completedAt)}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 開啟新週期 */}
+      {!showNew ? (
+        <button onClick={() => setShowNew(true)}
+          className="flex items-center justify-center gap-2 py-3 border border-dashed border-slate-300 rounded-xl text-sm text-slate-400 hover:border-blue-400 hover:text-blue-600 transition-colors">
+          <Plus className="w-4 h-4" />開啟新診療週期
+        </button>
+      ) : (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
+          <p className="text-sm font-semibold text-slate-700">選擇週期類型</p>
+          <div className="grid grid-cols-2 gap-2">
+            {CYCLE_TYPES.map((t) => (
+              <button key={t} onClick={() => setNewType(t)}
+                className={cn("py-2 px-3 rounded-lg text-sm font-medium border transition-colors",
+                  newType === t ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300")}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            步驟：{(CYCLE_STEPS[newType] || []).join(" → ")}
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" size="sm" onClick={() => setShowNew(false)}>取消</Button>
+            <Button size="sm" onClick={createCycle} disabled={creating}>{creating ? "建立中..." : "開始此週期"}</Button>
+          </div>
+        </div>
+      )}
+
+      {/* 過去週期 */}
+      {pastCycles.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">過去週期</p>
+          <div className="flex flex-col gap-2">
+            {pastCycles.map((cycle) => {
+              const expanded = expandedIds.has(cycle.id);
+              const done = cycle.steps.filter((s) => s.isCompleted).length;
+              return (
+                <div key={cycle.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 select-none"
+                    onClick={() => setExpandedIds((prev) => { const n = new Set(prev); n.has(cycle.id) ? n.delete(cycle.id) : n.add(cycle.id); return n; })}>
+                    {expanded ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+                    <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", CYCLE_TYPE_COLORS[cycle.type] || "bg-slate-100 text-slate-600")}>{cycle.type}</span>
+                    <span className="text-sm text-slate-500">{formatDate(cycle.startDate)}</span>
+                    <span className="ml-auto text-xs text-slate-400">{done}/{cycle.steps.length} ✓</span>
+                  </div>
+                  {expanded && (
+                    <div className="border-t border-slate-100 px-4 py-3 flex flex-col gap-1.5">
+                      {cycle.steps.map((step) => (
+                        <div key={step.id} className="flex items-center gap-2 text-sm">
+                          <span className={cn("w-4 h-4 rounded-full flex items-center justify-center text-xs flex-shrink-0",
+                            step.isCompleted ? "bg-green-500 text-white" : "bg-slate-100 text-slate-400")}>
+                            {step.isCompleted ? "✓" : ""}
+                          </span>
+                          <span className={step.isCompleted ? "text-slate-400" : "text-slate-700"}>{step.label}</span>
+                          {step.completedAt && <span className="text-xs text-slate-400 ml-auto">{formatDate(step.completedAt)}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {cycles.length === 0 && !showNew && (
+        <EmptyState label="尚無診療週期，點擊上方「開啟新診療週期」開始" />
+      )}
     </div>
   );
 }

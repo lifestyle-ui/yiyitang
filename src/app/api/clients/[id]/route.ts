@@ -44,6 +44,7 @@ export async function PATCH(_req: Request, { params }: Params) {
       occupation: data.occupation || null,
       referralSource: data.referralSource || null,
       notes: data.notes || null,
+      ...(data.riskLevel !== undefined && { riskLevel: data.riskLevel || null }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", id)

@@ -1456,7 +1456,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     </div>
   );
 }
-
+// ─── 時間軸 ────────────────────────────────────────────────────────────────────
 // ─── 時間軸 ────────────────────────────────────────────────────────────────────�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w�w
 
 type TimelineEvent = {
@@ -1523,8 +1523,8 @@ function TimelineTab({ client }: { client: Client }) {
   );
 
   return (
-    <div className="max-w-2xl flex flex-col gap-6">
-      {renderGroup("�Y�N���", future)}
+      {renderGroup("即將事項", future)}
+      {renderGroup("過去記錄", past)}
       {renderGroup("�L�h�O��", past)}
     </div>
   );

@@ -3,12 +3,22 @@ import { supabase } from "@/lib/supabase";
 
 type Params = { params: Promise<{ id: string }> };
 
-const CYCLE_STEPS: Record<string, string[]> = {
+const DEFAULT_CYCLE_STEPS: Record<string, string[]> = {
   "初診": ["健康問卷收集", "初診諮詢", "功能醫學檢測", "等待報告", "報告解讀", "開立保健品處方", "安排回診"],
   "回診": ["回診諮詢", "狀況追蹤評估", "調整保健品處方", "安排下次回診"],
   "專項檢測": ["諮詢說明", "安排專項檢測", "等待報告", "報告解讀", "處置與建議"],
   "緊急評估": ["即時諮詢", "緊急檢測安排", "快速解讀", "處置方案"],
 };
+
+async function getStepsForType(type: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("OptionConfig")
+    .select("label, sortOrder")
+    .eq("category", `cycleStep_${type}`)
+    .order("sortOrder", { ascending: true });
+  if (data && data.length > 0) return data.map((r) => r.label);
+  return DEFAULT_CYCLE_STEPS[type] ?? DEFAULT_CYCLE_STEPS["回診"];
+}
 
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
@@ -32,7 +42,7 @@ export async function GET(_req: Request, { params }: Params) {
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   const { type } = await req.json();
-  const steps = CYCLE_STEPS[type] ?? CYCLE_STEPS["回診"];
+  const steps = await getStepsForType(type);
   const now = new Date().toISOString();
   const cycleId = crypto.randomUUID();
 

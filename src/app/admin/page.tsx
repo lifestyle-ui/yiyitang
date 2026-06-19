@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Settings, Users, ClipboardList, MessageSquare, ListChecks } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import OptionManager from "@/components/OptionManager";
+import CycleTypeManager from "@/components/CycleTypeManager";
 
 type Stats = { totalClients: number; totalTasks: number; totalConsultations: number; totalPrescriptions: number };
 
@@ -65,6 +66,17 @@ export default function AdminPage() {
           <OptionManager category="referralSource" title="轉介來源" />
           <OptionManager category="occupation" title="職業類別" />
           <OptionManager category="workflowStep" title="客戶流程步驟" />
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ListChecks className="w-4 h-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-700">診療週期管理</h2>
+          <p className="text-xs text-slate-400">— 新增、修改週期類型及其預設步驟</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CycleTypeManager />
         </div>
       </div>
 

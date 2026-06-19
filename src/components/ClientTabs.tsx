@@ -1260,8 +1260,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const [cycles, setCycles] = useState<VisitCycle[]>([]);
   const [fetching, setFetching] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [newType, setNewType] = useState<CycleType>("回診");
+  const [newType, setNewType] = useState("回診");
   const [creating, setCreating] = useState(false);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [previewSteps, setPreviewSteps] = useState<string[]>([]);
   const [editRisk, setEditRisk] = useState(false);
   const [riskLevel, setRiskLevel] = useState(client.riskLevel ?? "");
 
@@ -1272,6 +1274,27 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   };
 
   useEffect(() => { load(); }, [client.id]);
+
+  useEffect(() => {
+    fetch("/api/options?category=cycleType").then((r) => r.json()).then((data) => {
+      const labels = Array.isArray(data) && data.length > 0
+        ? data.map((d: { label: string }) => d.label)
+        : ["初診", "回診", "專項檢測", "緊急評估"];
+      setAvailableTypes(labels);
+      if (!labels.includes(newType)) setNewType(labels[0]);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!newType) return;
+    fetch(`/api/options?category=${encodeURIComponent(`cycleStep_${newType}`)}`).then((r) => r.json()).then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setPreviewSteps(data.map((d: { label: string }) => d.label));
+      } else {
+        setPreviewSteps(CYCLE_STEPS[newType] || []);
+      }
+    });
+  }, [newType]);
 
   const createCycle = async () => {
     setCreating(true);
@@ -1440,7 +1463,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
           <p className="text-sm font-semibold text-slate-700">選擇週期類型</p>
           <div className="grid grid-cols-2 gap-2">
-            {CYCLE_TYPES.map((t) => (
+            {availableTypes.map((t) => (
               <button key={t} onClick={() => setNewType(t)}
                 className={cn("py-2 px-3 rounded-lg text-sm font-medium border transition-colors",
                   newType === t ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300")}>
@@ -1448,7 +1471,9 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">步驟：{(CYCLE_STEPS[newType] || []).join(" → ")}</p>
+          {previewSteps.length > 0 && (
+            <p className="text-xs text-slate-400 leading-relaxed">步驟：{previewSteps.join(" → ")}</p>
+          )}
           <div className="flex gap-2 justify-end">
             <Button variant="secondary" size="sm" onClick={() => setShowNew(false)}>取消</Button>
             <Button size="sm" onClick={createCycle} disabled={creating}>{creating ? "建立中..." : "開始此週期"}</Button>

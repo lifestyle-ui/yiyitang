@@ -13,6 +13,7 @@ export async function PATCH(req: Request, { params }: Params) {
       content: data.content,
       response: data.response || null,
       followUpNeeded: !!data.followUpNeeded,
+      ...(data.scores !== undefined && { scores: data.scores || null }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", rid)

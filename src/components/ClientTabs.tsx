@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select";
 type Client = {
   id: string; name: string; riskLevel: string | null;
   gender: string | null; birthDate: string | null;
+  referralSource: string | null;
   consultations: Consultation[]; labTests: LabTest[];
   prescriptions: Prescription[]; tasks: Task[];
   lineTrackings: LineTracking[]; doctorNotes: DoctorNote[];
@@ -27,7 +28,7 @@ type Consultation = { id: string; date: string; visitType: string | null; chiefC
 type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; };
 type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; };
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
-type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; };
+type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, number> | null; };
 type DoctorNote = { id: string; date: string; diagnosis: string | null; treatment: string | null; notes: string | null; nextVisit: string | null; };
 type Product = { id: string; name: string; category: string | null; brand: string | null; spec: string | null; dosage: string | null; unit: string; };
 type TestItem = { id: string; name: string; category: string | null; code: string | null; turnaround: string | null; };
@@ -1085,13 +1086,188 @@ function TaskCard({ task, editing, editForm, setEditForm, onStatusChange, onEdit
   );
 }
 
+// ─── 追蹤評分 ────────────────────────────────────────────────────────────────
+
+const SCORE_CATEGORIES = [
+  { key: "sleep", label: "睡眠" },
+  { key: "energy", label: "精力" },
+  { key: "digestion", label: "消化" },
+  { key: "mood", label: "情緒" },
+  { key: "pain", label: "疼痛/不適" },
+] as const;
+
+type TrackScores = Record<string, number>;
+
+function ScorePicker({ scores, onChange }: { scores: TrackScores; onChange: (s: TrackScores) => void }) {
+  return (
+    <div>
+      <p className="text-xs mb-2" style={{ color: "#8A8580" }}>改善程度（1 成＝很差，5 成＝極佳；可不填）</p>
+      <div className="flex flex-col gap-2">
+        {SCORE_CATEGORIES.map((cat) => (
+          <div key={cat.key} className="flex items-center gap-3">
+            <span className="text-xs w-16 flex-shrink-0" style={{ color: "#6A6560" }}>{cat.label}</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button"
+                  onClick={() => {
+                    const next = { ...scores };
+                    if (next[cat.key] === n) delete next[cat.key]; else next[cat.key] = n;
+                    onChange(next);
+                  }}
+                  className="w-7 h-7 text-xs rounded transition-all"
+                  style={scores[cat.key] === n
+                    ? { background: "#2C4A3E", color: "#fff", border: "1px solid #2C4A3E" }
+                    : { background: "#F7F6F3", color: "#8A8580", border: "1px solid #ECEAE6" }}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            {scores[cat.key] !== undefined && (
+              <span className="text-xs" style={{ color: "#2C4A3E" }}>{scores[cat.key]} 成</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScoreBadges({ scores }: { scores: Record<string, number> | null }) {
+  if (!scores) return null;
+  const filled = SCORE_CATEGORIES.filter((c) => scores[c.key] !== undefined);
+  if (filled.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1.5">
+      {filled.map((c) => {
+        const val = scores[c.key];
+        return (
+          <span key={c.key} className="text-[10.5px] px-1.5 py-0.5 rounded-sm"
+            style={val >= 4
+              ? { background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }
+              : val >= 3
+                ? { background: "#FEF9EC", color: "#8A6A00", border: "1px solid #E8D8A0" }
+                : { background: "#FEF0F0", color: "#8A3A3A", border: "1px solid #E8B0B0" }}>
+            {c.label} {val} 成
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── 進診前交班備忘 ────────────────────────────────────────────────────────────
+
+function HandoverBriefCard({ client }: { client: Client }) {
+  const latestConsultation = [...client.consultations]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  const latestTracking = [...client.lineTrackings]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+  const [open, setOpen] = useState(false);
+  const [brief, setBrief] = useState({
+    referralSource: client.referralSource ?? "",
+    chiefComplaint: latestConsultation?.chiefComplaint ?? "",
+    currentStatus: latestTracking?.content ? latestTracking.content.slice(0, 80) : "",
+    todayGoal: "",
+  });
+  const [copied, setCopied] = useState(false);
+
+  const formatted = [
+    `醫師您好，下一位是${client.name}，`,
+    brief.referralSource ? `由${brief.referralSource}轉介，` : "",
+    brief.chiefComplaint ? `主要問題是「${brief.chiefComplaint}」，` : "",
+    brief.currentStatus ? `目前${brief.currentStatus}，` : "",
+    brief.todayGoal ? `今日希望確認${brief.todayGoal}。` : "（今日目標請補充）",
+  ].join("");
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(formatted);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const f = (field: keyof typeof brief, val: string) =>
+    setBrief((prev) => ({ ...prev, [field]: val }));
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 text-sm py-2.5 px-4 rounded-sm text-left transition-colors"
+        style={{ background: "#F2F0EC", border: "1px solid #ECEAE6", color: "#6A6560" }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2C4A3E"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#ECEAE6"; }}>
+        <ClipboardList className="w-4 h-4 flex-shrink-0" style={{ color: "#2C4A3E" }} />
+        <span>進診前交班備忘</span>
+        <ChevronRight className="w-3.5 h-3.5 ml-auto" style={{ color: "#A8A5A0" }} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#C4D4CC" }}>
+      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
+        <ClipboardList className="w-4 h-4" style={{ color: "#2C4A3E" }} />
+        <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>進診前交班備忘</span>
+        <button onClick={() => setOpen(false)} className="ml-auto" style={{ color: "#A8A5A0" }}>
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>轉介來源</label>
+            <input value={brief.referralSource} onChange={(e) => f("referralSource", e.target.value)}
+              placeholder="例：陳醫師介紹、自行前來"
+              className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
+              style={{ borderColor: "#DDDAD4" }} />
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>主訴</label>
+            <input value={brief.chiefComplaint} onChange={(e) => f("chiefComplaint", e.target.value)}
+              placeholder="例：疲勞、睡眠不好"
+              className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
+              style={{ borderColor: "#DDDAD4" }} />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>目前狀況（上次回診後）</label>
+          <input value={brief.currentStatus} onChange={(e) => f("currentStatus", e.target.value)}
+            placeholder="例：睡眠稍微改善，但疲勞仍在"
+            className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
+            style={{ borderColor: "#DDDAD4" }} />
+        </div>
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>今日目標 <span style={{ color: "#B83232" }}>*</span></label>
+          <input value={brief.todayGoal} onChange={(e) => f("todayGoal", e.target.value)}
+            placeholder="例：確認睡眠改善狀況、調整保健品"
+            className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
+            style={{ borderColor: "#DDDAD4" }} />
+        </div>
+        <div className="rounded-sm p-3" style={{ background: "#F9F8F6", border: "1px solid #ECEAE6" }}>
+          <p className="text-[10.5px] mb-1.5 font-medium uppercase tracking-[.06em]" style={{ color: "#A8A5A0" }}>交班話術</p>
+          <p className="text-sm leading-relaxed" style={{ color: "#1A1A1A" }}>{formatted}</p>
+        </div>
+        <div className="flex justify-end">
+          <button onClick={copy}
+            className="text-xs px-3 py-1.5 rounded-sm border transition-colors"
+            style={copied
+              ? { background: "#EFF4F1", color: "#2C4A3E", borderColor: "#C4D4CC" }
+              : { background: "#fff", color: "#6A6560", borderColor: "#DDDAD4" }}>
+            {copied ? "✓ 已複製" : "複製話術"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LINE 追蹤 ────────────────────────────────────────────────────────────────
 
 function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), content: "", response: "", followUpNeeded: false });
-  const [editForm, setEditForm] = useState({ date: "", content: "", response: "", followUpNeeded: false });
+  const [form, setForm] = useState<{ date: string; content: string; response: string; followUpNeeded: boolean; scores: TrackScores }>({ date: new Date().toISOString().slice(0, 10), content: "", response: "", followUpNeeded: false, scores: {} });
+  const [editForm, setEditForm] = useState<{ date: string; content: string; response: string; followUpNeeded: boolean; scores: TrackScores }>({ date: "", content: "", response: "", followUpNeeded: false, scores: {} });
   const [loading, setLoading] = useState(false);
 
   const toggleExpand = (id: string) => {
@@ -1102,19 +1278,19 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
     e.preventDefault();
     if (!form.content.trim()) return;
     setLoading(true);
-    await fetch(`/api/clients/${client.id}/line-trackings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setLoading(false); setShowForm(false); onRefresh();
+    await fetch(`/api/clients/${client.id}/line-trackings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, scores: Object.keys(form.scores).length > 0 ? form.scores : null }) });
+    setLoading(false); setShowForm(false); setForm({ date: new Date().toISOString().slice(0, 10), content: "", response: "", followUpNeeded: false, scores: {} }); onRefresh();
   };
 
   const startEdit = (t: LineTracking) => {
-    setEditForm({ date: t.date.slice(0, 10), content: t.content, response: t.response || "", followUpNeeded: t.followUpNeeded });
+    setEditForm({ date: t.date.slice(0, 10), content: t.content, response: t.response || "", followUpNeeded: t.followUpNeeded, scores: (t.scores as TrackScores) || {} });
     setEditingId(t.id);
     setExpandedIds((prev) => new Set([...prev, t.id]));
   };
 
   const saveEdit = async (id: string) => {
     setLoading(true);
-    await fetch(`/api/clients/${client.id}/line-trackings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+    await fetch(`/api/clients/${client.id}/line-trackings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, scores: Object.keys(editForm.scores).length > 0 ? editForm.scores : null }) });
     setLoading(false); setEditingId(null); onRefresh();
   };
 
@@ -1133,6 +1309,7 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
               <Input label="日期" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
               <Textarea label="對話內容 *" placeholder="記錄與客戶的 LINE 對話重點..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={4} required />
               <Textarea label="客戶回應" placeholder="客戶的回覆或狀況..." value={form.response} onChange={(e) => setForm((f) => ({ ...f, response: e.target.value }))} rows={2} />
+              <ScorePicker scores={form.scores} onChange={(scores) => setForm((f) => ({ ...f, scores }))} />
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.followUpNeeded} onChange={(e) => setForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
                 需要後續追蹤
@@ -1157,6 +1334,16 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                 <span className="text-sm font-semibold text-slate-700">{formatDate(t.date)}</span>
                 {!expanded && !isEditing && <span className="text-sm text-slate-500 truncate">{preview}</span>}
                 {t.followUpNeeded && <Badge variant="warning" className="flex-shrink-0">需追蹤</Badge>}
+                {!expanded && !isEditing && t.scores && Object.keys(t.scores).length > 0 && (
+                  <div className="flex gap-1 flex-shrink-0">
+                    {SCORE_CATEGORIES.filter((c) => t.scores![c.key] !== undefined).slice(0, 3).map((c) => (
+                      <span key={c.key} className="text-[10px] px-1 py-0.5 rounded-sm"
+                        style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>
+                        {c.label}{t.scores![c.key]}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1171,6 +1358,7 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <Input label="日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
                     <Textarea label="對話內容 *" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
                     <Textarea label="客戶回應" value={editForm.response} onChange={(e) => setEditForm((f) => ({ ...f, response: e.target.value }))} rows={2} />
+                    <ScorePicker scores={editForm.scores} onChange={(scores) => setEditForm((f) => ({ ...f, scores }))} />
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={editForm.followUpNeeded} onChange={(e) => setEditForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
                       需要後續追蹤
@@ -1184,6 +1372,7 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                   <div className="flex flex-col gap-2 text-sm pt-3">
                     <Field label="對話內容" value={t.content} />
                     {t.response && <Field label="客戶回應" value={t.response} />}
+                    <ScoreBadges scores={t.scores} />
                   </div>
                 )}
               </CardContent>
@@ -1427,6 +1616,9 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           )}
         </div>
       </div>
+
+      {/* 進診前交班備忘 */}
+      <HandoverBriefCard client={client} />
 
       {/* 進行中週期 */}
       {activeCycle && (

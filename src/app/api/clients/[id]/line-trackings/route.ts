@@ -17,6 +17,7 @@ export async function POST(req: Request, { params }: Params) {
       content: data.content,
       response: data.response || null,
       followUpNeeded: data.followUpNeeded || false,
+      scores: data.scores || null,
       createdAt: now,
     })
     .select()

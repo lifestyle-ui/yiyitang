@@ -105,8 +105,10 @@ export async function GET(_req: Request, { params }: Params) {
 
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
-  const { type, notes } = await req.json();
-  const steps = await getStepsForType(type);
+  const { type, notes, customSteps } = await req.json();
+  const steps = customSteps && Array.isArray(customSteps) && customSteps.length > 0
+    ? customSteps
+    : await getStepsForType(type);
   const now = new Date().toISOString();
   const cycleId = crypto.randomUUID();
 

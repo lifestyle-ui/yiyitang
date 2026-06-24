@@ -1737,6 +1737,8 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const [previewSteps, setPreviewSteps] = useState<string[]>([]);
   const [editRisk, setEditRisk] = useState(false);
   const [riskLevel, setRiskLevel] = useState(client.riskLevel ?? "");
+  const [customTypeName, setCustomTypeName] = useState("");
+  const [customStepLines, setCustomStepLines] = useState("");
   const [editingCycle, setEditingCycle] = useState<{ id: string; note: string } | null>(null);
   const [editingStep, setEditingStep] = useState<{ id: string; cycleId: string; note: string; label: string } | null>(null);
   const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
@@ -1753,7 +1755,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     fetch("/api/options?category=cycleType").then((r) => r.json()).then((data) => {
       const labels = Array.isArray(data) && data.length > 0
         ? data.map((d: { label: string }) => d.label)
-        : ["初診", "回診", "專項檢測", "緊急評估"];
+        : [...CYCLE_TYPES];
       setAvailableTypes(labels);
       if (!labels.includes(newType)) setNewType(labels[0]);
     });
@@ -1771,12 +1773,18 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   }, [newType]);
 
   const createCycle = async () => {
+    const isCustom = newType === "自定義";
+    const finalType = isCustom ? (customTypeName.trim() || "自定義") : newType;
     setCreating(true);
+    const body: Record<string, unknown> = { type: finalType, notes: newNote || null };
+    if (isCustom && customStepLines.trim()) {
+      body.customSteps = customStepLines.split("\n").map((s) => s.trim()).filter(Boolean);
+    }
     await fetch(`/api/clients/${client.id}/cycles`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: newType, notes: newNote || null }),
+      body: JSON.stringify(body),
     });
-    setCreating(false); setShowNew(false); setNewNote(""); await load();
+    setCreating(false); setShowNew(false); setNewNote(""); setCustomTypeName(""); setCustomStepLines(""); await load();
   };
 
   const deleteCycle = async (cycleId: string) => {
@@ -1989,8 +1997,8 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                 const nextIdx = nextHeader ? activeCycle.steps.findIndex((s) => s.id === nextHeader.id) : activeCycle.steps.length;
                 const mySteps = activeCycle.steps.slice(myIdx + 1, nextIdx).filter((s) => !s.label.startsWith("§ "));
                 const allDone = mySteps.length > 0 && mySteps.every((s) => s.isCompleted || s.status === "completed" || s.status === "skipped");
-                const anyActive = mySteps.some((s) => s.status === "in_progress");
-                const st: StepStatus = allDone ? "completed" : anyActive ? "in_progress" : "pending";
+                const anyDone = mySteps.some((s) => s.isCompleted || s.status === "completed" || s.status === "in_progress");
+                const st: StepStatus = allDone ? "completed" : anyDone ? "in_progress" : "pending";
                 const sty = STEP_STATUS_STYLE[st];
                 const displayLabel = step.label.startsWith("§ ") ? step.label.slice(2) : step.label;
                 return (
@@ -2083,15 +2091,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                         style={{ background: st === "completed" ? "#d4ede8" : st === "in_progress" ? "#e8f0ed" : "#ece5da", color: st === "completed" ? "#2d7a6a" : st === "in_progress" ? "#2d7a6a" : "#8b8076" }}>
                         {STEP_STATUS_STYLE[st].label}
                       </button>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setCreatingTaskForStep({ stepId: step.id, title: step.label, dueDate: "", priority: "medium" })}
-                          className="p-1.5 rounded text-[10px] font-medium" style={{ color: "#5c4638" }} title="建立追蹤任務">+任務</button>
-                        <button onClick={() => skipStep(activeCycle.id, step)}
-                          className="p-1.5 rounded text-[10px]" style={{ color: st === "skipped" ? "#5c4638" : "#b3a99d" }}
-                          title={st === "skipped" ? "取消略過" : "標記略過"}>{st === "skipped" ? "↩" : "⊘"}</button>
+                      <div className="flex items-center gap-1">
                         <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
-                          className="p-1.5 rounded" style={{ color: "#8b8076" }}><Pencil className="w-3 h-3" /></button>
-                        <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#b8392c" }}><Trash2 className="w-3 h-3" /></button>
+                          className="p-1.5 rounded" style={{ color: "#b3a99d" }} title="編輯"><Pencil className="w-3 h-3" /></button>
+                        <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#c8574a" }} title="刪除"><Trash2 className="w-3 h-3" /></button>
                       </div>
                       {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#b3a99d" }}>{formatDate(step.completedAt)}</span>}
                     </div>
@@ -2100,6 +2103,37 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               );
             })}
           </div>
+
+          {/* 新增步驟 */}
+          <div className="px-4 py-2" style={{ borderTop: "1px solid #ece5da" }}>
+            <button onClick={() => setEditingStep({ id: "__new__", cycleId: activeCycle.id, note: "", label: "" })}
+              className="text-xs flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: "#5c4638" }}>
+              <Plus className="w-3 h-3" />新增步驟
+            </button>
+          </div>
+          {editingStep?.id === "__new__" && editingStep.cycleId === activeCycle.id && (
+            <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderTop: "1px solid #ece5da" }}>
+              <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
+                className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="步驟名稱" autoFocus />
+              <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
+                className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="備注（選填）" />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                <button onClick={async () => {
+                  if (!editingStep.label.trim()) return;
+                  const cycleId = editingStep.cycleId;
+                  const cycle = cycles.find(c => c.id === cycleId);
+                  const sortOrder = cycle ? cycle.steps.length : 0;
+                  const res = await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ label: editingStep.label, note: editingStep.note, sortOrder }),
+                  });
+                  if (res.ok) { await load(); }
+                  setEditingStep(null);
+                }} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>新增</button>
+              </div>
+            </div>
+          )}
 
           {/* 週期備注 */}
           {editingCycle?.id === activeCycle.id ? (
@@ -2158,10 +2192,30 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                   {t}
                 </button>
               ))}
+              <button onClick={() => setNewType("自定義")}
+                className={cn("py-2 px-3 rounded-sm text-sm font-medium border transition-colors", newType !== "自定義" && "hover:border-[#5c4638]")}
+                style={newType === "自定義" ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" } : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3", borderStyle: "dashed" }}>
+                ＋ 自定義
+              </button>
             </div>
           </div>
-          {previewSteps.length > 0 && (
-            <p className="text-xs leading-relaxed" style={{ color: "#b3a99d" }}>步驟：{previewSteps.join(" → ")}</p>
+          {newType === "自定義" ? (
+            <div className="flex flex-col gap-2">
+              <div>
+                <p className="text-xs mb-1" style={{ color: "#8b8076" }}>療程名稱</p>
+                <input value={customTypeName} onChange={(e) => setCustomTypeName(e.target.value)}
+                  className="w-full text-sm border rounded-sm px-3 py-1.5 focus:outline-none" style={{ borderColor: "#d8cfc3" }}
+                  placeholder="例如：過敏調理、荷爾蒙平衡..." />
+              </div>
+              <div>
+                <p className="text-xs mb-1" style={{ color: "#8b8076" }}>步驟（每行一步，選填）</p>
+                <textarea value={customStepLines} onChange={(e) => setCustomStepLines(e.target.value)}
+                  className="w-full text-sm border rounded-sm px-3 py-2 focus:outline-none resize-none" style={{ borderColor: "#d8cfc3" }}
+                  rows={4} placeholder={"初次評估\n開立方案\n第1週追蹤\n成效評估"} />
+              </div>
+            </div>
+          ) : previewSteps.length > 0 && (
+            <p className="text-xs leading-relaxed" style={{ color: "#b3a99d" }}>步驟：{previewSteps.filter(s => !s.startsWith("§ ")).join(" → ")}</p>
           )}
           <div>
             <p className="text-xs mb-1" style={{ color: "#8b8076" }}>備注（選填）</p>

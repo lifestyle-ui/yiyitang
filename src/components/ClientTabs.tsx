@@ -836,6 +836,43 @@ function AdherenceSection({ prescription: p, clientId, onRefresh }: { prescripti
   );
 }
 
+const PRESCRIPTION_PRESETS: { label: string; items: { name: string; dosage: string }[] }[] = [
+  {
+    label: "腸道殺菌處方",
+    items: [
+      { name: "GI Detox", dosage: "1# QD" },
+      { name: "腸溶薑黃素", dosage: "1# QN" },
+      { name: "Biocidin", dosage: "2# QN" },
+      { name: "Serrapeptase", dosage: "2# QN" },
+    ],
+  },
+  {
+    label: "汞牙移除",
+    items: [
+      { name: "薑黃蛋白粉", dosage: "2# QD" },
+      { name: "MSM", dosage: "3# BID" },
+      { name: "Vit C 1000mg", dosage: "1# TID" },
+      { name: "G.I Detox", dosage: "1# BID" },
+      { name: "綠藻錠", dosage: "20# BID" },
+    ],
+  },
+  {
+    label: "排毒十天",
+    items: [
+      { name: "UltraClear® RENEW Day 1", dosage: "不服用" },
+      { name: "UltraClear® RENEW Day 2–3", dosage: "1# BID" },
+      { name: "UltraClear® RENEW Day 4", dosage: "2# BID" },
+      { name: "UltraClear® RENEW Day 5–7", dosage: "2# QID" },
+      { name: "UltraClear® RENEW Day 8", dosage: "2# TID" },
+      { name: "UltraClear® RENEW Day 9", dosage: "2# BID" },
+      { name: "UltraClear® RENEW Day 10", dosage: "若沒服用完可以於這天補充" },
+      { name: "MSM", dosage: "3# BID" },
+      { name: "綠藻錠", dosage: "15# BID" },
+      { name: "水飛薊", dosage: "1# BID" },
+    ],
+  },
+];
+
 function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; dosage: string; custom?: boolean }[]>([]);
@@ -938,6 +975,23 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <div className="sticky top-0 p-2 flex flex-col gap-1.5" style={{ background: "#faf7f1", borderBottom: "1px solid #ece5da" }}>
                       <input value={catSearch} onChange={(e) => { setCatSearch(e.target.value); setBrandFilter(null); }} placeholder="搜尋保健品..."
                         className="w-full px-3 py-1.5 text-sm rounded-sm focus:outline-none" style={{ border: "1px solid #d8cfc3" }} />
+                      {/* 處方套餐快選 */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {PRESCRIPTION_PRESETS.map((preset) => (
+                          <button key={preset.label} type="button"
+                            onClick={() => {
+                              const toAdd = preset.items.map((item) => ({ id: crypto.randomUUID(), name: item.name, dosage: item.dosage, custom: true }));
+                              setSelectedItems((prev) => {
+                                const existingNames = new Set(prev.map((i) => i.name));
+                                return [...prev, ...toAdd.filter((i) => !existingNames.has(i.name))];
+                              });
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-sm border transition-colors"
+                            style={{ background: "#f3ece0", color: "#5c4638", borderColor: "#d8cabb", fontWeight: 500 }}>
+                            ＋{preset.label}
+                          </button>
+                        ))}
+                      </div>
                       {catalogBrands.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
                           {catalogBrands.map((brand) => (

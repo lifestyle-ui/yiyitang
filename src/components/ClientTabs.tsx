@@ -1915,12 +1915,16 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               return (
                 <div key={step.id}>
                   {creatingTaskForStep?.stepId === step.id && (
-                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}
+                      onClick={(e) => e.stopPropagation()}>
                       <p className="text-xs font-semibold" style={{ color: "#5c4638" }}>建立追蹤任務</p>
-                      <input value={creatingTaskForStep.title} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, title: e.target.value })}
+                      <input value={creatingTaskForStep.title}
+                        onChange={(e) => { e.stopPropagation(); setCreatingTaskForStep((prev) => prev ? { ...prev, title: e.target.value } : prev); }}
                         className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="任務標題" />
                       <div className="flex gap-2">
-                        <input type="date" value={creatingTaskForStep.dueDate} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, dueDate: e.target.value })}
+                        <input type="date" value={creatingTaskForStep.dueDate}
+                          onChange={(e) => { e.stopPropagation(); setCreatingTaskForStep((prev) => prev ? { ...prev, dueDate: e.target.value } : prev); }}
+                          onClick={(e) => e.stopPropagation()}
                           className="flex-1 text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#d8cfc3" }} />
                         <select value={creatingTaskForStep.priority} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, priority: e.target.value })}
                           className="text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#d8cfc3" }}>

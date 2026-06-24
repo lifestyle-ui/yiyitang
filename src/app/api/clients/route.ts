@@ -9,7 +9,8 @@ export async function GET(request: Request) {
     .from("Client")
     .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate)")
     .eq("isActive", true)
-    .order("updatedAt", { ascending: false });
+    .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
+    .order("createdAt", { ascending: true });
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,lineId.ilike.%${search}%`);

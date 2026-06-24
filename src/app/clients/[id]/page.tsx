@@ -108,10 +108,11 @@ export default async function ClientDetailPage({ params }: Params) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href={`/clients/${client.id}/edit`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            <a href={`/clients/${client.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-sm border transition-opacity hover:opacity-80"
+              style={{ color: "#5c4638", borderColor: "#d8cabb", background: "#fff" }}>
               <Pencil className="w-3.5 h-3.5" />編輯資料
-            </Link>
+            </a>
             <AISummaryButton clientId={client.id} />
           </div>
         </div>

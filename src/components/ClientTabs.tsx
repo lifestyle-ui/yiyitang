@@ -1836,6 +1836,26 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     });
   };
 
+  const cyclePhase = async (cycleId: string, phaseStep: VisitCycleStep, allCycleSteps: VisitCycleStep[]) => {
+    const phaseIdx = allCycleSteps.indexOf(phaseStep);
+    const nextHeader = allCycleSteps.slice(phaseIdx + 1).find((s) => s.label.startsWith("§ "));
+    const nextIdx = nextHeader ? allCycleSteps.indexOf(nextHeader) : allCycleSteps.length;
+    const children = allCycleSteps.slice(phaseIdx + 1, nextIdx).filter((s) => !s.label.startsWith("§ "));
+    const allDone = children.every((s) => s.isCompleted || s.status === "completed" || s.status === "skipped");
+    const nextStatus: StepStatus = allDone ? "pending" : "completed";
+    setCycles((prev) => prev.map((c) => c.id === cycleId
+      ? { ...c, steps: c.steps.map((s) => children.find((ch) => ch.id === s.id)
+          ? { ...s, status: nextStatus, isCompleted: nextStatus === "completed", completedAt: nextStatus === "completed" ? new Date().toISOString() : null }
+          : s) }
+      : c));
+    await Promise.all(children.map((s) =>
+      fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${s.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+    ));
+  };
+
   const skipStep = async (cycleId: string, step: VisitCycleStep) => {
     const next: StepStatus = step.status === "skipped" ? "pending" : "skipped";
     setCycles((prev) => prev.map((c) => c.id === cycleId
@@ -1980,10 +2000,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                 return (
                   <div key={step.id} className="flex items-start flex-shrink-0">
                     <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, displayLabel.length * 7 + 8) }}>
-                      <div className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2"
+                      <button onClick={() => cyclePhase(activeCycle.id, step, activeCycle.steps)}
+                        className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all hover:opacity-80"
                         style={{ background: sty.bg, borderColor: sty.border, color: sty.color, borderRadius: "50%", ...(st === "in_progress" ? { boxShadow: "0 0 0 3px #ece2d6" } : {}) }}>
                         {st === "completed" ? <Check className="w-4 h-4" /> : i + 1}
-                      </div>
+                      </button>
                       <span className="text-[10px] mt-1 text-center leading-tight px-1"
                         style={{ color: sty.color !== "#fff" ? sty.color : "#5c4638", fontWeight: st === "in_progress" ? 500 : 400 }}>
                         {displayLabel}

@@ -769,67 +769,118 @@ const ADHERENCE_OPTIONS = [
   { value: "stopped",  label: "已自行停用" },
 ];
 
-function AdherenceSection({ prescription: p, clientId, onRefresh }: { prescription: Prescription; clientId: string; onRefresh: () => void }) {
+type AdherenceLog = { id: string; date: string; status: string; note: string | null };
+
+function AdherenceSection({ prescription: p, clientId }: { prescription: Prescription; clientId: string }) {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState(p.adherenceStatus || "");
-  const [notes, setNotes] = useState(p.adherenceNotes || "");
+  const [logs, setLogs] = useState<AdherenceLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [newNote, setNewNote] = useState("");
+  const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
-    setSaving(true);
-    await fetch(`/api/clients/${clientId}/prescriptions/${p.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adherenceStatus: status || null, adherenceNotes: notes || null, adherenceCheckedAt: new Date().toISOString() }),
-    });
-    setSaving(false); setOpen(false); onRefresh();
+  const loadLogs = async () => {
+    setLoadingLogs(true);
+    const data = await fetch(`/api/clients/${clientId}/prescriptions/${p.id}/adherence`).then(r => r.json());
+    setLogs(Array.isArray(data) ? data : []);
+    setLoadingLogs(false);
   };
 
-  const adLabel = ADHERENCE_OPTIONS.find((o) => o.value === p.adherenceStatus)?.label;
+  const handleOpen = () => { if (!open) loadLogs(); setOpen(!open); };
+
+  const save = async () => {
+    if (!newStatus) return;
+    setSaving(true);
+    await fetch(`/api/clients/${clientId}/prescriptions/${p.id}/adherence`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: newDate, status: newStatus, note: newNote || null }),
+    });
+    setSaving(false); setNewStatus(""); setNewNote(""); setNewDate(new Date().toISOString().slice(0, 10));
+    await loadLogs();
+  };
+
+  const deleteLog = async (logId: string) => {
+    await fetch(`/api/clients/${clientId}/prescriptions/${p.id}/adherence?logId=${logId}`, { method: "DELETE" });
+    setLogs(prev => prev.filter(l => l.id !== logId));
+  };
+
+  const latestLog = logs[0];
 
   return (
     <div className="rounded-sm overflow-hidden" style={{ border: "1px solid #ece5da" }}>
-      <button onClick={() => setOpen(!open)}
+      <button onClick={handleOpen}
         className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors"
         style={{ background: open ? "#f3ece0" : "#faf7f1" }}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium" style={{ color: "#6b6056" }}>規律性追蹤</span>
-          {adLabel && !open && (
+          {!open && latestLog && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-sm"
-              style={{ background: p.adherenceStatus === "on_time" ? "#d8cabb" : p.adherenceStatus === "stopped" ? "#f0d6cf" : "#ecdcbf",
-                       color: p.adherenceStatus === "on_time" ? "#5c4638" : p.adherenceStatus === "stopped" ? "#8a4634" : "#93702f" }}>
-              {adLabel}
+              style={{ background: latestLog.status === "on_time" ? "#d8cabb" : latestLog.status === "stopped" ? "#f0d6cf" : "#ecdcbf",
+                       color: latestLog.status === "on_time" ? "#5c4638" : latestLog.status === "stopped" ? "#8a4634" : "#93702f" }}>
+              {ADHERENCE_OPTIONS.find(o => o.value === latestLog.status)?.label}
             </span>
           )}
-          {p.adherenceCheckedAt && !open && (
+          {!open && p.adherenceCheckedAt && !latestLog && (
             <span className="text-[10px]" style={{ color: "#b3a99d" }}>上次：{formatDate(p.adherenceCheckedAt)}</span>
           )}
         </div>
-        <span className="text-xs" style={{ color: "#b3a99d" }}>{open ? "收起" : "更新"}</span>
+        <span className="text-xs" style={{ color: "#b3a99d" }}>{open ? "收起" : "新增紀錄"}</span>
       </button>
       {open && (
-        <div className="px-3 py-3 flex flex-col gap-2" style={{ background: "#f3ece0" }}>
-          <div className="flex gap-2">
-            {ADHERENCE_OPTIONS.map((o) => (
-              <button key={o.value} onClick={() => setStatus(o.value)}
-                className="flex-1 text-xs py-1.5 rounded-sm border transition-colors"
-                style={status === o.value
-                  ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" }
-                  : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
-                {o.label}
+        <div className="px-3 py-3 flex flex-col gap-3" style={{ background: "#f3ece0" }}>
+          {/* 新增紀錄 */}
+          <div className="flex flex-col gap-2 pb-3" style={{ borderBottom: "1px solid #ece5da" }}>
+            <div className="flex gap-2 items-center">
+              <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
+                className="text-xs border rounded-sm px-2 py-1 focus:outline-none" style={{ borderColor: "#d8cfc3" }} />
+            </div>
+            <div className="flex gap-2">
+              {ADHERENCE_OPTIONS.map((o) => (
+                <button key={o.value} type="button" onClick={() => setNewStatus(o.value)}
+                  className="flex-1 text-xs py-1.5 rounded-sm border transition-colors"
+                  style={newStatus === o.value
+                    ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" }
+                    : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            <textarea value={newNote} onChange={(e) => setNewNote(e.target.value)}
+              placeholder="備注（如：客戶說胃不舒服、忘記帶出門...）"
+              rows={2} className="w-full text-sm border rounded-sm px-2.5 py-1.5 resize-none focus:outline-none"
+              style={{ borderColor: "#d8cfc3" }} />
+            <div className="flex justify-end">
+              <button onClick={save} disabled={saving || !newStatus}
+                className="text-xs px-3 py-1 rounded-sm text-white"
+                style={{ background: newStatus ? "#5c4638" : "#d8cfc3" }}>
+                {saving ? "儲存中..." : "新增紀錄"}
               </button>
-            ))}
+            </div>
           </div>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="備注（如：客戶說胃不舒服、忘記帶出門...）"
-            rows={2} className="w-full text-sm border rounded-sm px-2.5 py-1.5 resize-none focus:outline-none"
-            style={{ borderColor: "#d8cfc3" }} />
-          <div className="flex justify-end">
-            <button onClick={save} disabled={saving || !status}
-              className="text-xs px-3 py-1 rounded-sm text-white"
-              style={{ background: status ? "#5c4638" : "#d8cfc3" }}>
-              {saving ? "儲存中..." : "儲存追蹤"}
-            </button>
-          </div>
+          {/* 歷史紀錄 */}
+          {loadingLogs ? (
+            <p className="text-xs text-center" style={{ color: "#b3a99d" }}>載入中...</p>
+          ) : logs.length === 0 ? (
+            <p className="text-xs text-center" style={{ color: "#b3a99d" }}>尚無追蹤紀錄</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {logs.map((log) => (
+                <div key={log.id} className="flex items-start gap-2 text-xs py-1.5 px-2 rounded-sm" style={{ background: "#fff" }}>
+                  <span style={{ color: "#b3a99d", flexShrink: 0 }}>{formatDate(log.date)}</span>
+                  <span className="px-1.5 py-0.5 rounded-sm flex-shrink-0"
+                    style={{ background: log.status === "on_time" ? "#d8cabb" : log.status === "stopped" ? "#f0d6cf" : "#ecdcbf",
+                             color: log.status === "on_time" ? "#5c4638" : log.status === "stopped" ? "#8a4634" : "#93702f" }}>
+                    {ADHERENCE_OPTIONS.find(o => o.value === log.status)?.label}
+                  </span>
+                  {log.note && <span className="flex-1" style={{ color: "#6b6056" }}>{log.note}</span>}
+                  <button onClick={() => deleteLog(log.id)} className="ml-auto flex-shrink-0" style={{ color: "#c8574a" }}>
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1074,7 +1125,16 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <div className="grid grid-cols-2 gap-4">
                       <Input label="開立日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
                       <Select label="狀態" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}
-                        options={[{ value: "active", label: "使用中" }, { value: "completed", label: "已完成" }, { value: "cancelled", label: "已取消" }]} />
+                        options={[
+                          { value: "active", label: "有效" },
+                          { value: "packing", label: "正在包裝" },
+                          { value: "packing_done", label: "打包完成" },
+                          { value: "shipped", label: "已寄送" },
+                          { value: "received", label: "確認客人已收到" },
+                          { value: "started", label: "已開始服用" },
+                          { value: "completed", label: "已完成" },
+                          { value: "cancelled", label: "已取消" },
+                        ]} />
                     </div>
                     <div>
                       <p className="text-xs font-medium text-slate-600 mb-2">保健品項目</p>
@@ -1117,7 +1177,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     {p.totalDays && <p className="text-xs" style={{ color: "#b3a99d" }}>共 {p.totalDays} 天</p>}
                     {p.notes && <p className="text-xs mt-1" style={{ color: "#6b6056" }}>{p.notes}</p>}
                     {/* 規律性追蹤 */}
-                    <AdherenceSection prescription={p} clientId={client.id} onRefresh={onRefresh} />
+                    <AdherenceSection prescription={p} clientId={client.id} />
                   </div>
                 )}
               </CardContent>

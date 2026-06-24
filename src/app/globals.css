@@ -1,43 +1,119 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600&display=swap");
 
+/* ============================================================
+   意一堂 ESSENTIA — Design Tokens
+   ============================================================ */
 :root {
-  --background: #F7F6F3;
-  --foreground: #1A1A1A;
-  --primary: #2C4A3E;
-  --primary-light: #EFF4F1;
-  --border: #ECEAE6;
-  --brand-dark: #1A1A1A;
-  --brand-accent: #2C4A3E;
-  --brand-accent-light: #EFF4F1;
-  --brand-accent-border: #C4D4CC;
-  --brand-surface: #F7F6F3;
-  --brand-muted: #8A8580;
+  /* Paper (backgrounds) */
+  --paper-0:    #ffffff;
+  --paper-1:    #faf7f1;
+  --paper-2:    #f3ece0;
+  --paper-3:    #e8dccb;
+
+  /* Ink (text & lines) */
+  --ink-900:    #241f1b;
+  --ink-700:    #3b332c;
+  --ink-500:    #6b6056;
+  --ink-400:    #8b8076;
+  --ink-300:    #b3a99d;
+  --ink-200:    #d8cfc3;
+  --ink-100:    #ece5da;
+
+  /* Brand brown */
+  --brown-900:  #34251c;
+  --brown-800:  #432f23;
+  --brown-700:  #5c4638;   /* PRIMARY */
+  --brown-600:  #6f5645;
+  --brown-500:  #876b57;
+  --brown-300:  #b8a491;
+  --brown-200:  #d8cabb;
+  --brown-100:  #ece2d6;
+
+  /* Maroon/oxblood */
+  --maroon-700: #4a201a;
+  --maroon-500: #6b3128;
+  --maroon-200: #c9a59d;
+
+  /* Seal red */
+  --seal-red:   #b8392c;
+
+  /* Gold */
+  --gold-500:   #b0904e;
+  --gold-300:   #d8c089;
+
+  /* Semantic aliases */
+  --background:         var(--paper-1);
+  --foreground:         var(--ink-900);
+  --surface-raised:     var(--paper-1);
+  --surface-wash:       var(--paper-2);
+  --surface-sunken:     var(--paper-3);
+
+  --text-title:         var(--ink-900);
+  --text-body:          var(--ink-700);
+  --text-secondary:     var(--ink-500);
+  --text-muted:         var(--ink-400);
+  --text-caption:       var(--ink-300);
+
+  --border-faint:       var(--ink-100);
+  --border-hairline:    var(--ink-200);
+  --border-strong:      var(--brown-700);
+
+  /* App-level aliases (consumed by components) */
+  --primary:            var(--brown-700);
+  --primary-light:      var(--brown-100);
+  --border:             var(--ink-100);
+  --brand-dark:         var(--brown-900);
+  --brand-accent:       var(--brown-700);
+  --brand-accent-light: var(--brown-100);
+  --brand-accent-border:var(--brown-300);
+  --brand-surface:      var(--paper-1);
+  --brand-muted:        var(--ink-400);
+
+  /* Shadows */
+  --shadow-sm:    0 1px 2px rgba(52,37,28,.06);
+  --shadow-card:  0 2px 10px rgba(52,37,28,.08);
+  --shadow-pop:   0 10px 30px rgba(52,37,28,.14);
+
+  /* Radius */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  /* Fonts */
+  --font-cjk:  "Noto Serif TC", "Songti TC", serif;
+  --font-sans: "Work Sans", "PingFang TC", system-ui, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), "Noto Sans TC", Arial, sans-serif;
+  color: var(--text-body);
+  font-family: var(--font-cjk);
+  font-size: 1rem;
+  line-height: 1.75;
+  letter-spacing: 0.04em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--ink-200);
   border-radius: 9999px;
+}
+
+::selection { background: var(--brown-100); color: var(--ink-900); }
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--brown-700) 50%, transparent);
+  outline-offset: 2px;
 }

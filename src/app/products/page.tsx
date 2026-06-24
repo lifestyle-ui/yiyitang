@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { Pill, Plus, Upload, Download, Search, X, Tag } from "lucide-react";
@@ -177,10 +177,10 @@ export default function ProductsPage() {
     <div className="p-6 max-w-5xl mx-auto w-full">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: "#1A1A1A" }}>
-            <Pill className="w-5 h-5" style={{ color: "#2C4A3E" }} />保健品目錄
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: "#241f1b" }}>
+            <Pill className="w-5 h-5" style={{ color: "#5c4638" }} />保健品目錄
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#8A8580" }}>共 {products.length} 項保健品</p>
+          <p className="text-sm mt-0.5" style={{ color: "#8b8076" }}>共 {products.length} 項保健品</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => {
@@ -212,7 +212,7 @@ export default function ProductsPage() {
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-slate-600">類別</label>
                 <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  className="px-3 py-2 text-sm rounded-sm border bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#DDDAD4" }}>
+                  className="px-3 py-2 text-sm rounded-sm border bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#d8cfc3" }}>
                   <option value="">請選擇類別</option>
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -234,7 +234,7 @@ export default function ProductsPage() {
                 <input value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="例：B6 pyridoxine folic acid folate B complex"
-                  className="px-3 py-2 text-sm rounded-sm border bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#DDDAD4" }} />
+                  className="px-3 py-2 text-sm rounded-sm border bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#d8cfc3" }} />
               </div>
               <Input label="備註" placeholder="注意事項..." value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
@@ -248,13 +248,13 @@ export default function ProductsPage() {
 
       {/* 搜尋 */}
       <div className="relative mb-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#A8A5A0" }} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#b3a99d" }} />
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="搜尋品名、品牌、成分…　例：B群、維他命C、CoQ10、魚油"
           className="w-full pl-9 pr-4 py-2.5 text-sm border rounded-sm bg-white focus:outline-none focus:ring-1"
-          style={{ borderColor: "#DDDAD4" }} />
+          style={{ borderColor: "#d8cfc3" }} />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#A8A5A0" }}>
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "#b3a99d" }}>
             <X className="w-4 h-4" />
           </button>
         )}
@@ -262,7 +262,7 @@ export default function ProductsPage() {
 
       {/* 搜尋展開提示 */}
       {search.trim() && matchedTerms.length > 1 && (
-        <p className="text-xs mb-3 flex items-center gap-1.5" style={{ color: "#8A8580" }}>
+        <p className="text-xs mb-3 flex items-center gap-1.5" style={{ color: "#8b8076" }}>
           <Tag className="w-3 h-3" />
           自動展開搜尋：{matchedTerms.slice(0, 8).join("、")}{matchedTerms.length > 8 ? ` 等 ${matchedTerms.length} 個關鍵字` : ""}
         </p>
@@ -270,47 +270,47 @@ export default function ProductsPage() {
       {search.trim() && matchedTerms.length <= 1 && <div className="mb-3" />}
 
       {loading ? (
-        <div className="py-12 text-center text-sm" style={{ color: "#A8A5A0" }}>載入中...</div>
+        <div className="py-12 text-center text-sm" style={{ color: "#b3a99d" }}>載入中...</div>
       ) : filtered.length === 0 ? (
-        <div className="py-16 text-center border rounded-sm" style={{ borderColor: "#ECEAE6" }}>
-          <Pill className="w-10 h-10 mx-auto mb-3" style={{ color: "#DDDAD4" }} />
-          <p className="text-sm" style={{ color: "#8A8580" }}>{search ? `找不到「${search}」相關的保健品` : "尚無保健品資料，請新增或匯入"}</p>
-          {search && <p className="text-xs mt-1" style={{ color: "#A8A5A0" }}>可在「成分 / 搜尋關鍵字」欄位補充成分名稱以提升搜尋精準度</p>}
+        <div className="py-16 text-center border rounded-sm" style={{ borderColor: "#ece5da" }}>
+          <Pill className="w-10 h-10 mx-auto mb-3" style={{ color: "#d8cfc3" }} />
+          <p className="text-sm" style={{ color: "#8b8076" }}>{search ? `找不到「${search}」相關的保健品` : "尚無保健品資料，請新增或匯入"}</p>
+          {search && <p className="text-xs mt-1" style={{ color: "#b3a99d" }}>可在「成分 / 搜尋關鍵字」欄位補充成分名稱以提升搜尋精準度</p>}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           {Object.entries(grouped).sort().map(([cat, items]) => (
-            <div key={cat} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
-              <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
-                <span className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>{cat}</span>
-                <span className="text-xs" style={{ color: "#A8A5A0" }}>（{items.length} 項）</span>
+            <div key={cat} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
+              <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+                <span className="text-sm font-semibold" style={{ color: "#241f1b" }}>{cat}</span>
+                <span className="text-xs" style={{ color: "#b3a99d" }}>（{items.length} 項）</span>
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #F2F0EC", background: "#FAFAF8" }}>
-                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>品名</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>品牌</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>規格</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>建議用法</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>成分標籤</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium" style={{ color: "#8A8580" }}>售價</th>
+                  <tr style={{ borderBottom: "1px solid #ece5da", background: "#FAFAF8" }}>
+                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>品名</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>品牌</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>規格</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>建議用法</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>成分標籤</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium" style={{ color: "#8b8076" }}>售價</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((p) => (
-                    <tr key={p.id} className="hover:bg-[#F9F8F6]" style={{ borderBottom: "1px solid #F2F0EC" }}>
-                      <td className="px-4 py-2.5 font-medium" style={{ color: "#1A1A1A" }}>{p.name}</td>
-                      <td className="px-4 py-2.5" style={{ color: "#6A6560" }}>{p.brand || "—"}</td>
-                      <td className="px-4 py-2.5" style={{ color: "#6A6560" }}>{p.spec || "—"}</td>
-                      <td className="px-4 py-2.5" style={{ color: "#6A6560" }}>{p.dosage || "—"}</td>
+                    <tr key={p.id} className="hover:bg-[#f3ece0]" style={{ borderBottom: "1px solid #ece5da" }}>
+                      <td className="px-4 py-2.5 font-medium" style={{ color: "#241f1b" }}>{p.name}</td>
+                      <td className="px-4 py-2.5" style={{ color: "#6b6056" }}>{p.brand || "—"}</td>
+                      <td className="px-4 py-2.5" style={{ color: "#6b6056" }}>{p.spec || "—"}</td>
+                      <td className="px-4 py-2.5" style={{ color: "#6b6056" }}>{p.dosage || "—"}</td>
                       <td className="px-4 py-2.5 max-w-[200px]">
                         {p.description ? (
-                          <span className="text-xs rounded-sm px-1.5 py-0.5 truncate block" style={{ background: "#EFF4F1", color: "#2C4A3E" }}>
+                          <span className="text-xs rounded-sm px-1.5 py-0.5 truncate block" style={{ background: "#ece2d6", color: "#5c4638" }}>
                             {p.description}
                           </span>
                         ) : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-right" style={{ color: "#6A6560" }}>
+                      <td className="px-4 py-2.5 text-right" style={{ color: "#6b6056" }}>
                         {p.price ? `$${p.price.toLocaleString()}` : "—"}
                       </td>
                     </tr>

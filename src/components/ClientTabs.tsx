@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -65,7 +65,7 @@ export default function ClientTabs({ client }: { client: Client }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white px-6 flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid #ECEAE6" }}>
+      <div className="bg-white px-6 flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid #ece5da" }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const noCount = tab.key === "timeline" || tab.key === "overview";
@@ -76,10 +76,10 @@ export default function ClientTabs({ client }: { client: Client }) {
               onClick={() => { setActiveTab(tab.key); setShowForm(false); }}
               className="flex items-center gap-1.5 px-4 py-3 text-[12.5px] border-b-2 transition-colors whitespace-nowrap tracking-[.01em]"
               style={active
-                ? { borderBottomColor: "#1A1A1A", color: "#1A1A1A", fontWeight: 500 }
-                : { borderBottomColor: "transparent", color: "#A8A5A0", fontWeight: 400 }}>
+                ? { borderBottomColor: "#241f1b", color: "#241f1b", fontWeight: 500 }
+                : { borderBottomColor: "transparent", color: "#b3a99d", fontWeight: 400 }}>
               <Icon className="w-3.5 h-3.5" />{tab.label}
-              {count > 0 && <span className="ml-1 text-[10.5px] rounded-sm px-1.5 py-0.5" style={{ background: "#F2F0EC", color: "#6A6560", border: "1px solid #DDDAD4" }}>{count}</span>}
+              {count > 0 && <span className="ml-1 text-[10.5px] rounded-sm px-1.5 py-0.5" style={{ background: "#ece5da", color: "#6b6056", border: "1px solid #d8cfc3" }}>{count}</span>}
             </button>
           );
         })}
@@ -1027,7 +1027,7 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
       <div className="flex justify-end gap-2">
         <button onClick={() => setShowTrackingModal(!showTrackingModal)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-sm transition-colors"
-          style={{ borderColor: showTrackingModal ? "#2C4A3E" : "#DDDAD4", color: showTrackingModal ? "#2C4A3E" : "#6A6560" }}>
+          style={{ borderColor: showTrackingModal ? "#5c4638" : "#d8cfc3", color: showTrackingModal ? "#5c4638" : "#6b6056" }}>
           <Bell className="w-4 h-4" />追蹤節點
         </button>
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
@@ -1035,18 +1035,18 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
         </Button>
       </div>
       {showTrackingModal && (
-        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#C4D4CC" }}>
-          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>自動建立追蹤節點</p>
-          <p className="text-xs" style={{ color: "#6A6560" }}>從指定日期起，自動建立 4 個追蹤任務：5天、2週、4週、1–3個月複查。</p>
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#f3ece0", borderColor: "#d8cabb" }}>
+          <p className="text-sm font-semibold" style={{ color: "#241f1b" }}>自動建立追蹤節點</p>
+          <p className="text-xs" style={{ color: "#6b6056" }}>從指定日期起，自動建立 4 個追蹤任務：5天、2週、4週、1–3個月複查。</p>
           <div>
-            <label className="text-xs font-medium" style={{ color: "#8A8580" }}>方案開始日期</label>
+            <label className="text-xs font-medium" style={{ color: "#8b8076" }}>方案開始日期</label>
             <input type="date" value={trackingStart} onChange={(e) => setTrackingStart(e.target.value)}
-              className="mt-1 w-full text-sm border rounded-sm px-2 py-1.5 focus:outline-none" style={{ borderColor: "#DDDAD4" }} />
+              className="mt-1 w-full text-sm border rounded-sm px-2 py-1.5 focus:outline-none" style={{ borderColor: "#d8cfc3" }} />
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowTrackingModal(false)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+            <button onClick={() => setShowTrackingModal(false)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
             <button onClick={createTrackingNodes} disabled={!trackingStart}
-              className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: trackingStart ? "#2C4A3E" : "#DDDAD4" }}>
+              className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: trackingStart ? "#5c4638" : "#d8cfc3" }}>
               建立 4 個追蹤任務
             </button>
           </div>
@@ -1157,11 +1157,11 @@ type TrackScores = Record<string, number>;
 function ScorePicker({ scores, onChange }: { scores: TrackScores; onChange: (s: TrackScores) => void }) {
   return (
     <div>
-      <p className="text-xs mb-2" style={{ color: "#8A8580" }}>改善程度（1 成＝很差，5 成＝極佳；可不填）</p>
+      <p className="text-xs mb-2" style={{ color: "#8b8076" }}>改善程度（1 成＝很差，5 成＝極佳；可不填）</p>
       <div className="flex flex-col gap-2">
         {SCORE_CATEGORIES.map((cat) => (
           <div key={cat.key} className="flex items-center gap-3">
-            <span className="text-xs w-16 flex-shrink-0" style={{ color: "#6A6560" }}>{cat.label}</span>
+            <span className="text-xs w-16 flex-shrink-0" style={{ color: "#6b6056" }}>{cat.label}</span>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button"
@@ -1172,14 +1172,14 @@ function ScorePicker({ scores, onChange }: { scores: TrackScores; onChange: (s: 
                   }}
                   className="w-7 h-7 text-xs rounded transition-all"
                   style={scores[cat.key] === n
-                    ? { background: "#2C4A3E", color: "#fff", border: "1px solid #2C4A3E" }
-                    : { background: "#F7F6F3", color: "#8A8580", border: "1px solid #ECEAE6" }}>
+                    ? { background: "#5c4638", color: "#fff", border: "1px solid #5c4638" }
+                    : { background: "#faf7f1", color: "#8b8076", border: "1px solid #ece5da" }}>
                   {n}
                 </button>
               ))}
             </div>
             {scores[cat.key] !== undefined && (
-              <span className="text-xs" style={{ color: "#2C4A3E" }}>{scores[cat.key]} 成</span>
+              <span className="text-xs" style={{ color: "#5c4638" }}>{scores[cat.key]} 成</span>
             )}
           </div>
         ))}
@@ -1199,7 +1199,7 @@ function ScoreBadges({ scores }: { scores: Record<string, number> | null }) {
         return (
           <span key={c.key} className="text-[10.5px] px-1.5 py-0.5 rounded-sm"
             style={val >= 4
-              ? { background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }
+              ? { background: "#ece2d6", color: "#5c4638", border: "1px solid #d8cabb" }
               : val >= 3
                 ? { background: "#FEF9EC", color: "#8A6A00", border: "1px solid #E8D8A0" }
                 : { background: "#FEF0F0", color: "#8A3A3A", border: "1px solid #E8B0B0" }}>
@@ -1249,66 +1249,66 @@ function HandoverBriefCard({ client }: { client: Client }) {
     return (
       <button onClick={() => setOpen(true)}
         className="w-full flex items-center gap-2 text-sm py-2.5 px-4 rounded-sm text-left transition-colors"
-        style={{ background: "#F2F0EC", border: "1px solid #ECEAE6", color: "#6A6560" }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2C4A3E"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#ECEAE6"; }}>
-        <ClipboardList className="w-4 h-4 flex-shrink-0" style={{ color: "#2C4A3E" }} />
+        style={{ background: "#ece5da", border: "1px solid #ece5da", color: "#6b6056" }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#5c4638"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#ece5da"; }}>
+        <ClipboardList className="w-4 h-4 flex-shrink-0" style={{ color: "#5c4638" }} />
         <span>進診前交班備忘</span>
-        <ChevronRight className="w-3.5 h-3.5 ml-auto" style={{ color: "#A8A5A0" }} />
+        <ChevronRight className="w-3.5 h-3.5 ml-auto" style={{ color: "#b3a99d" }} />
       </button>
     );
   }
 
   return (
-    <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#C4D4CC" }}>
-      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
-        <ClipboardList className="w-4 h-4" style={{ color: "#2C4A3E" }} />
-        <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>進診前交班備忘</span>
-        <button onClick={() => setOpen(false)} className="ml-auto" style={{ color: "#A8A5A0" }}>
+    <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#d8cabb" }}>
+      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#ece2d6", borderBottom: "1px solid #d8cabb" }}>
+        <ClipboardList className="w-4 h-4" style={{ color: "#5c4638" }} />
+        <span className="text-sm font-medium" style={{ color: "#241f1b" }}>進診前交班備忘</span>
+        <button onClick={() => setOpen(false)} className="ml-auto" style={{ color: "#b3a99d" }}>
           <X className="w-4 h-4" />
         </button>
       </div>
       <div className="px-4 py-3 flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>轉介來源</label>
+            <label className="text-xs mb-1 block" style={{ color: "#8b8076" }}>轉介來源</label>
             <input value={brief.referralSource} onChange={(e) => f("referralSource", e.target.value)}
               placeholder="例：陳醫師介紹、自行前來"
               className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
-              style={{ borderColor: "#DDDAD4" }} />
+              style={{ borderColor: "#d8cfc3" }} />
           </div>
           <div>
-            <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>主訴</label>
+            <label className="text-xs mb-1 block" style={{ color: "#8b8076" }}>主訴</label>
             <input value={brief.chiefComplaint} onChange={(e) => f("chiefComplaint", e.target.value)}
               placeholder="例：疲勞、睡眠不好"
               className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
-              style={{ borderColor: "#DDDAD4" }} />
+              style={{ borderColor: "#d8cfc3" }} />
           </div>
         </div>
         <div>
-          <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>目前狀況（上次回診後）</label>
+          <label className="text-xs mb-1 block" style={{ color: "#8b8076" }}>目前狀況（上次回診後）</label>
           <input value={brief.currentStatus} onChange={(e) => f("currentStatus", e.target.value)}
             placeholder="例：睡眠稍微改善，但疲勞仍在"
             className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
-            style={{ borderColor: "#DDDAD4" }} />
+            style={{ borderColor: "#d8cfc3" }} />
         </div>
         <div>
-          <label className="text-xs mb-1 block" style={{ color: "#8A8580" }}>今日目標 <span style={{ color: "#B83232" }}>*</span></label>
+          <label className="text-xs mb-1 block" style={{ color: "#8b8076" }}>今日目標 <span style={{ color: "#b8392c" }}>*</span></label>
           <input value={brief.todayGoal} onChange={(e) => f("todayGoal", e.target.value)}
             placeholder="例：確認睡眠改善狀況、調整保健品"
             className="w-full text-sm border rounded-sm px-2.5 py-1.5 focus:outline-none focus:ring-1"
-            style={{ borderColor: "#DDDAD4" }} />
+            style={{ borderColor: "#d8cfc3" }} />
         </div>
-        <div className="rounded-sm p-3" style={{ background: "#F9F8F6", border: "1px solid #ECEAE6" }}>
-          <p className="text-[10.5px] mb-1.5 font-medium uppercase tracking-[.06em]" style={{ color: "#A8A5A0" }}>交班話術</p>
-          <p className="text-sm leading-relaxed" style={{ color: "#1A1A1A" }}>{formatted}</p>
+        <div className="rounded-sm p-3" style={{ background: "#f3ece0", border: "1px solid #ece5da" }}>
+          <p className="text-[10.5px] mb-1.5 font-medium uppercase tracking-[.06em]" style={{ color: "#b3a99d" }}>交班話術</p>
+          <p className="text-sm leading-relaxed" style={{ color: "#241f1b" }}>{formatted}</p>
         </div>
         <div className="flex justify-end">
           <button onClick={copy}
             className="text-xs px-3 py-1.5 rounded-sm border transition-colors"
             style={copied
-              ? { background: "#EFF4F1", color: "#2C4A3E", borderColor: "#C4D4CC" }
-              : { background: "#fff", color: "#6A6560", borderColor: "#DDDAD4" }}>
+              ? { background: "#ece2d6", color: "#5c4638", borderColor: "#d8cabb" }
+              : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
             {copied ? "✓ 已複製" : "複製話術"}
           </button>
         </div>
@@ -1394,7 +1394,7 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                   <div className="flex gap-1 flex-shrink-0">
                     {SCORE_CATEGORIES.filter((c) => t.scores![c.key] !== undefined).slice(0, 3).map((c) => (
                       <span key={c.key} className="text-[10px] px-1 py-0.5 rounded-sm"
-                        style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>
+                        style={{ background: "#ece2d6", color: "#5c4638", border: "1px solid #d8cabb" }}>
                         {c.label}{t.scores![c.key]}
                       </span>
                     ))}
@@ -1456,8 +1456,8 @@ const CYCLE_TYPES = ["初診", "回診", "專項檢測", "緊急評估"] as cons
 type CycleType = typeof CYCLE_TYPES[number];
 
 const CYCLE_TYPE_COLORS: Record<string, string> = {
-  "初診": "text-[#2C4A3E]",
-  "回診": "text-[#2C4A3E]",
+  "初診": "text-[#5c4638]",
+  "回診": "text-[#5c4638]",
   "專項檢測": "text-[#3A4A5C]",
   "緊急評估": "text-[#6B2C2C]",
 };
@@ -1480,10 +1480,10 @@ type VisitCycle = { id: string; type: string; status: string; startDate: string;
 
 const STEP_CYCLE: Record<StepStatus, StepStatus> = { pending: "in_progress", in_progress: "completed", completed: "pending", skipped: "pending" };
 const STEP_STATUS_STYLE: Record<StepStatus, { bg: string; border: string; color: string; label: string }> = {
-  pending:     { bg: "#fff",     border: "#DDDAD4", color: "#C4C0BB", label: "未開始" },
-  in_progress: { bg: "#fff",     border: "#2C4A3E", color: "#2C4A3E", label: "進行中" },
-  completed:   { bg: "#2C4A3E", border: "#2C4A3E", color: "#fff",    label: "完成"   },
-  skipped:     { bg: "#F7F6F3", border: "#DDDAD4", color: "#A8A5A0", label: "略過"   },
+  pending:     { bg: "#fff",     border: "#d8cfc3", color: "#b3a99d", label: "未開始" },
+  in_progress: { bg: "#fff",     border: "#5c4638", color: "#5c4638", label: "進行中" },
+  completed:   { bg: "#5c4638", border: "#5c4638", color: "#fff",    label: "完成"   },
+  skipped:     { bg: "#faf7f1", border: "#d8cfc3", color: "#b3a99d", label: "略過"   },
 };
 
 function stepIcon(label: string) {
@@ -1497,9 +1497,9 @@ function stepIcon(label: string) {
 }
 
 function stepStatusLabel(label: string, isCompleted: boolean, isCurrent: boolean): { text: string; cls: string } {
-  if (!isCompleted && !isCurrent) return { text: "未完成", cls: "text-[#A8A5A0] bg-[#F7F6F3] border border-[#ECEAE6]" };
-  if (!isCompleted && isCurrent) return { text: "進行中", cls: "text-[#1A1A1A] bg-[#F7F6F3] border border-[#DDDAD4]" };
-  return { text: "完成", cls: "text-[#2C4A3E] bg-[#EFF4F1] border border-[#C4D4CC]" };
+  if (!isCompleted && !isCurrent) return { text: "未完成", cls: "text-[#b3a99d] bg-[#faf7f1] border border-[#ece5da]" };
+  if (!isCompleted && isCurrent) return { text: "進行中", cls: "text-[#241f1b] bg-[#faf7f1] border border-[#d8cfc3]" };
+  return { text: "完成", cls: "text-[#5c4638] bg-[#ece2d6] border border-[#d8cabb]" };
 }
 
 function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => void }) {
@@ -1669,16 +1669,16 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
   const activePrescriptions = client.prescriptions.filter((p) => p.status === "active");
 
-  if (fetching) return <div className="py-12 text-center text-sm" style={{ color: "#A8A5A0" }}>載入中...</div>;
+  if (fetching) return <div className="py-12 text-center text-sm" style={{ color: "#b3a99d" }}>載入中...</div>;
 
   return (
     <div className="max-w-2xl flex flex-col gap-4">
 
       {/* 客戶摘要列 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm pb-1" style={{ borderBottom: "1px solid #ECEAE6", color: "#8A8580" }}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm pb-1" style={{ borderBottom: "1px solid #ece5da", color: "#8b8076" }}>
         {client.gender && <span>{client.gender}</span>}
         {age !== null && <span>{age} 歲</span>}
-        {nextVisit && <span className="font-medium rounded-sm px-2 py-0.5" style={{ color: "#2C4A3E", background: "#EFF4F1", border: "1px solid #C4D4CC" }}>下次回診 {formatDate(nextVisit)}</span>}
+        {nextVisit && <span className="font-medium rounded-sm px-2 py-0.5" style={{ color: "#5c4638", background: "#ece2d6", border: "1px solid #d8cabb" }}>下次回診 {formatDate(nextVisit)}</span>}
         {activePrescriptions.length > 0 && (
           <span>服用中：{activePrescriptions.map((p) => p.items).join("、")}</span>
         )}
@@ -1686,14 +1686,14 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           {editRisk ? (
             <div className="flex items-center gap-2">
               <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)}
-                className="text-xs border rounded px-2 py-0.5 bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#ECEAE6" }}>
+                className="text-xs border rounded px-2 py-0.5 bg-white focus:outline-none focus:ring-1" style={{ borderColor: "#ece5da" }}>
                 <option value="">未設定</option>
                 <option value="高風險">高風險</option>
                 <option value="中風險">中風險</option>
                 <option value="低風險">低風險</option>
               </select>
-              <button onClick={saveRisk} className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>儲存</button>
-              <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs" style={{ color: "#A8A5A0" }}>取消</button>
+              <button onClick={saveRisk} className="text-xs font-semibold" style={{ color: "#5c4638" }}>儲存</button>
+              <button onClick={() => { setEditRisk(false); setRiskLevel(client.riskLevel ?? ""); }} className="text-xs" style={{ color: "#b3a99d" }}>取消</button>
             </div>
           ) : riskConf ? (
             <button onClick={() => setEditRisk(true)}
@@ -1701,7 +1701,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
               ⚠ {riskLevel}
             </button>
           ) : (
-            <button onClick={() => setEditRisk(true)} className="text-xs border border-dashed rounded-full px-2.5 py-1" style={{ color: "#A8A5A0", borderColor: "#DDDAD4" }}>
+            <button onClick={() => setEditRisk(true)} className="text-xs border border-dashed rounded-full px-2.5 py-1" style={{ color: "#b3a99d", borderColor: "#d8cfc3" }}>
               設定風險等級
             </button>
           )}
@@ -1710,22 +1710,22 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
       {/* 進行中週期 */}
       {activeCycle && (
-        <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#C4D4CC" }}>
-          <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
-            <span className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>週期 #{cycleNumber(activeCycle.id)}</span>
-            <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{activeCycle.type}</span>
-            <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide ml-1" style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>進行中</span>
+        <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#d8cabb" }}>
+          <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#ece2d6", borderBottom: "1px solid #d8cabb" }}>
+            <span className="text-xs font-semibold" style={{ color: "#5c4638" }}>週期 #{cycleNumber(activeCycle.id)}</span>
+            <span className="text-sm font-medium" style={{ color: "#241f1b" }}>{activeCycle.type}</span>
+            <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide ml-1" style={{ background: "#ece2d6", color: "#5c4638", border: "1px solid #d8cabb" }}>進行中</span>
             <div className="ml-auto flex items-center gap-3">
               <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })}
-                className="text-xs flex items-center gap-1" style={{ color: "#6A6560" }}>
+                className="text-xs flex items-center gap-1" style={{ color: "#6b6056" }}>
                 <Pencil className="w-3 h-3" />備注
               </button>
               <button onClick={() => completeCycle(activeCycle.id)}
-                className="text-xs border rounded-sm px-2 py-0.5" style={{ color: "#6A6560", borderColor: "#DDDAD4" }}>
+                className="text-xs border rounded-sm px-2 py-0.5" style={{ color: "#6b6056", borderColor: "#d8cfc3" }}>
                 結束
               </button>
               <button onClick={() => deleteCycle(activeCycle.id)}
-                className="text-xs flex items-center gap-1" style={{ color: "#B83232" }}>
+                className="text-xs flex items-center gap-1" style={{ color: "#b8392c" }}>
                 <Trash2 className="w-3 h-3" />刪除
               </button>
             </div>
@@ -1742,16 +1742,16 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                     <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
                       <button onClick={() => cycleStep(activeCycle.id, step)}
                         className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
-                        style={{ background: sty.bg, borderColor: sty.border, color: sty.color, borderRadius: "50%", ...(st === "in_progress" ? { boxShadow: "0 0 0 3px #EFF4F1" } : {}) }}>
+                        style={{ background: sty.bg, borderColor: sty.border, color: sty.color, borderRadius: "50%", ...(st === "in_progress" ? { boxShadow: "0 0 0 3px #ece2d6" } : {}) }}>
                         {st === "completed" ? <Check className="w-4 h-4" /> : st === "skipped" ? "⊘" : i + 1}
                       </button>
                       <span className="text-[10px] mt-1 text-center leading-tight px-1"
-                        style={{ color: sty.color !== "#fff" ? sty.color : "#2C4A3E", fontWeight: st === "in_progress" ? 500 : 400 }}>
+                        style={{ color: sty.color !== "#fff" ? sty.color : "#5c4638", fontWeight: st === "in_progress" ? 500 : 400 }}>
                         {step.label}
                       </span>
                     </div>
                     {i < activeCycle.steps.length - 1 && (
-                      <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: st === "completed" ? "#2C4A3E" : "#DDDAD4" }} />
+                      <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: st === "completed" ? "#5c4638" : "#d8cfc3" }} />
                     )}
                   </div>
                 );
@@ -1760,66 +1760,66 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           </div>
 
           {/* 步驟列表（可編輯）*/}
-          <div style={{ borderTop: "1px solid #ECEAE6" }}>
+          <div style={{ borderTop: "1px solid #ece5da" }}>
             {activeCycle.steps.map((step) => {
               const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
               return (
                 <div key={step.id}>
                   {creatingTaskForStep?.stepId === step.id && (
-                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
-                      <p className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>建立追蹤任務</p>
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+                      <p className="text-xs font-semibold" style={{ color: "#5c4638" }}>建立追蹤任務</p>
                       <input value={creatingTaskForStep.title} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, title: e.target.value })}
-                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="任務標題" />
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="任務標題" />
                       <div className="flex gap-2">
                         <input type="date" value={creatingTaskForStep.dueDate} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, dueDate: e.target.value })}
-                          className="flex-1 text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#DDDAD4" }} />
+                          className="flex-1 text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#d8cfc3" }} />
                         <select value={creatingTaskForStep.priority} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, priority: e.target.value })}
-                          className="text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#DDDAD4" }}>
+                          className="text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#d8cfc3" }}>
                           <option value="high">🔴 高</option>
                           <option value="medium">🟡 中</option>
                           <option value="low">🟢 低</option>
                         </select>
                       </div>
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => setCreatingTaskForStep(null)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
-                        <button onClick={submitStepTask} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>建立任務</button>
+                        <button onClick={() => setCreatingTaskForStep(null)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                        <button onClick={submitStepTask} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>建立任務</button>
                       </div>
                     </div>
                   )}
                   {editingStep?.id === step.id ? (
-                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
                       <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
-                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="步驟名稱" />
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="步驟名稱" />
                       <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
-                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="備注（選填）" />
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="備注（選填）" />
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
-                        <button onClick={saveStepEdit} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+                        <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                        <button onClick={saveStepEdit} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>儲存</button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#2C4A3E" : st === "in_progress" ? "#5A8A7A" : st === "skipped" ? "#DDDAD4" : "#DDDAD4" }} />
+                    <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #ece5da" }}>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#5c4638" : st === "in_progress" ? "#5A8A7A" : st === "skipped" ? "#d8cfc3" : "#d8cfc3" }} />
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8A8580" : "#1A1A1A", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
+                        <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8b8076" : "#241f1b", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
                           {step.label}
                         </span>
-                        {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#A8A5A0" }}>{step.note}</p>}
+                        {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#b3a99d" }}>{step.note}</p>}
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm flex-shrink-0" style={{ background: "#F2F0EC", color: "#8A8580" }}>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm flex-shrink-0" style={{ background: "#ece5da", color: "#8b8076" }}>
                         {STEP_STATUS_STYLE[st].label}
                       </span>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setCreatingTaskForStep({ stepId: step.id, title: step.label, dueDate: "", priority: "medium" })}
-                          className="p-1.5 rounded text-[10px] font-medium" style={{ color: "#2C4A3E" }} title="建立追蹤任務">+任務</button>
+                          className="p-1.5 rounded text-[10px] font-medium" style={{ color: "#5c4638" }} title="建立追蹤任務">+任務</button>
                         <button onClick={() => skipStep(activeCycle.id, step)}
-                          className="p-1.5 rounded text-[10px]" style={{ color: st === "skipped" ? "#2C4A3E" : "#A8A5A0" }}
+                          className="p-1.5 rounded text-[10px]" style={{ color: st === "skipped" ? "#5c4638" : "#b3a99d" }}
                           title={st === "skipped" ? "取消略過" : "標記略過"}>{st === "skipped" ? "↩" : "⊘"}</button>
                         <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
-                          className="p-1.5 rounded" style={{ color: "#8A8580" }}><Pencil className="w-3 h-3" /></button>
-                        <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#B83232" }}><Trash2 className="w-3 h-3" /></button>
+                          className="p-1.5 rounded" style={{ color: "#8b8076" }}><Pencil className="w-3 h-3" /></button>
+                        <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#b8392c" }}><Trash2 className="w-3 h-3" /></button>
                       </div>
-                      {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#A8A5A0" }}>{formatDate(step.completedAt)}</span>}
+                      {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#b3a99d" }}>{formatDate(step.completedAt)}</span>}
                     </div>
                   )}
                 </div>
@@ -1829,21 +1829,21 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
           {/* 週期備注 */}
           {editingCycle?.id === activeCycle.id ? (
-            <div className="px-4 py-3 flex flex-col gap-2" style={{ borderTop: "1px solid #ECEAE6" }}>
+            <div className="px-4 py-3 flex flex-col gap-2" style={{ borderTop: "1px solid #ece5da" }}>
               <textarea value={editingCycle.note}
                 onChange={(e) => setEditingCycle({ ...editingCycle, note: e.target.value })}
                 className="text-sm border rounded-sm px-3 py-2 w-full focus:outline-none focus:ring-1 resize-none"
-                style={{ borderColor: "#DDDAD4" }} rows={3}
+                style={{ borderColor: "#d8cfc3" }} rows={3}
                 placeholder="週期備注（例如：以排毒方案為主，搭配...）" />
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setEditingCycle(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
-                <button onClick={saveCycleNote} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+                <button onClick={() => setEditingCycle(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                <button onClick={saveCycleNote} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>儲存</button>
               </div>
             </div>
           ) : activeCycle.notes ? (
-            <div className="px-4 py-2.5 flex items-start gap-2" style={{ borderTop: "1px solid #ECEAE6", background: "#F9F8F6" }}>
-              <span className="text-xs flex-1" style={{ color: "#6A6560" }}>{activeCycle.notes}</span>
-              <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })} style={{ color: "#A8A5A0" }}>
+            <div className="px-4 py-2.5 flex items-start gap-2" style={{ borderTop: "1px solid #ece5da", background: "#f3ece0" }}>
+              <span className="text-xs flex-1" style={{ color: "#6b6056" }}>{activeCycle.notes}</span>
+              <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })} style={{ color: "#b3a99d" }}>
                 <Pencil className="w-3 h-3" />
               </button>
             </div>
@@ -1853,11 +1853,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
       {/* 下一步卡片 */}
       {activeCycle && nextStep && (
-        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#EFF4F1", border: "1px solid #C4D4CC" }}>
-          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#2C4A3E" }} />
+        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
+          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />
           <div>
-            <p className="text-sm font-medium" style={{ color: "#1A1A1A" }}>下一步：{nextStep.label}</p>
-            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#7A8A82" }}>{nextStep.note}</p>}
+            <p className="text-sm font-medium" style={{ color: "#241f1b" }}>下一步：{nextStep.label}</p>
+            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#876b57" }}>{nextStep.note}</p>}
           </div>
         </div>
       )}
@@ -1866,34 +1866,34 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
       {!showNew ? (
         <button onClick={() => setShowNew(true)}
           className="flex items-center justify-center gap-2 py-3 text-sm transition-colors rounded-sm"
-          style={{ border: "1px dashed #DDDAD4", color: "#A8A5A0" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#2C4A3E"; (e.currentTarget as HTMLElement).style.borderColor = "#2C4A3E"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#A8A5A0"; (e.currentTarget as HTMLElement).style.borderColor = "#DDDAD4"; }}>
+          style={{ border: "1px dashed #d8cfc3", color: "#b3a99d" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#5c4638"; (e.currentTarget as HTMLElement).style.borderColor = "#5c4638"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#b3a99d"; (e.currentTarget as HTMLElement).style.borderColor = "#d8cfc3"; }}>
           <Plus className="w-4 h-4" />開啟新診療週期
         </button>
       ) : (
-        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
-          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增診療週期</p>
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#f3ece0", borderColor: "#ece5da" }}>
+          <p className="text-sm font-semibold" style={{ color: "#241f1b" }}>新增診療週期</p>
           <div>
-            <p className="text-xs mb-1.5" style={{ color: "#8A8580" }}>週期類型</p>
+            <p className="text-xs mb-1.5" style={{ color: "#8b8076" }}>週期類型</p>
             <div className="grid grid-cols-2 gap-2">
               {availableTypes.map((t) => (
                 <button key={t} onClick={() => setNewType(t)}
-                  className={cn("py-2 px-3 rounded-sm text-sm font-medium border transition-colors", newType !== t && "hover:border-[#2C4A3E]")}
-                  style={newType === t ? { background: "#2C4A3E", color: "#fff", borderColor: "#2C4A3E" } : { background: "#fff", color: "#6A6560", borderColor: "#DDDAD4" }}>
+                  className={cn("py-2 px-3 rounded-sm text-sm font-medium border transition-colors", newType !== t && "hover:border-[#5c4638]")}
+                  style={newType === t ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" } : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
                   {t}
                 </button>
               ))}
             </div>
           </div>
           {previewSteps.length > 0 && (
-            <p className="text-xs leading-relaxed" style={{ color: "#A8A5A0" }}>步驟：{previewSteps.join(" → ")}</p>
+            <p className="text-xs leading-relaxed" style={{ color: "#b3a99d" }}>步驟：{previewSteps.join(" → ")}</p>
           )}
           <div>
-            <p className="text-xs mb-1" style={{ color: "#8A8580" }}>備注（選填）</p>
+            <p className="text-xs mb-1" style={{ color: "#8b8076" }}>備注（選填）</p>
             <textarea value={newNote} onChange={(e) => setNewNote(e.target.value)}
               className="w-full text-sm border rounded-sm px-3 py-2 focus:outline-none focus:ring-1 resize-none"
-              style={{ borderColor: "#DDDAD4" }} rows={2}
+              style={{ borderColor: "#d8cfc3" }} rows={2}
               placeholder="例如：以排毒方案為主，搭配..." />
           </div>
           <div className="flex gap-2 justify-end">
@@ -1906,47 +1906,47 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
       {/* 歷史週期 */}
       {pastCycles.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[.08em]" style={{ color: "#A8A5A0" }}>歷史週期（{pastCycles.length}）</p>
+          <p className="text-xs font-semibold uppercase tracking-[.08em]" style={{ color: "#b3a99d" }}>歷史週期（{pastCycles.length}）</p>
           {pastCycles.map((cycle) => {
             const num = cycleNumber(cycle.id);
             const completedCount = cycle.steps.filter((s) => s.isCompleted).length;
             const expanded = expandedCycles.has(cycle.id);
             return (
-              <div key={cycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
-                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#F9F8F6" }}>
-                  <span className="text-xs" style={{ color: "#8A8580" }}>#{num}</span>
-                  <span className="text-sm font-medium" style={{ color: "#3A3A3A" }}>{cycle.type}</span>
-                  <span className="text-xs" style={{ color: "#A8A5A0" }}>{formatDate(cycle.startDate).slice(0, 7)}</span>
-                  <span className="text-xs rounded-sm px-1.5 py-0.5" style={{ background: "#ECEAE6", color: "#8A8580" }}>
+              <div key={cycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
+                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#f3ece0" }}>
+                  <span className="text-xs" style={{ color: "#8b8076" }}>#{num}</span>
+                  <span className="text-sm font-medium" style={{ color: "#3b332c" }}>{cycle.type}</span>
+                  <span className="text-xs" style={{ color: "#b3a99d" }}>{formatDate(cycle.startDate).slice(0, 7)}</span>
+                  <span className="text-xs rounded-sm px-1.5 py-0.5" style={{ background: "#ece5da", color: "#8b8076" }}>
                     {completedCount}/{cycle.steps.length} 完成
                   </span>
                   <div className="ml-auto flex items-center gap-3">
                     <button onClick={() => toggleExpandCycle(cycle.id)}
-                      className="text-xs flex items-center gap-1" style={{ color: "#8A8580" }}>
+                      className="text-xs flex items-center gap-1" style={{ color: "#8b8076" }}>
                       {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}步驟
                     </button>
-                    <button onClick={() => deleteCycle(cycle.id)} className="flex items-center gap-1 text-xs" style={{ color: "#B83232" }}>
+                    <button onClick={() => deleteCycle(cycle.id)} className="flex items-center gap-1 text-xs" style={{ color: "#b8392c" }}>
                       <Trash2 className="w-3 h-3" />刪除
                     </button>
                   </div>
                 </div>
                 {expanded && (
-                  <div style={{ borderTop: "1px solid #ECEAE6" }}>
+                  <div style={{ borderTop: "1px solid #ece5da" }}>
                     {cycle.steps.map((step) => (
-                      <div key={step.id} className="flex items-center gap-3 px-4 py-2 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
-                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", step.isCompleted ? "bg-[#2C4A3E]" : "bg-[#DDDAD4]")} />
-                        <span className="text-sm flex-1" style={{ color: step.isCompleted ? "#8A8580" : "#3A3A3A", textDecoration: step.isCompleted ? "line-through" : "none" }}>
+                      <div key={step.id} className="flex items-center gap-3 px-4 py-2 group" style={{ borderBottom: "1px solid #ece5da" }}>
+                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", step.isCompleted ? "bg-[#5c4638]" : "bg-[#d8cfc3]")} />
+                        <span className="text-sm flex-1" style={{ color: step.isCompleted ? "#8b8076" : "#3b332c", textDecoration: step.isCompleted ? "line-through" : "none" }}>
                           {step.label}
                         </span>
-                        {step.note && <span className="text-xs" style={{ color: "#A8A5A0" }}>{step.note}</span>}
+                        {step.note && <span className="text-xs" style={{ color: "#b3a99d" }}>{step.note}</span>}
                         <button onClick={() => deleteStep(cycle.id, step.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "#B83232" }}>
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1" style={{ color: "#b8392c" }}>
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     ))}
                     {cycle.notes && (
-                      <div className="px-4 py-2.5 text-xs" style={{ background: "#F9F8F6", borderTop: "1px solid #ECEAE6", color: "#6A6560" }}>
+                      <div className="px-4 py-2.5 text-xs" style={{ background: "#f3ece0", borderTop: "1px solid #ece5da", color: "#6b6056" }}>
                         備注：{cycle.notes}
                       </div>
                     )}
@@ -2053,7 +2053,7 @@ function QuestionnaireTab({ client, showForm, setShowForm, onRefresh }: { client
     setSaving(false); setShowForm(false); onRefresh();
   };
 
-  const scoreColor = (v: number | null) => v === null ? "#DDDAD4" : v >= 8 ? "#2C4A3E" : v >= 5 ? "#E8A000" : "#B83232";
+  const scoreColor = (v: number | null) => v === null ? "#d8cfc3" : v >= 8 ? "#5c4638" : v >= 5 ? "#E8A000" : "#b8392c";
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
@@ -2061,47 +2061,47 @@ function QuestionnaireTab({ client, showForm, setShowForm, onRefresh }: { client
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>{showForm ? "取消" : "+ 新增問卷"}</Button>
       </div>
       {showForm && (
-        <div className="border rounded-sm p-4 flex flex-col gap-4" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
-          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增健康問卷</p>
+        <div className="border rounded-sm p-4 flex flex-col gap-4" style={{ background: "#f3ece0", borderColor: "#ece5da" }}>
+          <p className="text-sm font-semibold" style={{ color: "#241f1b" }}>新增健康問卷</p>
           <form onSubmit={submit} className="flex flex-col gap-3">
             <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              className="text-sm border rounded-sm px-2 py-1.5 w-48" style={{ borderColor: "#DDDAD4" }} />
+              className="text-sm border rounded-sm px-2 py-1.5 w-48" style={{ borderColor: "#d8cfc3" }} />
             <textarea placeholder="主訴 / 主要症狀" value={form.chiefComplaint} onChange={(e) => setForm((f) => ({ ...f, chiefComplaint: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <textarea placeholder="健康目標" value={form.healthGoals} onChange={(e) => setForm((f) => ({ ...f, healthGoals: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <div className="grid grid-cols-5 gap-2">
               {scoreKeys.map((key, i) => (
                 <div key={key} className="flex flex-col gap-1">
-                  <label className="text-xs text-center" style={{ color: "#8A8580" }}>{SCORE_LABELS[i]}</label>
+                  <label className="text-xs text-center" style={{ color: "#8b8076" }}>{SCORE_LABELS[i]}</label>
                   <input type="number" min={0} max={10} value={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                    className="text-sm border rounded-sm px-2 py-1 text-center w-full" style={{ borderColor: "#DDDAD4" }} />
+                    className="text-sm border rounded-sm px-2 py-1 text-center w-full" style={{ borderColor: "#d8cfc3" }} />
                 </div>
               ))}
             </div>
             <textarea placeholder="飲食習慣" value={form.diet} onChange={(e) => setForm((f) => ({ ...f, diet: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <textarea placeholder="運動習慣" value={form.exercise} onChange={(e) => setForm((f) => ({ ...f, exercise: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <textarea placeholder="目前用藥" value={form.currentMeds} onChange={(e) => setForm((f) => ({ ...f, currentMeds: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <textarea placeholder="過敏史" value={form.allergies} onChange={(e) => setForm((f) => ({ ...f, allergies: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <textarea placeholder="備注" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
             <div className="flex justify-end"><Button type="submit" disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button></div>
           </form>
         </div>
       )}
       {client.questionnaires.length === 0 && !showForm && (
-        <div className="text-center py-12 text-sm" style={{ color: "#A8A5A0" }}>尚無健康問卷紀錄</div>
+        <div className="text-center py-12 text-sm" style={{ color: "#b3a99d" }}>尚無健康問卷紀錄</div>
       )}
       {client.questionnaires.map((q) => (
-        <div key={q.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-left" style={{ background: "#F9F8F6" }}
+        <div key={q.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left" style={{ background: "#f3ece0" }}
             onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
-            <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{formatDate(q.date)}</span>
-            <span className="text-sm flex-1 truncate" style={{ color: "#6A6560" }}>{q.chiefComplaint || "—"}</span>
+            <span className="text-sm font-medium" style={{ color: "#241f1b" }}>{formatDate(q.date)}</span>
+            <span className="text-sm flex-1 truncate" style={{ color: "#6b6056" }}>{q.chiefComplaint || "—"}</span>
             <div className="flex gap-1">
               {scoreKeys.map((key) => {
                 const val = q[key as ScoreKey];
@@ -2109,16 +2109,16 @@ function QuestionnaireTab({ client, showForm, setShowForm, onRefresh }: { client
                   style={{ background: scoreColor(val) }}>{val ?? "?"}</span>;
               })}
             </div>
-            {expanded === q.id ? <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: "#A8A5A0" }} /> : <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#A8A5A0" }} />}
+            {expanded === q.id ? <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: "#b3a99d" }} /> : <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#b3a99d" }} />}
           </button>
           {expanded === q.id && (
-            <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ECEAE6" }}>
-              {q.healthGoals && <p><span className="font-medium" style={{ color: "#8A8580" }}>健康目標：</span>{q.healthGoals}</p>}
-              {q.diet && <p><span className="font-medium" style={{ color: "#8A8580" }}>飲食：</span>{q.diet}</p>}
-              {q.exercise && <p><span className="font-medium" style={{ color: "#8A8580" }}>運動：</span>{q.exercise}</p>}
-              {q.currentMeds && <p><span className="font-medium" style={{ color: "#8A8580" }}>用藥：</span>{q.currentMeds}</p>}
-              {q.allergies && <p><span className="font-medium" style={{ color: "#8A8580" }}>過敏：</span>{q.allergies}</p>}
-              {q.notes && <p><span className="font-medium" style={{ color: "#8A8580" }}>備注：</span>{q.notes}</p>}
+            <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ece5da" }}>
+              {q.healthGoals && <p><span className="font-medium" style={{ color: "#8b8076" }}>健康目標：</span>{q.healthGoals}</p>}
+              {q.diet && <p><span className="font-medium" style={{ color: "#8b8076" }}>飲食：</span>{q.diet}</p>}
+              {q.exercise && <p><span className="font-medium" style={{ color: "#8b8076" }}>運動：</span>{q.exercise}</p>}
+              {q.currentMeds && <p><span className="font-medium" style={{ color: "#8b8076" }}>用藥：</span>{q.currentMeds}</p>}
+              {q.allergies && <p><span className="font-medium" style={{ color: "#8b8076" }}>過敏：</span>{q.allergies}</p>}
+              {q.notes && <p><span className="font-medium" style={{ color: "#8b8076" }}>備注：</span>{q.notes}</p>}
             </div>
           )}
         </div>
@@ -2177,23 +2177,23 @@ function FunctionalMatrixTab({ client, onRefresh }: { client: Client; onRefresh:
   return (
     <div className="max-w-3xl flex flex-col gap-6">
       {/* 功能醫學矩陣 */}
-      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
-        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
-          <p className="text-sm font-semibold" style={{ color: "#2C4A3E" }}>功能醫學矩陣</p>
+      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#ece2d6", borderBottom: "1px solid #d8cabb" }}>
+          <p className="text-sm font-semibold" style={{ color: "#5c4638" }}>功能醫學矩陣</p>
           <button onClick={saveMatrix} disabled={saving}
-            className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: saving ? "#DDDAD4" : "#2C4A3E" }}>
+            className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: saving ? "#d8cfc3" : "#5c4638" }}>
             {saving ? "儲存中..." : "儲存"}
           </button>
         </div>
         <div className="p-4 grid grid-cols-1 gap-3">
           {FM_SYSTEMS.map(({ key, label }) => (
             <div key={key}>
-              <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>{label}</label>
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6b6056" }}>{label}</label>
               <textarea
                 value={matrix[key as keyof FunctionalMatrix] ?? ""}
                 onChange={(e) => setMatrix((m) => ({ ...m, [key]: e.target.value || null }))}
                 className="w-full text-sm border rounded-sm px-3 py-2 resize-none focus:outline-none"
-                style={{ borderColor: "#DDDAD4" }} rows={2}
+                style={{ borderColor: "#d8cfc3" }} rows={2}
                 placeholder={`${label}相關症狀、指標、觀察...`} />
             </div>
           ))}
@@ -2201,34 +2201,34 @@ function FunctionalMatrixTab({ client, onRefresh }: { client: Client; onRefresh:
       </div>
 
       {/* 症狀時間軸 */}
-      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
-        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
-          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>症狀時間軸</p>
+      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+          <p className="text-sm font-semibold" style={{ color: "#241f1b" }}>症狀時間軸</p>
           <button onClick={() => setShowTimelineForm(!showTimelineForm)}
             className="text-xs px-3 py-1 rounded-sm border transition-colors"
-            style={{ borderColor: showTimelineForm ? "#2C4A3E" : "#DDDAD4", color: showTimelineForm ? "#2C4A3E" : "#6A6560" }}>
+            style={{ borderColor: showTimelineForm ? "#5c4638" : "#d8cfc3", color: showTimelineForm ? "#5c4638" : "#6b6056" }}>
             {showTimelineForm ? "取消" : "+ 新增事件"}
           </button>
         </div>
         {showTimelineForm && (
-          <form onSubmit={addEvent} className="px-4 py-3 flex flex-col gap-2" style={{ borderBottom: "1px solid #ECEAE6", background: "#F9F8F6" }}>
+          <form onSubmit={addEvent} className="px-4 py-3 flex flex-col gap-2" style={{ borderBottom: "1px solid #ece5da", background: "#f3ece0" }}>
             <div className="grid grid-cols-2 gap-2">
               <input type="date" value={timelineForm.date} onChange={(e) => setTimelineForm((f) => ({ ...f, date: e.target.value }))}
-                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#d8cfc3" }} />
               <select value={timelineForm.category} onChange={(e) => setTimelineForm((f) => ({ ...f, category: e.target.value }))}
-                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }}>
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#d8cfc3" }}>
                 {TIMELINE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <input placeholder="標題 *" value={timelineForm.title} onChange={(e) => setTimelineForm((f) => ({ ...f, title: e.target.value }))}
-              className="text-sm border rounded-sm px-2 py-1.5 w-full" style={{ borderColor: "#DDDAD4" }} required />
+              className="text-sm border rounded-sm px-2 py-1.5 w-full" style={{ borderColor: "#d8cfc3" }} required />
             <textarea placeholder="詳細說明（選填）" value={timelineForm.description} onChange={(e) => setTimelineForm((f) => ({ ...f, description: e.target.value }))}
-              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
-            <div className="flex justify-end"><button type="submit" className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>新增</button></div>
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#d8cfc3" }} rows={2} />
+            <div className="flex justify-end"><button type="submit" className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>新增</button></div>
           </form>
         )}
         {events.length === 0 && (
-          <div className="text-center py-10 text-sm" style={{ color: "#A8A5A0" }}>尚無時間軸事件</div>
+          <div className="text-center py-10 text-sm" style={{ color: "#b3a99d" }}>尚無時間軸事件</div>
         )}
         <div className="px-4 py-3 flex flex-col gap-3">
           {events.map((ev) => {
@@ -2236,18 +2236,18 @@ function FunctionalMatrixTab({ client, onRefresh }: { client: Client; onRefresh:
             return (
               <div key={ev.id} className="flex items-start gap-3 group">
                 <div className="flex flex-col items-center flex-shrink-0">
-                  <div className="w-2.5 h-2.5 rounded-full mt-0.5" style={{ background: "#2C4A3E" }} />
-                  <div className="flex-1 w-px mt-1" style={{ background: "#DDDAD4", minHeight: "24px" }} />
+                  <div className="w-2.5 h-2.5 rounded-full mt-0.5" style={{ background: "#5c4638" }} />
+                  <div className="flex-1 w-px mt-1" style={{ background: "#d8cfc3", minHeight: "24px" }} />
                 </div>
-                <div className="flex-1 min-w-0 pb-3" style={{ borderBottom: "1px solid #F2F0EC" }}>
+                <div className="flex-1 min-w-0 pb-3" style={{ borderBottom: "1px solid #ece5da" }}>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: "#8A8580" }}>{formatDate(ev.date)}</span>
-                    {cat && <span className="text-[10px] px-1.5 py-0.5 rounded-sm" style={{ background: "#EFF4F1", color: "#2C4A3E" }}>{cat.label}</span>}
+                    <span className="text-xs" style={{ color: "#8b8076" }}>{formatDate(ev.date)}</span>
+                    {cat && <span className="text-[10px] px-1.5 py-0.5 rounded-sm" style={{ background: "#ece2d6", color: "#5c4638" }}>{cat.label}</span>}
                   </div>
-                  <p className="text-sm font-medium mt-0.5" style={{ color: "#1A1A1A" }}>{ev.title}</p>
-                  {ev.description && <p className="text-xs mt-0.5" style={{ color: "#6A6560" }}>{ev.description}</p>}
+                  <p className="text-sm font-medium mt-0.5" style={{ color: "#241f1b" }}>{ev.title}</p>
+                  {ev.description && <p className="text-xs mt-0.5" style={{ color: "#6b6056" }}>{ev.description}</p>}
                 </div>
-                <button onClick={() => deleteEvent(ev.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 flex-shrink-0" style={{ color: "#B83232" }}>
+                <button onClick={() => deleteEvent(ev.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 flex-shrink-0" style={{ color: "#b8392c" }}>
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
@@ -2308,72 +2308,72 @@ function ComplaintsTab({ client, showForm, setShowForm, onRefresh }: { client: C
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>{showForm ? "取消" : "+ 新增客訴"}</Button>
       </div>
       {showForm && (
-        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
-          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增客訴記錄（LEAP 模型）</p>
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#f3ece0", borderColor: "#ece5da" }}>
+          <p className="text-sm font-semibold" style={{ color: "#241f1b" }}>新增客訴記錄（LEAP 模型）</p>
           <form onSubmit={submit} className="flex flex-col gap-3">
             <div className="flex gap-2">
               <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#d8cfc3" }} />
               <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }}>
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#d8cfc3" }}>
                 {COMPLAINT_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             {LEAP_FIELDS.map(({ key, label, placeholder }) => (
               <div key={key}>
-                <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>{label}</label>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#6b6056" }}>{label}</label>
                 <textarea value={form[key as keyof typeof form]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                  className="w-full text-sm border rounded-sm px-3 py-2 resize-none" style={{ borderColor: "#DDDAD4" }} rows={2}
+                  className="w-full text-sm border rounded-sm px-3 py-2 resize-none" style={{ borderColor: "#d8cfc3" }} rows={2}
                   placeholder={placeholder} />
               </div>
             ))}
             <div>
-              <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>承諾期限</label>
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6b6056" }}>承諾期限</label>
               <input type="date" value={form.promisedDeadline} onChange={(e) => setForm((f) => ({ ...f, promisedDeadline: e.target.value }))}
-                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#d8cfc3" }} />
             </div>
             <div className="flex justify-end"><Button type="submit" disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button></div>
           </form>
         </div>
       )}
       {complaints.length === 0 && !showForm && (
-        <div className="text-center py-12 text-sm" style={{ color: "#A8A5A0" }}>尚無客訴記錄</div>
+        <div className="text-center py-12 text-sm" style={{ color: "#b3a99d" }}>尚無客訴記錄</div>
       )}
       {complaints.map((c) => {
         const statusMeta = COMPLAINT_STATUS.find((s) => s.value === c.status);
         const isOpen = expanded === c.id;
         return (
-          <div key={c.id} className="border rounded-sm overflow-hidden" style={{ borderColor: c.status === "open" ? "#E8C4A0" : "#ECEAE6" }}>
-            <div className="flex items-center gap-3 px-4 py-3" style={{ background: c.status === "open" ? "#FDF6EF" : "#F9F8F6" }}>
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: c.status === "open" ? "#E8A000" : "#A8A5A0" }} />
-              <span className="text-sm font-medium flex-1 truncate" style={{ color: "#1A1A1A" }}>{c.clientWords?.slice(0, 40) || `客訴 ${formatDate(c.date)}`}</span>
-              <span className="text-xs" style={{ color: "#8A8580" }}>{formatDate(c.date)}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded-sm" style={{ background: c.status === "open" ? "#FDEBD0" : "#ECEAE6", color: c.status === "open" ? "#E8A000" : "#8A8580" }}>
+          <div key={c.id} className="border rounded-sm overflow-hidden" style={{ borderColor: c.status === "open" ? "#E8C4A0" : "#ece5da" }}>
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: c.status === "open" ? "#FDF6EF" : "#f3ece0" }}>
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: c.status === "open" ? "#E8A000" : "#b3a99d" }} />
+              <span className="text-sm font-medium flex-1 truncate" style={{ color: "#241f1b" }}>{c.clientWords?.slice(0, 40) || `客訴 ${formatDate(c.date)}`}</span>
+              <span className="text-xs" style={{ color: "#8b8076" }}>{formatDate(c.date)}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-sm" style={{ background: c.status === "open" ? "#FDEBD0" : "#ece5da", color: c.status === "open" ? "#E8A000" : "#8b8076" }}>
                 {statusMeta?.label}
               </span>
-              <button onClick={() => setExpanded(isOpen ? null : c.id)} style={{ color: "#A8A5A0" }}>
+              <button onClick={() => setExpanded(isOpen ? null : c.id)} style={{ color: "#b3a99d" }}>
                 {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
             </div>
             {isOpen && (
-              <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ECEAE6" }}>
+              <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ece5da" }}>
                 {LEAP_FIELDS.filter(({ key }) => c[key as keyof Complaint]).map(({ key, label }) => (
                   <div key={key}>
-                    <p className="text-xs font-medium mb-0.5" style={{ color: "#8A8580" }}>{label}</p>
-                    <p style={{ color: "#1A1A1A" }}>{c[key as keyof Complaint] as string}</p>
+                    <p className="text-xs font-medium mb-0.5" style={{ color: "#8b8076" }}>{label}</p>
+                    <p style={{ color: "#241f1b" }}>{c[key as keyof Complaint] as string}</p>
                   </div>
                 ))}
-                {c.promisedDeadline && <p><span className="text-xs font-medium" style={{ color: "#8A8580" }}>承諾期限：</span>{formatDate(c.promisedDeadline)}</p>}
-                <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: "1px solid #F2F0EC" }}>
-                  <span className="text-xs" style={{ color: "#8A8580" }}>狀態：</span>
+                {c.promisedDeadline && <p><span className="text-xs font-medium" style={{ color: "#8b8076" }}>承諾期限：</span>{formatDate(c.promisedDeadline)}</p>}
+                <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: "1px solid #ece5da" }}>
+                  <span className="text-xs" style={{ color: "#8b8076" }}>狀態：</span>
                   {COMPLAINT_STATUS.map((s) => (
                     <button key={s.value} onClick={() => updateStatus(c.id, s.value)}
                       className="text-xs px-2 py-0.5 rounded-sm border transition-colors"
-                      style={c.status === s.value ? { background: "#2C4A3E", color: "#fff", borderColor: "#2C4A3E" } : { borderColor: "#DDDAD4", color: "#6A6560" }}>
+                      style={c.status === s.value ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" } : { borderColor: "#d8cfc3", color: "#6b6056" }}>
                       {s.label}
                     </button>
                   ))}
-                  <button onClick={() => deleteComplaint(c.id)} className="ml-auto text-xs" style={{ color: "#B83232" }}>刪除</button>
+                  <button onClick={() => deleteComplaint(c.id)} className="ml-auto text-xs" style={{ color: "#b8392c" }}>刪除</button>
                 </div>
               </div>
             )}

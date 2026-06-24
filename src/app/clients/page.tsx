@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export const dynamic = "force-dynamic";
 
@@ -126,10 +126,10 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: "#1A1A1A" }}>
-            <Users className="w-5 h-5" style={{ color: "#2C4A3E" }} />客戶管理
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: "#241f1b" }}>
+            <Users className="w-5 h-5" style={{ color: "#5c4638" }} />客戶管理
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#8A8580" }}>共 {clients.length} 位客戶</p>
+          <p className="text-sm mt-0.5" style={{ color: "#8b8076" }}>共 {clients.length} 位客戶</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={downloadTemplate}><Download className="w-4 h-4" />下載範本</Button>
@@ -139,7 +139,7 @@ export default function ClientsPage() {
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
           <Link href="/clients/new"
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-sm transition-colors"
-            style={{ background: "#2C4A3E", color: "#F7F6F3" }}>
+            style={{ background: "#5c4638", color: "#faf7f1" }}>
             <Plus className="w-4 h-4" />新增客戶
           </Link>
         </div>
@@ -147,13 +147,13 @@ export default function ClientsPage() {
 
       {/* Search */}
       <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#A8A5A0" }} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#b3a99d" }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜尋姓名、電話、LINE ID、病歷號碼..."
           className="w-full pl-9 pr-4 py-2 text-sm rounded-sm focus:outline-none"
-          style={{ border: "1px solid #DDDAD4", background: "#FFFFFF" }}
+          style={{ border: "1px solid #d8cfc3", background: "#FFFFFF" }}
         />
       </div>
 
@@ -165,17 +165,17 @@ export default function ClientsPage() {
           { key: "expiring", label: "⏰ 處方快到期", count: expiringCount, style: "orange" },
         ] as const).map((f) => {
           const active = quickFilter === f.key;
-          const bgMap = { default: "#2C4A3E", amber: "#FEF3C7", orange: "#FFF4E6" };
-          const colorMap = { default: "#F7F6F3", amber: "#92400E", orange: "#C2600A" };
-          const borderMap = { default: "#2C4A3E", amber: "#F6A330", orange: "#F4825A" };
+          const bgMap = { default: "#5c4638", amber: "#FEF3C7", orange: "#FFF4E6" };
+          const colorMap = { default: "#faf7f1", amber: "#92400E", orange: "#C2600A" };
+          const borderMap = { default: "#5c4638", amber: "#F6A330", orange: "#F4825A" };
           return (
             <button key={f.key}
               onClick={() => setQuickFilter(f.key)}
               className="px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1"
               style={{
                 background: active ? bgMap[f.style] : "#FFFFFF",
-                color: active ? colorMap[f.style] : "#6A6560",
-                borderColor: active ? borderMap[f.style] : "#DDDAD4",
+                color: active ? colorMap[f.style] : "#6b6056",
+                borderColor: active ? borderMap[f.style] : "#d8cfc3",
                 fontWeight: active ? 600 : 400,
               }}>
               {f.label}
@@ -184,16 +184,16 @@ export default function ClientsPage() {
           );
         })}
 
-        {allTags.length > 0 && <div className="h-4 w-px mx-1" style={{ background: "#DDDAD4" }} />}
+        {allTags.length > 0 && <div className="h-4 w-px mx-1" style={{ background: "#d8cfc3" }} />}
 
         {allTags.map((tag) => (
           <button key={tag}
             onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
             className="px-3 py-1 text-xs rounded-full border transition-colors"
             style={{
-              background: tagFilter === tag ? "#EFF4F1" : "#FFFFFF",
-              color: tagFilter === tag ? "#2C4A3E" : "#6A6560",
-              borderColor: tagFilter === tag ? "#2C4A3E" : "#DDDAD4",
+              background: tagFilter === tag ? "#ece2d6" : "#FFFFFF",
+              color: tagFilter === tag ? "#5c4638" : "#6b6056",
+              borderColor: tagFilter === tag ? "#5c4638" : "#d8cfc3",
               fontWeight: tagFilter === tag ? 600 : 400,
             }}>
             {tag}
@@ -204,24 +204,24 @@ export default function ClientsPage() {
       {/* Table */}
       <Card>
         {loading ? (
-          <div className="py-16 text-center text-sm" style={{ color: "#A8A5A0" }}>載入中...</div>
+          <div className="py-16 text-center text-sm" style={{ color: "#b3a99d" }}>載入中...</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "#DDDAD4" }} />
-            <p className="text-sm" style={{ color: "#8A8580" }}>
+            <Users className="w-10 h-10 mx-auto mb-3" style={{ color: "#d8cfc3" }} />
+            <p className="text-sm" style={{ color: "#8b8076" }}>
               {search || quickFilter !== "all" || tagFilter ? "找不到符合的客戶" : "尚無客戶資料，請新增或匯入"}
             </p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: "1px solid #ECEAE6" }}>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580", width: "140px" }}>病歷號碼</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580" }}>姓名</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580" }}>性別 / 年齡</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580" }}>聯絡方式</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580" }}>處方狀態</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8A8580" }}>最後更新</th>
+              <tr style={{ borderBottom: "1px solid #ece5da" }}>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076", width: "140px" }}>病歷號碼</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>姓名</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>性別 / 年齡</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>聯絡方式</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>處方狀態</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>最後更新</th>
               </tr>
             </thead>
             <tbody>
@@ -230,7 +230,7 @@ export default function ClientsPage() {
                 return (
                   <tr key={client.id}
                     style={{
-                      borderBottom: "1px solid #F2F0EC",
+                      borderBottom: "1px solid #ece5da",
                       background: client.needsAttention ? "#FFFBF0" : undefined,
                     }}
                     className={!client.needsAttention ? "hover:bg-slate-50" : undefined}>
@@ -243,7 +243,7 @@ export default function ClientsPage() {
                           style={{ color: client.needsAttention ? "#D97706" : "#D1CEC8" }}>
                           <Bookmark className="w-3.5 h-3.5" fill={client.needsAttention ? "#D97706" : "none"} />
                         </button>
-                        <span className="font-mono text-xs" style={{ color: "#8A8580" }}>
+                        <span className="font-mono text-xs" style={{ color: "#8b8076" }}>
                           {client.medicalRecordNumber || "—"}
                         </span>
                       </div>
@@ -253,7 +253,7 @@ export default function ClientsPage() {
                         <div className="flex items-center gap-2">
                           <a href={`/clients/${client.id}`}
                             className="font-medium hover:underline"
-                            style={{ color: "#2C4A3E" }}>
+                            style={{ color: "#5c4638" }}>
                             {client.name}
                           </a>
                           {client.needsAttention && (
@@ -264,7 +264,7 @@ export default function ClientsPage() {
                           <div className="flex gap-1 mt-1 flex-wrap">
                             {(client.tags || []).map((tag) => (
                               <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-sm"
-                                style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>
+                                style={{ background: "#ece2d6", color: "#5c4638", border: "1px solid #d8cabb" }}>
                                 {tag}
                               </span>
                             ))}
@@ -272,10 +272,10 @@ export default function ClientsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ color: "#6A6560" }}>
+                    <td className="px-4 py-3" style={{ color: "#6b6056" }}>
                       {client.gender || "—"}{client.birthDate && ` / ${calculateAge(client.birthDate)} 歲`}
                     </td>
-                    <td className="px-4 py-3" style={{ color: "#6A6560" }}>
+                    <td className="px-4 py-3" style={{ color: "#6b6056" }}>
                       <div>{client.phone || "—"}</div>
                       {client.lineId && (
                         <div className="text-xs" style={{ color: "#27AE60" }}>LINE: {client.lineId}</div>
@@ -290,7 +290,7 @@ export default function ClientsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: "#A8A5A0" }}>
+                    <td className="px-4 py-3 text-xs" style={{ color: "#b3a99d" }}>
                       {formatDate(client.updatedAt)}
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+﻿import { cn } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,10 +15,10 @@ const sizeStyles = {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = "primary", size = "md", className, style, children, ...props }, ref) => {
     const variantStyle: React.CSSProperties =
-      variant === "primary" ? { background: "#2C4A3E", color: "#fff", border: "1px solid transparent" }
-      : variant === "secondary" ? { background: "#fff", color: "#3A3A3A", border: "1px solid #DDDAD4" }
-      : variant === "ghost" ? { background: "transparent", color: "#6A6560", border: "1px solid transparent" }
-      : { background: "#B83232", color: "#fff", border: "1px solid transparent" };
+      variant === "primary" ? { background: "#5c4638", color: "#fff", border: "1px solid transparent" }
+      : variant === "secondary" ? { background: "#fff", color: "#3b332c", border: "1px solid #d8cfc3" }
+      : variant === "ghost" ? { background: "transparent", color: "#6b6056", border: "1px solid transparent" }
+      : { background: "#b8392c", color: "#fff", border: "1px solid transparent" };
 
     return (
       <button
@@ -28,7 +28,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           sizeStyles[size],
           className
         )}
-        style={{ ...variantStyle, ...style, ['--tw-ring-color' as string]: "#2C4A3E" }}
+        style={{ ...variantStyle, ...style, ['--tw-ring-color' as string]: "#5c4638" }}
         {...props}
       >
         {children}

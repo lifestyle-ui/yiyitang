@@ -117,11 +117,11 @@ export default function EditClientPage() {
 
             {/* 標籤管理 */}
             <div>
-              <p className="text-xs font-medium mb-2" style={{ color: "#6A6560" }}>標籤</p>
+              <p className="text-xs font-medium mb-2" style={{ color: "#6b6056" }}>標籤</p>
               <div className="flex flex-wrap gap-2 mb-2">
                 {tags.map((tag) => (
                   <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 rounded-sm"
-                    style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>
+                    style={{ background: "#ece2d6", color: "#5c4638", border: "1px solid #C4D4CC" }}>
                     {tag}
                     <button type="button" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
                       className="transition-opacity hover:opacity-60">
@@ -145,7 +145,7 @@ export default function EditClientPage() {
                   }}
                   placeholder="輸入標籤名稱，按 Enter 新增..."
                   className="flex-1 px-3 py-1.5 text-sm rounded-sm focus:outline-none"
-                  style={{ border: "1px solid #DDDAD4" }}
+                  style={{ border: "1px solid #d8cfc3" }}
                 />
                 <button type="button"
                   onClick={() => {
@@ -155,11 +155,11 @@ export default function EditClientPage() {
                     tagInputRef.current?.focus();
                   }}
                   className="px-3 py-1.5 text-sm rounded-sm border transition-colors"
-                  style={{ borderColor: "#2C4A3E", color: "#2C4A3E" }}>
+                  style={{ borderColor: "#5c4638", color: "#5c4638" }}>
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: "#A8A5A0" }}>例：自律神經、荷爾蒙、減重、長照…</p>
+              <p className="text-xs mt-1.5" style={{ color: "#b3a99d" }}>例：自律神經、荷爾蒙、減重、長照…</p>
             </div>
           </CardContent>
         </Card>

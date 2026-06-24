@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,27 +29,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "#F7F6F3" }}>
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "#faf7f1" }}>
       <div className="w-full max-w-sm mx-4">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm mb-4" style={{ background: "#1A1A1A" }}>
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm mb-4" style={{ background: "#241f1b" }}>
             <Heart className="w-5 h-5" style={{ color: "#C8C2B8" }} />
           </div>
-          <h1 className="text-xl font-bold" style={{ color: "#1A1A1A" }}>意一堂健康管理系統</h1>
-          <p className="text-sm mt-1" style={{ color: "#8A8580" }}>請輸入存取密碼以繼續</p>
+          <h1 className="text-xl font-bold" style={{ color: "#241f1b" }}>意一堂健康管理系統</h1>
+          <p className="text-sm mt-1" style={{ color: "#8b8076" }}>請輸入存取密碼以繼續</p>
         </div>
 
-        <div className="rounded-sm p-6" style={{ background: "#FFFFFF", border: "1px solid #ECEAE6" }}>
+        <div className="rounded-sm p-6" style={{ background: "#FFFFFF", border: "1px solid #ece5da" }}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#A8A5A0" }} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#b3a99d" }} />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="輸入密碼"
                 className="w-full pl-9 pr-4 py-2.5 text-sm rounded-sm focus:outline-none focus:ring-1"
-                style={{ border: "1px solid #DDDAD4" }}
+                style={{ border: "1px solid #d8cfc3" }}
                 autoFocus
                 autoComplete="current-password"
               />
@@ -63,7 +63,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading || !password}
               className="w-full py-2.5 text-sm font-medium rounded-sm transition-opacity disabled:opacity-50"
-              style={{ background: "#2C4A3E", color: "#F7F6F3" }}>
+              style={{ background: "#5c4638", color: "#faf7f1" }}>
               {loading ? "驗證中..." : "進入系統"}
             </button>
           </form>

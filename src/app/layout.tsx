@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/AppShell";
-
-const geist = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "意一堂健康管理系統",
@@ -19,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-TW" className={`${geist.variable} h-full`}>
+    <html lang="zh-TW" className="h-full">
       <body className="min-h-full flex" style={{ background: "var(--background)" }}>
         <AppShell>{children}</AppShell>
       </body>

@@ -1983,15 +1983,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                 ? activeCycle.steps.filter((s) => s.label.startsWith("§ "))
                 : activeCycle.steps
               ).map((step, i, arr) => {
-                const sectionSteps = activeCycle.steps.filter((s) => !s.label.startsWith("§ "));
-                const headerIndex = activeCycle.steps.filter((s) => s.label.startsWith("§ ")).indexOf(step);
-                const nextHeader = activeCycle.steps.filter((s) => s.label.startsWith("§ "))[headerIndex + 1];
-                const mySteps = sectionSteps.filter((s) => {
-                  const myIdx = activeCycle.steps.indexOf(step);
-                  const nextIdx = nextHeader ? activeCycle.steps.indexOf(nextHeader) : activeCycle.steps.length;
-                  const sIdx = activeCycle.steps.indexOf(s);
-                  return sIdx > myIdx && sIdx < nextIdx;
-                });
+                const headers = activeCycle.steps.filter((s) => s.label.startsWith("§ "));
+                const nextHeader = headers[i + 1];
+                const myIdx = activeCycle.steps.findIndex((s) => s.id === step.id);
+                const nextIdx = nextHeader ? activeCycle.steps.findIndex((s) => s.id === nextHeader.id) : activeCycle.steps.length;
+                const mySteps = activeCycle.steps.slice(myIdx + 1, nextIdx).filter((s) => !s.label.startsWith("§ "));
                 const allDone = mySteps.length > 0 && mySteps.every((s) => s.isCompleted || s.status === "completed" || s.status === "skipped");
                 const anyActive = mySteps.some((s) => s.status === "in_progress");
                 const st: StepStatus = allDone ? "completed" : anyActive ? "in_progress" : "pending";

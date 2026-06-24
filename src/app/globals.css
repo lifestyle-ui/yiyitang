@@ -43,7 +43,7 @@
   --gold-300:   #d8c089;
 
   /* Semantic aliases */
-  --background:         var(--paper-1);
+  --background:         var(--paper-0);
   --foreground:         var(--ink-900);
   --surface-raised:     var(--paper-1);
   --surface-wash:       var(--paper-2);

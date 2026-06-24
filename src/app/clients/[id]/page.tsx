@@ -22,19 +22,53 @@ async function getClient(id: string) {
       tasks:Task(*),
       lineTrackings:LineTracking(*),
       doctorNotes:DoctorNote(*),
-      healthPlans:HealthPlan(*)
+      healthPlans:HealthPlan(*),
+      questionnaires:HealthQuestionnaire(*)
     `)
     .eq("id", id)
     .eq("isActive", true)
     .single();
 
-  if (error) return null;
+  if (error) {
+    console.error("getClient error:", JSON.stringify(error));
+    // Fallback: try without HealthQuestionnaire in case table doesn't exist yet
+    const { data: fallback, error: fallbackError } = await supabase
+      .from("Client")
+      .select(`
+        *,
+        consultations:Consultation(*),
+        labTests:LabTest(*),
+        prescriptions:Prescription(*),
+        tasks:Task(*),
+        lineTrackings:LineTracking(*),
+        doctorNotes:DoctorNote(*),
+        healthPlans:HealthPlan(*)
+      `)
+      .eq("id", id)
+      .eq("isActive", true)
+      .single();
+    if (fallbackError) { console.error("fallback error:", JSON.stringify(fallbackError)); return null; }
+    return { ...fallback, questionnaires: [] };
+  }
   return data;
+}
+
+async function getExtra(id: string) {
+  const [complaintsRes, timelineRes, matrixRes] = await Promise.all([
+    supabase.from("Complaint").select("*").eq("clientId", id).order("date", { ascending: false }),
+    supabase.from("HealthTimelineEvent").select("*").eq("clientId", id).order("date", { ascending: false }),
+    supabase.from("FunctionalMatrix").select("*").eq("clientId", id).single(),
+  ]);
+  return {
+    complaints: complaintsRes.data ?? [],
+    timelineEvents: timelineRes.data ?? [],
+    functionalMatrix: matrixRes.data ?? null,
+  };
 }
 
 export default async function ClientDetailPage({ params }: Params) {
   const { id } = await params;
-  const client = await getClient(id);
+  const [client, extra] = await Promise.all([getClient(id), getExtra(id)]);
   if (!client) notFound();
 
   const age = calculateAge(client.birthDate);
@@ -49,6 +83,10 @@ export default async function ClientDetailPage({ params }: Params) {
     lineTrackings: [...(client.lineTrackings || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     doctorNotes: [...(client.doctorNotes || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     healthPlans: [...(client.healthPlans || [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    questionnaires: [...(client.questionnaires || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    complaints: extra.complaints,
+    timelineEvents: extra.timelineEvents,
+    functionalMatrix: extra.functionalMatrix,
   };
 
   return (

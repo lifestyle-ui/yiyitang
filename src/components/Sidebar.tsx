@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ClipboardList, Settings, Heart, Pill, FlaskConical,
+  LayoutDashboard, Users, ClipboardList, Settings, Heart, Pill, FlaskConical, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,24 @@ function NavItem({ href, icon: Icon, label, active }: { href: string; icon: Reac
       onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "#7A7570"; }}>
       <Icon className="w-4 h-4 shrink-0" />{label}
     </Link>
+  );
+}
+
+function LogoutButton() {
+  const router = useRouter();
+  const handleLogout = async () => {
+    await fetch("/api/auth", { method: "DELETE" });
+    router.push("/login");
+    router.refresh();
+  };
+  return (
+    <button onClick={handleLogout}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm transition-colors"
+      style={{ color: "#7A7570" }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#C8C2B8"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#7A7570"; }}>
+      <LogOut className="w-4 h-4 shrink-0" />登出
+    </button>
   );
 }
 
@@ -67,8 +85,8 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      <div className="p-4" style={{ borderTop: "1px solid #2E2E2E" }}>
-        <p className="text-[10px] text-center tracking-[.05em]" style={{ color: "#3E3A36" }}>找回健康的根本力量</p>
+      <div className="p-3" style={{ borderTop: "1px solid #2E2E2E" }}>
+        <LogoutButton />
       </div>
     </aside>
   );

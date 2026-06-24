@@ -15,12 +15,13 @@ export default function AdminPage() {
     Promise.all([
       fetch("/api/clients").then(r => r.json()),
       fetch("/api/tasks").then(r => r.json()),
-    ]).then(([clients, tasks]) => {
+      fetch("/api/stats").then(r => r.json()).catch(() => ({})),
+    ]).then(([clients, tasks, statsData]) => {
       setStats({
         totalClients: Array.isArray(clients) ? clients.length : 0,
         totalTasks: Array.isArray(tasks) ? tasks.length : 0,
-        totalConsultations: 0,
-        totalPrescriptions: 0,
+        totalConsultations: statsData?.totalConsultations ?? 0,
+        totalPrescriptions: statsData?.totalPrescriptions ?? 0,
       });
     });
   }, []);

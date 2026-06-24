@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, X, Plus } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,9 @@ export default function EditClientPage() {
     email: "", lineId: "", address: "", occupation: "",
     referralSource: "", notes: "",
   });
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`/api/clients/${id}`)
@@ -38,6 +41,7 @@ export default function EditClientPage() {
           referralSource: data.referralSource || "",
           notes: data.notes || "",
         });
+        setTags(Array.isArray(data.tags) ? data.tags : []);
         setFetching(false);
       });
   }, [id]);
@@ -54,7 +58,7 @@ export default function EditClientPage() {
       await fetch(`/api/clients/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, tags }),
       });
       router.push(`/clients/${id}`);
       router.refresh();
@@ -103,6 +107,53 @@ export default function EditClientPage() {
             <Input label="職業" placeholder="請輸入職業" value={form.occupation} onChange={set("occupation")} />
             <Input label="轉介來源" placeholder="例：朋友介紹、網路" value={form.referralSource} onChange={set("referralSource")} />
             <Textarea label="備註" placeholder="其他備註事項..." value={form.notes} onChange={set("notes")} rows={3} />
+
+            {/* 標籤管理 */}
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: "#6A6560" }}>標籤</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {tags.map((tag) => (
+                  <span key={tag} className="flex items-center gap-1 text-xs px-2 py-1 rounded-sm"
+                    style={{ background: "#EFF4F1", color: "#2C4A3E", border: "1px solid #C4D4CC" }}>
+                    {tag}
+                    <button type="button" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                      className="transition-opacity hover:opacity-60">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  ref={tagInputRef}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const t = tagInput.trim();
+                      if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+                      setTagInput("");
+                    }
+                  }}
+                  placeholder="輸入標籤名稱，按 Enter 新增..."
+                  className="flex-1 px-3 py-1.5 text-sm rounded-sm focus:outline-none"
+                  style={{ border: "1px solid #DDDAD4" }}
+                />
+                <button type="button"
+                  onClick={() => {
+                    const t = tagInput.trim();
+                    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+                    setTagInput("");
+                    tagInputRef.current?.focus();
+                  }}
+                  className="px-3 py-1.5 text-sm rounded-sm border transition-colors"
+                  style={{ borderColor: "#2C4A3E", color: "#2C4A3E" }}>
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs mt-1.5" style={{ color: "#A8A5A0" }}>例：自律神經、荷爾蒙、減重、長照…</p>
+            </div>
           </CardContent>
         </Card>
 

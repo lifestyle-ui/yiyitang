@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -20,9 +20,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW" className={`${geist.variable} h-full`}>
-        <body className="min-h-full flex" style={{ background: "var(--background)" }}>
-        <Sidebar />
-        <main className="flex-1 min-w-0 flex flex-col">{children}</main>
+      <body className="min-h-full flex" style={{ background: "var(--background)" }}>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

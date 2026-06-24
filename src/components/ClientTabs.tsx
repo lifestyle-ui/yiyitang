@@ -6,6 +6,7 @@ import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
   MessageCircle, Stethoscope, Plus, X, ChevronDown, ChevronRight,
   Pencil, Trash2, Calendar, LayoutDashboard, Check, FileText, Activity,
+  AlertTriangle, GitBranch, Bell,
 } from "lucide-react";
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 
+type StepStatus = "pending" | "in_progress" | "completed" | "skipped";
+type Complaint = { id: string; date: string; clientWords: string | null; process: string | null; emotionIssue: string | null; actualIssue: string | null; replyGiven: string | null; promisedActions: string | null; promisedDeadline: string | null; followUpResult: string | null; internalSuggestion: string | null; status: string; };
+type HealthTimelineEvent = { id: string; date: string; category: string; title: string; description: string | null; };
+type FunctionalMatrix = { id?: string; cardiovascular: string | null; nutritional: string | null; environmental: string | null; endocrine: string | null; gut: string | null; neurological: string | null; methylation: string | null; };
+type HealthQuestionnaire = { id: string; date: string; chiefComplaint: string | null; healthGoals: string | null; symptoms: string | null; sleep: number | null; energy: number | null; digestion: number | null; mood: number | null; pain: number | null; sleepNotes: string | null; energyNotes: string | null; digestionNotes: string | null; moodNotes: string | null; painNotes: string | null; diet: string | null; exercise: string | null; stress: string | null; currentMeds: string | null; medicalHistory: string | null; allergies: string | null; expectations: string | null; notes: string | null; };
+
 type Client = {
   id: string; name: string; riskLevel: string | null;
   gender: string | null; birthDate: string | null;
@@ -22,11 +29,13 @@ type Client = {
   consultations: Consultation[]; labTests: LabTest[];
   prescriptions: Prescription[]; tasks: Task[];
   lineTrackings: LineTracking[]; doctorNotes: DoctorNote[];
-  healthPlans: unknown[];
+  healthPlans: unknown[]; questionnaires: HealthQuestionnaire[];
+  complaints: Complaint[]; timelineEvents: HealthTimelineEvent[];
+  functionalMatrix: FunctionalMatrix | null;
 };
 type Consultation = { id: string; date: string; visitType: string | null; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
-type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; };
-type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; };
+type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; reportUrl: string | null; price: number | null; sampleCollectedAt: string | null; reportReceivedAt: string | null; };
+type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; };
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
 type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, number> | null; };
 type DoctorNote = { id: string; date: string; diagnosis: string | null; treatment: string | null; notes: string | null; nextVisit: string | null; };
@@ -40,6 +49,9 @@ const TABS = [
   { key: "labTests", label: "檢測", icon: FlaskConical },
   { key: "prescriptions", label: "保健品處方", icon: Pill },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
+  { key: "questionnaires", label: "健康問卷", icon: FileText },
+  { key: "matrix", label: "功能矩陣", icon: GitBranch },
+  { key: "complaints", label: "客訴", icon: AlertTriangle },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -79,6 +91,9 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "labTests" && <LabTestsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "lineTrackings" && <LineTrackingsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
+        {activeTab === "questionnaires" && <QuestionnaireTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
+        {activeTab === "matrix" && <FunctionalMatrixTab client={client} onRefresh={() => router.refresh()} />}
+        {activeTab === "complaints" && <ComplaintsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "overview" && <OverviewTab client={client} onRefresh={() => router.refresh()} />}
       </div>
     </div>
@@ -961,6 +976,24 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: "", description: "", dueDate: "", priority: "", category: "" });
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingStart, setTrackingStart] = useState("");
+
+  const createTrackingNodes = async () => {
+    if (!trackingStart) return;
+    const base = new Date(trackingStart);
+    const add = (days: number) => { const d = new Date(base); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
+    const nodes = [
+      { title: `【追蹤】${client.name} — 開始後 5 天`, dueDate: add(5) },
+      { title: `【追蹤】${client.name} — 開始後 2 週`, dueDate: add(14) },
+      { title: `【追蹤】${client.name} — 開始後 4 週`, dueDate: add(28) },
+      { title: `【複查】${client.name} — 1–3 個月複查`, dueDate: add(90) },
+    ];
+    for (const node of nodes) await createTask(client.id, { ...node, priority: "medium", category: "follow_up" });
+    setShowTrackingModal(false);
+    setTrackingStart("");
+    onRefresh();
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -991,11 +1024,34 @@ function TasksTab({ client, showForm, setShowForm, onRefresh }: { client: Client
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setShowTrackingModal(!showTrackingModal)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-sm transition-colors"
+          style={{ borderColor: showTrackingModal ? "#2C4A3E" : "#DDDAD4", color: showTrackingModal ? "#2C4A3E" : "#6A6560" }}>
+          <Bell className="w-4 h-4" />追蹤節點
+        </button>
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
           {showForm ? "取消" : "+ 新增任務"}
         </Button>
       </div>
+      {showTrackingModal && (
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#C4D4CC" }}>
+          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>自動建立追蹤節點</p>
+          <p className="text-xs" style={{ color: "#6A6560" }}>從指定日期起，自動建立 4 個追蹤任務：5天、2週、4週、1–3個月複查。</p>
+          <div>
+            <label className="text-xs font-medium" style={{ color: "#8A8580" }}>方案開始日期</label>
+            <input type="date" value={trackingStart} onChange={(e) => setTrackingStart(e.target.value)}
+              className="mt-1 w-full text-sm border rounded-sm px-2 py-1.5 focus:outline-none" style={{ borderColor: "#DDDAD4" }} />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowTrackingModal(false)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+            <button onClick={createTrackingNodes} disabled={!trackingStart}
+              className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: trackingStart ? "#2C4A3E" : "#DDDAD4" }}>
+              建立 4 個追蹤任務
+            </button>
+          </div>
+        </div>
+      )}
       {showForm && (
         <Card>
           <CardHeader><CardTitle>新增任務</CardTitle></CardHeader>
@@ -1419,8 +1475,16 @@ const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; do
   "低風險": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", dot: "bg-green-500", label: "✓ 低風險穩定" },
 };
 
-type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null; note: string | null };
+type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null; note: string | null; status?: StepStatus };
 type VisitCycle = { id: string; type: string; status: string; startDate: string; endDate: string | null; notes: string | null; steps: VisitCycleStep[] };
+
+const STEP_CYCLE: Record<StepStatus, StepStatus> = { pending: "in_progress", in_progress: "completed", completed: "pending", skipped: "pending" };
+const STEP_STATUS_STYLE: Record<StepStatus, { bg: string; border: string; color: string; label: string }> = {
+  pending:     { bg: "#fff",     border: "#DDDAD4", color: "#C4C0BB", label: "未開始" },
+  in_progress: { bg: "#fff",     border: "#2C4A3E", color: "#2C4A3E", label: "進行中" },
+  completed:   { bg: "#2C4A3E", border: "#2C4A3E", color: "#fff",    label: "完成"   },
+  skipped:     { bg: "#F7F6F3", border: "#DDDAD4", color: "#A8A5A0", label: "略過"   },
+};
 
 function stepIcon(label: string) {
   if (label.includes("問卷")) return <ClipboardList className="w-3.5 h-3.5" />;
@@ -1534,14 +1598,41 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     });
   };
 
-  const toggleStep = async (cycleId: string, step: VisitCycleStep) => {
+  const [creatingTaskForStep, setCreatingTaskForStep] = useState<{ stepId: string; title: string; dueDate: string; priority: string } | null>(null);
+
+  const cycleStep = async (cycleId: string, step: VisitCycleStep) => {
+    const cur: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
+    const next = STEP_CYCLE[cur];
     setCycles((prev) => prev.map((c) => c.id === cycleId
-      ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, isCompleted: !s.isCompleted, completedAt: !s.isCompleted ? new Date().toISOString() : null } : s) }
+      ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, status: next, isCompleted: next === "completed", completedAt: next === "completed" ? new Date().toISOString() : null } : s) }
       : c));
     await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isCompleted: !step.isCompleted }),
+      body: JSON.stringify({ status: next }),
     });
+  };
+
+  const skipStep = async (cycleId: string, step: VisitCycleStep) => {
+    const next: StepStatus = step.status === "skipped" ? "pending" : "skipped";
+    setCycles((prev) => prev.map((c) => c.id === cycleId
+      ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, status: next, isCompleted: false, completedAt: null } : s) }
+      : c));
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    });
+  };
+
+  const submitStepTask = async () => {
+    if (!creatingTaskForStep) return;
+    await createTask(client.id, {
+      title: creatingTaskForStep.title,
+      dueDate: creatingTaskForStep.dueDate || undefined,
+      priority: creatingTaskForStep.priority,
+      category: "follow_up",
+    });
+    setCreatingTaskForStep(null);
+    onRefresh();
   };
 
   const completeCycle = async (cycleId: string) => {
@@ -1617,9 +1708,6 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         </div>
       </div>
 
-      {/* 進診前交班備忘 */}
-      <HandoverBriefCard client={client} />
-
       {/* 進行中週期 */}
       {activeCycle && (
         <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#C4D4CC" }}>
@@ -1647,28 +1735,23 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           <div className="px-4 pt-4 pb-2 overflow-x-auto">
             <div className="flex items-start pb-1">
               {activeCycle.steps.map((step, i) => {
-                const currentIdx = activeCycle.steps.findIndex((s) => !s.isCompleted);
-                const isCurrent = i === currentIdx;
-                const isPast = step.isCompleted;
+                const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
+                const sty = STEP_STATUS_STYLE[st];
                 return (
                   <div key={step.id} className="flex items-start flex-shrink-0">
                     <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
-                      <button onClick={() => toggleStep(activeCycle.id, step)}
+                      <button onClick={() => cycleStep(activeCycle.id, step)}
                         className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
-                        style={isPast
-                          ? { background: "#2C4A3E", borderColor: "#2C4A3E", color: "#fff", borderRadius: "50%" }
-                          : isCurrent
-                            ? { background: "#fff", borderColor: "#2C4A3E", color: "#2C4A3E", borderRadius: "50%", boxShadow: "0 0 0 3px #EFF4F1" }
-                            : { background: "#fff", borderColor: "#DDDAD4", color: "#C4C0BB", borderRadius: "50%" }}>
-                        {isPast ? <Check className="w-4 h-4" /> : i + 1}
+                        style={{ background: sty.bg, borderColor: sty.border, color: sty.color, borderRadius: "50%", ...(st === "in_progress" ? { boxShadow: "0 0 0 3px #EFF4F1" } : {}) }}>
+                        {st === "completed" ? <Check className="w-4 h-4" /> : st === "skipped" ? "⊘" : i + 1}
                       </button>
                       <span className="text-[10px] mt-1 text-center leading-tight px-1"
-                        style={{ color: isPast ? "#2C4A3E" : isCurrent ? "#1A1A1A" : "#C4C0BB", fontWeight: isCurrent ? 500 : 400 }}>
+                        style={{ color: sty.color !== "#fff" ? sty.color : "#2C4A3E", fontWeight: st === "in_progress" ? 500 : 400 }}>
                         {step.label}
                       </span>
                     </div>
                     {i < activeCycle.steps.length - 1 && (
-                      <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: isPast ? "#2C4A3E" : "#DDDAD4" }} />
+                      <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: st === "completed" ? "#2C4A3E" : "#DDDAD4" }} />
                     )}
                   </div>
                 );
@@ -1678,46 +1761,70 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
           {/* 步驟列表（可編輯）*/}
           <div style={{ borderTop: "1px solid #ECEAE6" }}>
-            {activeCycle.steps.map((step) => (
-              <div key={step.id}>
-                {editingStep?.id === step.id ? (
-                  <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
-                    <input value={editingStep.label}
-                      onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
-                      className="text-sm border rounded-sm px-2 py-1 w-full focus:outline-none focus:ring-1"
-                      style={{ borderColor: "#DDDAD4" }} placeholder="步驟名稱" />
-                    <input value={editingStep.note}
-                      onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
-                      className="text-sm border rounded-sm px-2 py-1 w-full focus:outline-none focus:ring-1"
-                      style={{ borderColor: "#DDDAD4" }} placeholder="備注（選填）" />
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
-                      <button onClick={saveStepEdit} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+            {activeCycle.steps.map((step) => {
+              const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
+              return (
+                <div key={step.id}>
+                  {creatingTaskForStep?.stepId === step.id && (
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
+                      <p className="text-xs font-semibold" style={{ color: "#2C4A3E" }}>建立追蹤任務</p>
+                      <input value={creatingTaskForStep.title} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, title: e.target.value })}
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="任務標題" />
+                      <div className="flex gap-2">
+                        <input type="date" value={creatingTaskForStep.dueDate} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, dueDate: e.target.value })}
+                          className="flex-1 text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#DDDAD4" }} />
+                        <select value={creatingTaskForStep.priority} onChange={(e) => setCreatingTaskForStep({ ...creatingTaskForStep, priority: e.target.value })}
+                          className="text-sm border rounded-sm px-2 py-1" style={{ borderColor: "#DDDAD4" }}>
+                          <option value="high">🔴 高</option>
+                          <option value="medium">🟡 中</option>
+                          <option value="low">🟢 低</option>
+                        </select>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setCreatingTaskForStep(null)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+                        <button onClick={submitStepTask} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>建立任務</button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
-                    <div className={cn("w-2 h-2 rounded-full flex-shrink-0", step.isCompleted ? "bg-[#2C4A3E]" : "bg-[#DDDAD4]")} />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm" style={{ color: step.isCompleted ? "#8A8580" : "#1A1A1A", textDecoration: step.isCompleted ? "line-through" : "none" }}>
-                        {step.label}
+                  )}
+                  {editingStep?.id === step.id ? (
+                    <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
+                      <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="步驟名稱" />
+                      <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#DDDAD4" }} placeholder="備注（選填）" />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#DDDAD4", color: "#6A6560" }}>取消</button>
+                        <button onClick={saveStepEdit} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>儲存</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #F2F0EC" }}>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#2C4A3E" : st === "in_progress" ? "#5A8A7A" : st === "skipped" ? "#DDDAD4" : "#DDDAD4" }} />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8A8580" : "#1A1A1A", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
+                          {step.label}
+                        </span>
+                        {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#A8A5A0" }}>{step.note}</p>}
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm flex-shrink-0" style={{ background: "#F2F0EC", color: "#8A8580" }}>
+                        {STEP_STATUS_STYLE[st].label}
                       </span>
-                      {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#A8A5A0" }}>{step.note}</p>}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setCreatingTaskForStep({ stepId: step.id, title: step.label, dueDate: "", priority: "medium" })}
+                          className="p-1.5 rounded text-[10px] font-medium" style={{ color: "#2C4A3E" }} title="建立追蹤任務">+任務</button>
+                        <button onClick={() => skipStep(activeCycle.id, step)}
+                          className="p-1.5 rounded text-[10px]" style={{ color: st === "skipped" ? "#2C4A3E" : "#A8A5A0" }}
+                          title={st === "skipped" ? "取消略過" : "標記略過"}>{st === "skipped" ? "↩" : "⊘"}</button>
+                        <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
+                          className="p-1.5 rounded" style={{ color: "#8A8580" }}><Pencil className="w-3 h-3" /></button>
+                        <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#B83232" }}><Trash2 className="w-3 h-3" /></button>
+                      </div>
+                      {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#A8A5A0" }}>{formatDate(step.completedAt)}</span>}
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
-                        className="p-1.5 rounded" style={{ color: "#8A8580" }}>
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                      <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#B83232" }}>
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                    {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#A8A5A0" }}>{formatDate(step.completedAt)}</span>}
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* 週期備注 */}
@@ -1926,7 +2033,353 @@ function TimelineTab({ client }: { client: Client }) {
     <div className="max-w-2xl flex flex-col gap-6">
       {renderGroup("即將事項", future)}
       {renderGroup("過去記錄", past)}
+    </div>
+  );
+}
 
+// ─── QuestionnaireTab ────────────────────────────────────────────────────────
+function QuestionnaireTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const SCORE_LABELS = ["睡眠", "精力", "消化", "情緒", "疼痛"] as const;
+  type ScoreKey = "sleep" | "energy" | "digestion" | "mood" | "pain";
+  const scoreKeys: ScoreKey[] = ["sleep", "energy", "digestion", "mood", "pain"];
+  const [form, setForm] = useState<Record<string, string>>({ date: new Date().toISOString().slice(0, 10), chiefComplaint: "", healthGoals: "", symptoms: "", diet: "", exercise: "", stress: "", currentMeds: "", medicalHistory: "", allergies: "", expectations: "", notes: "", sleep: "", energy: "", digestion: "", mood: "", pain: "" });
+  const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await fetch(`/api/clients/${client.id}/questionnaires`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    setSaving(false); setShowForm(false); onRefresh();
+  };
+
+  const scoreColor = (v: number | null) => v === null ? "#DDDAD4" : v >= 8 ? "#2C4A3E" : v >= 5 ? "#E8A000" : "#B83232";
+
+  return (
+    <div className="max-w-3xl flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>{showForm ? "取消" : "+ 新增問卷"}</Button>
+      </div>
+      {showForm && (
+        <div className="border rounded-sm p-4 flex flex-col gap-4" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
+          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增健康問卷</p>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              className="text-sm border rounded-sm px-2 py-1.5 w-48" style={{ borderColor: "#DDDAD4" }} />
+            <textarea placeholder="主訴 / 主要症狀" value={form.chiefComplaint} onChange={(e) => setForm((f) => ({ ...f, chiefComplaint: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <textarea placeholder="健康目標" value={form.healthGoals} onChange={(e) => setForm((f) => ({ ...f, healthGoals: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <div className="grid grid-cols-5 gap-2">
+              {scoreKeys.map((key, i) => (
+                <div key={key} className="flex flex-col gap-1">
+                  <label className="text-xs text-center" style={{ color: "#8A8580" }}>{SCORE_LABELS[i]}</label>
+                  <input type="number" min={0} max={10} value={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    className="text-sm border rounded-sm px-2 py-1 text-center w-full" style={{ borderColor: "#DDDAD4" }} />
+                </div>
+              ))}
+            </div>
+            <textarea placeholder="飲食習慣" value={form.diet} onChange={(e) => setForm((f) => ({ ...f, diet: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <textarea placeholder="運動習慣" value={form.exercise} onChange={(e) => setForm((f) => ({ ...f, exercise: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <textarea placeholder="目前用藥" value={form.currentMeds} onChange={(e) => setForm((f) => ({ ...f, currentMeds: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <textarea placeholder="過敏史" value={form.allergies} onChange={(e) => setForm((f) => ({ ...f, allergies: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <textarea placeholder="備注" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <div className="flex justify-end"><Button type="submit" disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button></div>
+          </form>
+        </div>
+      )}
+      {client.questionnaires.length === 0 && !showForm && (
+        <div className="text-center py-12 text-sm" style={{ color: "#A8A5A0" }}>尚無健康問卷紀錄</div>
+      )}
+      {client.questionnaires.map((q) => (
+        <div key={q.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-left" style={{ background: "#F9F8F6" }}
+            onClick={() => setExpanded(expanded === q.id ? null : q.id)}>
+            <span className="text-sm font-medium" style={{ color: "#1A1A1A" }}>{formatDate(q.date)}</span>
+            <span className="text-sm flex-1 truncate" style={{ color: "#6A6560" }}>{q.chiefComplaint || "—"}</span>
+            <div className="flex gap-1">
+              {scoreKeys.map((key) => {
+                const val = q[key as ScoreKey];
+                return <span key={key} className="w-6 h-6 text-xs rounded-sm flex items-center justify-center text-white font-medium"
+                  style={{ background: scoreColor(val) }}>{val ?? "?"}</span>;
+              })}
+            </div>
+            {expanded === q.id ? <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: "#A8A5A0" }} /> : <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#A8A5A0" }} />}
+          </button>
+          {expanded === q.id && (
+            <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ECEAE6" }}>
+              {q.healthGoals && <p><span className="font-medium" style={{ color: "#8A8580" }}>健康目標：</span>{q.healthGoals}</p>}
+              {q.diet && <p><span className="font-medium" style={{ color: "#8A8580" }}>飲食：</span>{q.diet}</p>}
+              {q.exercise && <p><span className="font-medium" style={{ color: "#8A8580" }}>運動：</span>{q.exercise}</p>}
+              {q.currentMeds && <p><span className="font-medium" style={{ color: "#8A8580" }}>用藥：</span>{q.currentMeds}</p>}
+              {q.allergies && <p><span className="font-medium" style={{ color: "#8A8580" }}>過敏：</span>{q.allergies}</p>}
+              {q.notes && <p><span className="font-medium" style={{ color: "#8A8580" }}>備注：</span>{q.notes}</p>}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── FunctionalMatrixTab ─────────────────────────────────────────────────────
+const FM_SYSTEMS = [
+  { key: "cardiovascular", label: "心血管系統" },
+  { key: "nutritional", label: "營養與代謝" },
+  { key: "environmental", label: "環境毒素" },
+  { key: "endocrine", label: "內分泌" },
+  { key: "gut", label: "腸道健康" },
+  { key: "neurological", label: "神經認知" },
+  { key: "methylation", label: "甲基化" },
+] as const;
+
+const TIMELINE_CATEGORIES = [
+  { value: "symptom_onset", label: "症狀出現" },
+  { value: "diagnosis", label: "診斷" },
+  { value: "treatment_start", label: "治療開始" },
+  { value: "test_result", label: "檢測結果" },
+  { value: "lifestyle_change", label: "生活方式改變" },
+  { value: "other", label: "其他" },
+];
+
+function FunctionalMatrixTab({ client, onRefresh }: { client: Client; onRefresh: () => void }) {
+  const [matrix, setMatrix] = useState<FunctionalMatrix>(client.functionalMatrix ?? { cardiovascular: null, nutritional: null, environmental: null, endocrine: null, gut: null, neurological: null, methylation: null });
+  const [saving, setSaving] = useState(false);
+  const [showTimelineForm, setShowTimelineForm] = useState(false);
+  const [timelineForm, setTimelineForm] = useState({ date: new Date().toISOString().slice(0, 10), category: "symptom_onset", title: "", description: "" });
+  const [events, setEvents] = useState<HealthTimelineEvent[]>(client.timelineEvents ?? []);
+
+  const saveMatrix = async () => {
+    setSaving(true);
+    await fetch(`/api/clients/${client.id}/matrix`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(matrix) });
+    setSaving(false); onRefresh();
+  };
+
+  const addEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch(`/api/clients/${client.id}/timeline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(timelineForm) });
+    const data = await res.json();
+    setEvents((prev) => [data, ...prev]);
+    setShowTimelineForm(false);
+    setTimelineForm({ date: new Date().toISOString().slice(0, 10), category: "symptom_onset", title: "", description: "" });
+  };
+
+  const deleteEvent = async (id: string) => {
+    await fetch(`/api/clients/${client.id}/timeline/${id}`, { method: "DELETE" });
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  return (
+    <div className="max-w-3xl flex flex-col gap-6">
+      {/* 功能醫學矩陣 */}
+      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#EFF4F1", borderBottom: "1px solid #C4D4CC" }}>
+          <p className="text-sm font-semibold" style={{ color: "#2C4A3E" }}>功能醫學矩陣</p>
+          <button onClick={saveMatrix} disabled={saving}
+            className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: saving ? "#DDDAD4" : "#2C4A3E" }}>
+            {saving ? "儲存中..." : "儲存"}
+          </button>
+        </div>
+        <div className="p-4 grid grid-cols-1 gap-3">
+          {FM_SYSTEMS.map(({ key, label }) => (
+            <div key={key}>
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>{label}</label>
+              <textarea
+                value={matrix[key as keyof FunctionalMatrix] ?? ""}
+                onChange={(e) => setMatrix((m) => ({ ...m, [key]: e.target.value || null }))}
+                className="w-full text-sm border rounded-sm px-3 py-2 resize-none focus:outline-none"
+                style={{ borderColor: "#DDDAD4" }} rows={2}
+                placeholder={`${label}相關症狀、指標、觀察...`} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 症狀時間軸 */}
+      <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#ECEAE6" }}>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F9F8F6", borderBottom: "1px solid #ECEAE6" }}>
+          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>症狀時間軸</p>
+          <button onClick={() => setShowTimelineForm(!showTimelineForm)}
+            className="text-xs px-3 py-1 rounded-sm border transition-colors"
+            style={{ borderColor: showTimelineForm ? "#2C4A3E" : "#DDDAD4", color: showTimelineForm ? "#2C4A3E" : "#6A6560" }}>
+            {showTimelineForm ? "取消" : "+ 新增事件"}
+          </button>
+        </div>
+        {showTimelineForm && (
+          <form onSubmit={addEvent} className="px-4 py-3 flex flex-col gap-2" style={{ borderBottom: "1px solid #ECEAE6", background: "#F9F8F6" }}>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" value={timelineForm.date} onChange={(e) => setTimelineForm((f) => ({ ...f, date: e.target.value }))}
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+              <select value={timelineForm.category} onChange={(e) => setTimelineForm((f) => ({ ...f, category: e.target.value }))}
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }}>
+                {TIMELINE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <input placeholder="標題 *" value={timelineForm.title} onChange={(e) => setTimelineForm((f) => ({ ...f, title: e.target.value }))}
+              className="text-sm border rounded-sm px-2 py-1.5 w-full" style={{ borderColor: "#DDDAD4" }} required />
+            <textarea placeholder="詳細說明（選填）" value={timelineForm.description} onChange={(e) => setTimelineForm((f) => ({ ...f, description: e.target.value }))}
+              className="text-sm border rounded-sm px-3 py-2 w-full resize-none" style={{ borderColor: "#DDDAD4" }} rows={2} />
+            <div className="flex justify-end"><button type="submit" className="text-xs px-3 py-1 rounded-sm text-white" style={{ background: "#2C4A3E" }}>新增</button></div>
+          </form>
+        )}
+        {events.length === 0 && (
+          <div className="text-center py-10 text-sm" style={{ color: "#A8A5A0" }}>尚無時間軸事件</div>
+        )}
+        <div className="px-4 py-3 flex flex-col gap-3">
+          {events.map((ev) => {
+            const cat = TIMELINE_CATEGORIES.find((c) => c.value === ev.category);
+            return (
+              <div key={ev.id} className="flex items-start gap-3 group">
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full mt-0.5" style={{ background: "#2C4A3E" }} />
+                  <div className="flex-1 w-px mt-1" style={{ background: "#DDDAD4", minHeight: "24px" }} />
+                </div>
+                <div className="flex-1 min-w-0 pb-3" style={{ borderBottom: "1px solid #F2F0EC" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: "#8A8580" }}>{formatDate(ev.date)}</span>
+                    {cat && <span className="text-[10px] px-1.5 py-0.5 rounded-sm" style={{ background: "#EFF4F1", color: "#2C4A3E" }}>{cat.label}</span>}
+                  </div>
+                  <p className="text-sm font-medium mt-0.5" style={{ color: "#1A1A1A" }}>{ev.title}</p>
+                  {ev.description && <p className="text-xs mt-0.5" style={{ color: "#6A6560" }}>{ev.description}</p>}
+                </div>
+                <button onClick={() => deleteEvent(ev.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 flex-shrink-0" style={{ color: "#B83232" }}>
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ComplaintsTab ───────────────────────────────────────────────────────────
+const COMPLAINT_STATUS = [
+  { value: "open", label: "處理中" },
+  { value: "resolved", label: "已解決" },
+  { value: "closed", label: "已結案" },
+];
+
+function ComplaintsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [complaints, setComplaints] = useState<Complaint[]>(client.complaints ?? []);
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), clientWords: "", process: "", emotionIssue: "", actualIssue: "", replyGiven: "", promisedActions: "", promisedDeadline: "", followUpResult: "", internalSuggestion: "", status: "open" });
+  const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    const res = await fetch(`/api/clients/${client.id}/complaints`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const data = await res.json();
+    setComplaints((prev) => [data, ...prev]);
+    setSaving(false); setShowForm(false);
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    await fetch(`/api/clients/${client.id}/complaints/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    setComplaints((prev) => prev.map((c) => c.id === id ? { ...c, status } : c));
+  };
+
+  const deleteComplaint = async (id: string) => {
+    await fetch(`/api/clients/${client.id}/complaints/${id}`, { method: "DELETE" });
+    setComplaints((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const LEAP_FIELDS = [
+    { key: "clientWords",       label: "L — Listen（傾聽）",         placeholder: "客戶原話（逐字或摘要）" },
+    { key: "process",           label: "  流程說明",                   placeholder: "事發過程" },
+    { key: "emotionIssue",     label: "E — Empathize（情緒層面）",   placeholder: "情緒/感受問題" },
+    { key: "actualIssue",      label: "A — Analyze（實質問題）",     placeholder: "實際核心問題" },
+    { key: "replyGiven",       label: "P — Plan（當下回覆）",        placeholder: "已給予的回覆" },
+    { key: "promisedActions",  label: "  承諾的具體行動",             placeholder: "具體改善行動" },
+    { key: "followUpResult",   label: "  後續追蹤結果",               placeholder: "後續確認結果" },
+    { key: "internalSuggestion", label: "內部改善建議",              placeholder: "系統/流程改善建議" },
+  ] as const;
+
+  return (
+    <div className="max-w-3xl flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>{showForm ? "取消" : "+ 新增客訴"}</Button>
+      </div>
+      {showForm && (
+        <div className="border rounded-sm p-4 flex flex-col gap-3" style={{ background: "#F9F8F6", borderColor: "#ECEAE6" }}>
+          <p className="text-sm font-semibold" style={{ color: "#1A1A1A" }}>新增客訴記錄（LEAP 模型）</p>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+              <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }}>
+                {COMPLAINT_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            {LEAP_FIELDS.map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>{label}</label>
+                <textarea value={form[key as keyof typeof form]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                  className="w-full text-sm border rounded-sm px-3 py-2 resize-none" style={{ borderColor: "#DDDAD4" }} rows={2}
+                  placeholder={placeholder} />
+              </div>
+            ))}
+            <div>
+              <label className="text-xs font-medium block mb-1" style={{ color: "#6A6560" }}>承諾期限</label>
+              <input type="date" value={form.promisedDeadline} onChange={(e) => setForm((f) => ({ ...f, promisedDeadline: e.target.value }))}
+                className="text-sm border rounded-sm px-2 py-1.5" style={{ borderColor: "#DDDAD4" }} />
+            </div>
+            <div className="flex justify-end"><Button type="submit" disabled={saving}>{saving ? "儲存中..." : "儲存"}</Button></div>
+          </form>
+        </div>
+      )}
+      {complaints.length === 0 && !showForm && (
+        <div className="text-center py-12 text-sm" style={{ color: "#A8A5A0" }}>尚無客訴記錄</div>
+      )}
+      {complaints.map((c) => {
+        const statusMeta = COMPLAINT_STATUS.find((s) => s.value === c.status);
+        const isOpen = expanded === c.id;
+        return (
+          <div key={c.id} className="border rounded-sm overflow-hidden" style={{ borderColor: c.status === "open" ? "#E8C4A0" : "#ECEAE6" }}>
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: c.status === "open" ? "#FDF6EF" : "#F9F8F6" }}>
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: c.status === "open" ? "#E8A000" : "#A8A5A0" }} />
+              <span className="text-sm font-medium flex-1 truncate" style={{ color: "#1A1A1A" }}>{c.clientWords?.slice(0, 40) || `客訴 ${formatDate(c.date)}`}</span>
+              <span className="text-xs" style={{ color: "#8A8580" }}>{formatDate(c.date)}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-sm" style={{ background: c.status === "open" ? "#FDEBD0" : "#ECEAE6", color: c.status === "open" ? "#E8A000" : "#8A8580" }}>
+                {statusMeta?.label}
+              </span>
+              <button onClick={() => setExpanded(isOpen ? null : c.id)} style={{ color: "#A8A5A0" }}>
+                {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
+            </div>
+            {isOpen && (
+              <div className="px-4 py-3 flex flex-col gap-2 text-sm" style={{ borderTop: "1px solid #ECEAE6" }}>
+                {LEAP_FIELDS.filter(({ key }) => c[key as keyof Complaint]).map(({ key, label }) => (
+                  <div key={key}>
+                    <p className="text-xs font-medium mb-0.5" style={{ color: "#8A8580" }}>{label}</p>
+                    <p style={{ color: "#1A1A1A" }}>{c[key as keyof Complaint] as string}</p>
+                  </div>
+                ))}
+                {c.promisedDeadline && <p><span className="text-xs font-medium" style={{ color: "#8A8580" }}>承諾期限：</span>{formatDate(c.promisedDeadline)}</p>}
+                <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: "1px solid #F2F0EC" }}>
+                  <span className="text-xs" style={{ color: "#8A8580" }}>狀態：</span>
+                  {COMPLAINT_STATUS.map((s) => (
+                    <button key={s.value} onClick={() => updateStatus(c.id, s.value)}
+                      className="text-xs px-2 py-0.5 rounded-sm border transition-colors"
+                      style={c.status === s.value ? { background: "#2C4A3E", color: "#fff", borderColor: "#2C4A3E" } : { borderColor: "#DDDAD4", color: "#6A6560" }}>
+                      {s.label}
+                    </button>
+                  ))}
+                  <button onClick={() => deleteComplaint(c.id)} className="ml-auto text-xs" style={{ color: "#B83232" }}>刪除</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

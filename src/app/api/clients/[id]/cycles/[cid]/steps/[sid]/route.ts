@@ -9,8 +9,13 @@ export async function PATCH(req: Request, { params }: Params) {
   const now = new Date().toISOString();
 
   const update: Record<string, unknown> = {};
-  if (body.isCompleted !== undefined) {
+  if (body.status !== undefined) {
+    update.status = body.status;
+    update.isCompleted = body.status === "completed";
+    update.completedAt = body.status === "completed" ? now : null;
+  } else if (body.isCompleted !== undefined) {
     update.isCompleted = body.isCompleted;
+    update.status = body.isCompleted ? "completed" : "pending";
     update.completedAt = body.isCompleted ? now : null;
   }
   if (body.note !== undefined) update.note = body.note;

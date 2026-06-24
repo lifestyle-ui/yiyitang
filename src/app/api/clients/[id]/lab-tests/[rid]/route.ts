@@ -9,12 +9,16 @@ export async function PATCH(req: Request, { params }: Params) {
   const { data: row, error } = await supabase
     .from("LabTest")
     .update({
-      testDate: data.testDate ? new Date(data.testDate).toISOString() : null,
-      testType: data.testType,
-      status: data.status,
-      findings: data.findings || null,
-      doctorInterpretation: data.doctorInterpretation || null,
-      staffExplanation: data.staffExplanation || null,
+      ...(data.testDate !== undefined && { testDate: data.testDate ? new Date(data.testDate).toISOString() : null }),
+      ...(data.testType !== undefined && { testType: data.testType }),
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.findings !== undefined && { findings: data.findings || null }),
+      ...(data.doctorInterpretation !== undefined && { doctorInterpretation: data.doctorInterpretation || null }),
+      ...(data.staffExplanation !== undefined && { staffExplanation: data.staffExplanation || null }),
+      ...(data.reportUrl !== undefined && { reportUrl: data.reportUrl || null }),
+      ...(data.price !== undefined && { price: data.price ? Number(data.price) : null }),
+      ...(data.sampleCollectedAt !== undefined && { sampleCollectedAt: data.sampleCollectedAt ? new Date(data.sampleCollectedAt).toISOString() : null }),
+      ...(data.reportReceivedAt !== undefined && { reportReceivedAt: data.reportReceivedAt ? new Date(data.reportReceivedAt).toISOString() : null }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", rid)

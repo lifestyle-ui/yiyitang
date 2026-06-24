@@ -45,6 +45,8 @@ export async function PATCH(_req: Request, { params }: Params) {
       referralSource: data.referralSource || null,
       notes: data.notes || null,
       ...(data.riskLevel !== undefined && { riskLevel: data.riskLevel || null }),
+      ...(data.needsAttention !== undefined && { needsAttention: !!data.needsAttention }),
+      ...(data.tags !== undefined && { tags: Array.isArray(data.tags) ? data.tags : [] }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", id)

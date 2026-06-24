@@ -49,6 +49,13 @@ export const STATUS_LABELS: Record<string, string> = {
   expired: "已過期",
   refilled: "已補充",
   paused: "暫停",
+  suggested: "建議中",
+  quoted: "已報價",
+  sampled: "已採檢",
+  waiting: "等待報告",
+  report_received: "已收到報告",
+  doctor_interpreted: "醫師已判讀",
+  staff_explained: "健管師已解說",
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {

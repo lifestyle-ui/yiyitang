@@ -9,12 +9,13 @@ export async function PATCH(req: Request, { params }: Params) {
   const { data: row, error } = await supabase
     .from("Prescription")
     .update({
-      date: data.date ? new Date(data.date).toISOString() : undefined,
-      items: JSON.stringify(data.items || []),
-      totalDays: data.totalDays ? parseInt(data.totalDays) : null,
-      runOutDate: data.runOutDate ? new Date(data.runOutDate).toISOString() : null,
-      status: data.status,
-      notes: data.notes || null,
+      ...(data.date && { date: new Date(data.date).toISOString() }),
+      ...(data.items !== undefined && { items: JSON.stringify(data.items || []) }),
+      ...(data.totalDays !== undefined && { totalDays: data.totalDays ? parseInt(data.totalDays) : null }),
+      ...(data.runOutDate !== undefined && { runOutDate: data.runOutDate ? new Date(data.runOutDate).toISOString() : null }),
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.notes !== undefined && { notes: data.notes || null }),
+      ...(data.confirmedAt !== undefined && { confirmedAt: data.confirmedAt || null }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", rid)

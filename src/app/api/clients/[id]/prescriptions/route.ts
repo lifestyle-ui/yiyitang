@@ -19,6 +19,7 @@ export async function POST(req: Request, { params }: Params) {
       runOutDate: data.runOutDate ? new Date(data.runOutDate).toISOString() : null,
       status: data.status || "active",
       notes: data.notes || null,
+      confirmedAt: null,
       createdAt: now,
       updatedAt: now,
     })

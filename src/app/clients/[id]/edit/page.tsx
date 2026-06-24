@@ -55,16 +55,23 @@ export default function EditClientPage() {
     if (!form.name.trim()) return;
     setLoading(true);
     try {
-      await fetch(`/api/clients/${id}`, {
+      const res = await fetch(`/api/clients/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, tags }),
       });
-      router.push(`/clients/${id}`);
-      router.refresh();
+      if (res.ok) {
+        window.location.href = `/clients/${id}`;
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`確定要刪除「${form.name}」的所有資料嗎？此操作無法還原。`)) return;
+    await fetch(`/api/clients/${id}`, { method: "DELETE" });
+    window.location.href = "/clients";
   };
 
   if (fetching) return <div className="p-6 text-slate-400 text-sm">載入中...</div>;
@@ -157,14 +164,21 @@ export default function EditClientPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Link href={`/clients/${id}`}>
-            <Button type="button" variant="secondary">取消</Button>
-          </Link>
-          <Button type="submit" disabled={loading || !form.name.trim()}>
-            <Save className="w-4 h-4" />
-            {loading ? "儲存中..." : "儲存變更"}
-          </Button>
+        <div className="flex justify-between items-center">
+          <button type="button" onClick={handleDelete}
+            className="text-sm px-3 py-1.5 rounded-sm border transition-colors"
+            style={{ borderColor: "#E8BABA", color: "#B83232" }}>
+            刪除此客戶
+          </button>
+          <div className="flex gap-3">
+            <Link href={`/clients/${id}`}>
+              <Button type="button" variant="secondary">取消</Button>
+            </Link>
+            <Button type="submit" disabled={loading || !form.name.trim()}>
+              <Save className="w-4 h-4" />
+              {loading ? "儲存中..." : "儲存變更"}
+            </Button>
+          </div>
         </div>
       </form>
     </div>

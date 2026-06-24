@@ -1819,7 +1819,8 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
     setEditRisk(false); onRefresh();
   };
 
-  const activeCycle = cycles.find((c) => c.status === "active");
+  const activeCycles = cycles.filter((c) => c.status === "active");
+  const activeCycle = activeCycles[0];
   const pastCycles = cycles.filter((c) => c.status !== "active").sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
   const nextStep = activeCycle?.steps.find((s) => !s.isCompleted);
@@ -1875,9 +1876,9 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         </div>
       </div>
 
-      {/* 進行中週期 */}
-      {activeCycle && (
-        <div className="border rounded-sm overflow-hidden" style={{ borderColor: "#d8cabb" }}>
+      {/* 進行中週期（可能多個） */}
+      {activeCycles.map((activeCycle) => (
+        <div key={activeCycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#d8cabb" }}>
           <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#ece2d6", borderBottom: "1px solid #d8cabb" }}>
             <span className="text-xs font-semibold" style={{ color: "#5c4638" }}>週期 #{cycleNumber(activeCycle.id)}</span>
             <span className="text-sm font-medium" style={{ color: "#241f1b" }}>{activeCycle.type}</span>
@@ -2020,9 +2021,9 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             </div>
           ) : null}
         </div>
-      )}
+      ))}
 
-      {/* 下一步卡片 */}
+      {/* 下一步卡片（只顯示第一個進行中週期的下一步） */}
       {activeCycle && nextStep && (
         <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
           <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />

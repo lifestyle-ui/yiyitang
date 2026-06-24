@@ -35,12 +35,12 @@ type Client = {
 };
 type Consultation = { id: string; date: string; visitType: string | null; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
 type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; reportUrl: string | null; price: number | null; sampleCollectedAt: string | null; reportReceivedAt: string | null; };
-type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; };
+type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; adherenceStatus: string | null; adherenceNotes: string | null; adherenceCheckedAt: string | null; };
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
-type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, number> | null; };
+type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, string | number> | null; };
 type DoctorNote = { id: string; date: string; diagnosis: string | null; treatment: string | null; notes: string | null; nextVisit: string | null; };
 type Product = { id: string; name: string; category: string | null; brand: string | null; spec: string | null; dosage: string | null; unit: string; };
-type TestItem = { id: string; name: string; category: string | null; code: string | null; turnaround: string | null; };
+type TestItem = { id: string; name: string; category: string | null; code: string | null; turnaround: string | null; notes: string | null; };
 
 const TABS = [
   { key: "overview", label: "總覽", icon: LayoutDashboard },
@@ -563,7 +563,7 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
 
 function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<TestItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; custom?: boolean }[]>([]);
+  const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; notes?: string; turnaround?: string; custom?: boolean }[]>([]);
   const [customItem, setCustomItem] = useState("");
   const [form, setForm] = useState({ testDate: new Date().toISOString().slice(0, 10), status: "scheduled", findings: "", doctorInterpretation: "", staffExplanation: "" });
   const [loading, setLoading] = useState(false);
@@ -572,6 +572,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editForm, setEditForm] = useState({ testDate: "", testType: "", status: "", findings: "", doctorInterpretation: "", staffExplanation: "" });
+  const samplingNotes = selectedItems.filter((i) => i.notes).map((i) => ({ name: i.name, notes: i.notes!, turnaround: i.turnaround }));
 
   useEffect(() => {
     if (showForm) fetch("/api/test-items").then((r) => r.json()).then((d) => setCatalog(Array.isArray(d) ? d : []));
@@ -582,7 +583,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
   };
 
   const toggleItem = (item: TestItem) => {
-    setSelectedItems((prev) => prev.find((i) => i.id === item.id) ? prev.filter((i) => i.id !== item.id) : [...prev, { id: item.id, name: item.name }]);
+    setSelectedItems((prev) => prev.find((i) => i.id === item.id) ? prev.filter((i) => i.id !== item.id) : [...prev, { id: item.id, name: item.name, notes: item.notes ?? undefined, turnaround: item.turnaround ?? undefined }]);
   };
 
   const addCustom = () => {
@@ -681,6 +682,18 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
                   <Button type="button" variant="secondary" size="sm" onClick={addCustom}><Plus className="w-4 h-4" />新增</Button>
                 </div>
               </div>
+              {/* 採檢注意事項 */}
+              {samplingNotes.length > 0 && (
+                <div className="rounded-sm p-3 flex flex-col gap-2" style={{ background: "#f3ece0", border: "1px solid #d8cabb" }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "#876b57" }}>採檢注意事項</p>
+                  {samplingNotes.map((s) => (
+                    <div key={s.name}>
+                      <p className="text-xs font-medium" style={{ color: "#241f1b" }}>{s.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#6b6056" }}>{s.notes}{s.turnaround && `　回報時間：${s.turnaround}`}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
               <Textarea label="檢測結果" placeholder="結果摘要..." value={form.findings} onChange={(e) => setForm((f) => ({ ...f, findings: e.target.value }))} rows={2} />
               <Textarea label="醫師判讀" placeholder="醫師判讀內容..." value={form.doctorInterpretation} onChange={(e) => setForm((f) => ({ ...f, doctorInterpretation: e.target.value }))} rows={2} />
               <Textarea label="健管師解說" placeholder="健管師解說內容..." value={form.staffExplanation} onChange={(e) => setForm((f) => ({ ...f, staffExplanation: e.target.value }))} rows={2} />
@@ -749,6 +762,79 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
 }
 
 // ─── 保健品處方 ───────────────────────────────────────────────────────────────
+
+const ADHERENCE_OPTIONS = [
+  { value: "on_time",  label: "按時服用" },
+  { value: "partial",  label: "偶爾漏服" },
+  { value: "stopped",  label: "已自行停用" },
+];
+
+function AdherenceSection({ prescription: p, clientId, onRefresh }: { prescription: Prescription; clientId: string; onRefresh: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState(p.adherenceStatus || "");
+  const [notes, setNotes] = useState(p.adherenceNotes || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    await fetch(`/api/clients/${clientId}/prescriptions/${p.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adherenceStatus: status || null, adherenceNotes: notes || null, adherenceCheckedAt: new Date().toISOString() }),
+    });
+    setSaving(false); setOpen(false); onRefresh();
+  };
+
+  const adLabel = ADHERENCE_OPTIONS.find((o) => o.value === p.adherenceStatus)?.label;
+
+  return (
+    <div className="rounded-sm overflow-hidden" style={{ border: "1px solid #ece5da" }}>
+      <button onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2 text-left transition-colors"
+        style={{ background: open ? "#f3ece0" : "#faf7f1" }}>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium" style={{ color: "#6b6056" }}>規律性追蹤</span>
+          {adLabel && !open && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-sm"
+              style={{ background: p.adherenceStatus === "on_time" ? "#d8cabb" : p.adherenceStatus === "stopped" ? "#f0d6cf" : "#ecdcbf",
+                       color: p.adherenceStatus === "on_time" ? "#5c4638" : p.adherenceStatus === "stopped" ? "#8a4634" : "#93702f" }}>
+              {adLabel}
+            </span>
+          )}
+          {p.adherenceCheckedAt && !open && (
+            <span className="text-[10px]" style={{ color: "#b3a99d" }}>上次：{formatDate(p.adherenceCheckedAt)}</span>
+          )}
+        </div>
+        <span className="text-xs" style={{ color: "#b3a99d" }}>{open ? "收起" : "更新"}</span>
+      </button>
+      {open && (
+        <div className="px-3 py-3 flex flex-col gap-2" style={{ background: "#f3ece0" }}>
+          <div className="flex gap-2">
+            {ADHERENCE_OPTIONS.map((o) => (
+              <button key={o.value} onClick={() => setStatus(o.value)}
+                className="flex-1 text-xs py-1.5 rounded-sm border transition-colors"
+                style={status === o.value
+                  ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" }
+                  : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="備注（如：客戶說胃不舒服、忘記帶出門...）"
+            rows={2} className="w-full text-sm border rounded-sm px-2.5 py-1.5 resize-none focus:outline-none"
+            style={{ borderColor: "#d8cfc3" }} />
+          <div className="flex justify-end">
+            <button onClick={save} disabled={saving || !status}
+              className="text-xs px-3 py-1 rounded-sm text-white"
+              style={{ background: status ? "#5c4638" : "#d8cfc3" }}>
+              {saving ? "儲存中..." : "儲存追蹤"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -945,19 +1031,21 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-3">
-                    <table className="w-full text-sm mb-2">
+                  <div className="pt-3 flex flex-col gap-3">
+                    <table className="w-full text-sm">
                       <tbody>
                         {items.map((item, i) => (
-                          <tr key={i} className="border-b border-slate-50 last:border-0">
-                            <td className="py-1.5 font-medium text-slate-700">{item.name}</td>
-                            <td className="py-1.5 text-slate-500 text-right">{item.dosage || "—"}</td>
+                          <tr key={i} className="border-b last:border-0" style={{ borderColor: "#ece5da" }}>
+                            <td className="py-1.5 font-medium" style={{ color: "#241f1b" }}>{item.name}</td>
+                            <td className="py-1.5 text-right text-sm" style={{ color: "#6b6056" }}>{item.dosage || "—"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    {p.totalDays && <p className="text-xs text-slate-400">共 {p.totalDays} 天</p>}
-                    {p.notes && <p className="text-xs text-slate-500 mt-2">{p.notes}</p>}
+                    {p.totalDays && <p className="text-xs" style={{ color: "#b3a99d" }}>共 {p.totalDays} 天</p>}
+                    {p.notes && <p className="text-xs mt-1" style={{ color: "#6b6056" }}>{p.notes}</p>}
+                    {/* 規律性追蹤 */}
+                    <AdherenceSection prescription={p} clientId={client.id} onRefresh={onRefresh} />
                   </div>
                 )}
               </CardContent>
@@ -1152,7 +1240,15 @@ const SCORE_CATEGORIES = [
   { key: "pain", label: "疼痛/不適" },
 ] as const;
 
-type TrackScores = Record<string, number>;
+type TrackScores = Record<string, string | number>;
+
+const LINE_DIMS = [
+  { key: "_eff",    label: "有效性",  placeholder: "方案是否有效？症狀改善情況？" },
+  { key: "_safe",   label: "安全性",  placeholder: "有無不適、副作用或過敏反應？" },
+  { key: "_reg",    label: "規律性",  placeholder: "是否按時服用？有無漏服或自行停用？" },
+  { key: "_life",   label: "生活方案", placeholder: "飲食、運動、睡眠等生活方案執行狀況？" },
+  { key: "_urgent", label: "突發症狀", placeholder: "是否有突發或緊急狀況？需立即回應？" },
+] as const;
 
 function ScorePicker({ scores, onChange }: { scores: TrackScores; onChange: (s: TrackScores) => void }) {
   return (
@@ -1188,14 +1284,14 @@ function ScorePicker({ scores, onChange }: { scores: TrackScores; onChange: (s: 
   );
 }
 
-function ScoreBadges({ scores }: { scores: Record<string, number> | null }) {
+function ScoreBadges({ scores }: { scores: Record<string, string | number> | null }) {
   if (!scores) return null;
-  const filled = SCORE_CATEGORIES.filter((c) => scores[c.key] !== undefined);
+  const filled = SCORE_CATEGORIES.filter((c) => typeof scores[c.key] === "number");
   if (filled.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5 mt-1.5">
       {filled.map((c) => {
-        const val = scores[c.key];
+        const val = scores[c.key] as number;
         return (
           <span key={c.key} className="text-[10.5px] px-1.5 py-0.5 rounded-sm"
             style={val >= 4
@@ -1363,11 +1459,26 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
           <CardContent>
             <form onSubmit={submit} className="flex flex-col gap-4">
               <Input label="日期" type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-              <Textarea label="對話內容 *" placeholder="記錄與客戶的 LINE 對話重點..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={4} required />
-              <Textarea label="客戶回應" placeholder="客戶的回覆或狀況..." value={form.response} onChange={(e) => setForm((f) => ({ ...f, response: e.target.value }))} rows={2} />
+              {/* 5 追蹤維度 */}
+              <div className="rounded-sm p-3 flex flex-col gap-3" style={{ background: "#f3ece0", border: "1px solid #d8cabb" }}>
+                <p className="text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "#876b57" }}>追蹤五維度</p>
+                {LINE_DIMS.map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <label className="text-xs font-medium block mb-1" style={{ color: "#6b6056" }}>{label}</label>
+                    <textarea
+                      value={(form.scores[key] as string) || ""}
+                      onChange={(e) => setForm((f) => ({ ...f, scores: { ...f.scores, [key]: e.target.value } }))}
+                      placeholder={placeholder}
+                      rows={2}
+                      className="w-full text-sm border rounded-sm px-2.5 py-1.5 resize-none focus:outline-none"
+                      style={{ borderColor: "#d8cfc3" }} />
+                  </div>
+                ))}
+              </div>
+              <Textarea label="其他備注" placeholder="其他對話重點、觀察..." value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={3} />
               <ScorePicker scores={form.scores} onChange={(scores) => setForm((f) => ({ ...f, scores }))} />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form.followUpNeeded} onChange={(e) => setForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={form.followUpNeeded} onChange={(e) => setForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4" />
                 需要後續追蹤
               </label>
               <div className="flex justify-end"><Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button></div>
@@ -1412,11 +1523,21 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                 {isEditing ? (
                   <div className="flex flex-col gap-4 pt-4">
                     <Input label="日期" type="date" value={editForm.date} onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))} />
-                    <Textarea label="對話內容 *" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={4} />
-                    <Textarea label="客戶回應" value={editForm.response} onChange={(e) => setEditForm((f) => ({ ...f, response: e.target.value }))} rows={2} />
+                    <div className="rounded-sm p-3 flex flex-col gap-3" style={{ background: "#f3ece0", border: "1px solid #d8cabb" }}>
+                      <p className="text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "#876b57" }}>追蹤五維度</p>
+                      {LINE_DIMS.map(({ key, label, placeholder }) => (
+                        <div key={key}>
+                          <label className="text-xs font-medium block mb-1" style={{ color: "#6b6056" }}>{label}</label>
+                          <textarea value={(editForm.scores[key] as string) || ""} onChange={(e) => setEditForm((f) => ({ ...f, scores: { ...f.scores, [key]: e.target.value } }))}
+                            placeholder={placeholder} rows={2}
+                            className="w-full text-sm border rounded-sm px-2.5 py-1.5 resize-none focus:outline-none" style={{ borderColor: "#d8cfc3" }} />
+                        </div>
+                      ))}
+                    </div>
+                    <Textarea label="其他備注" value={editForm.content} onChange={(e) => setEditForm((f) => ({ ...f, content: e.target.value }))} rows={3} />
                     <ScorePicker scores={editForm.scores} onChange={(scores) => setEditForm((f) => ({ ...f, scores }))} />
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={editForm.followUpNeeded} onChange={(e) => setEditForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={editForm.followUpNeeded} onChange={(e) => setEditForm((f) => ({ ...f, followUpNeeded: e.target.checked }))} className="w-4 h-4" />
                       需要後續追蹤
                     </label>
                     <div className="flex justify-end gap-2">
@@ -1425,8 +1546,20 @@ function LineTrackingsTab({ client, showForm, setShowForm, onRefresh }: { client
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2 text-sm pt-3">
-                    <Field label="對話內容" value={t.content} />
+                  <div className="flex flex-col gap-3 text-sm pt-3">
+                    {/* 5 追蹤維度 */}
+                    {t.scores && LINE_DIMS.some(({ key }) => t.scores![key]) && (
+                      <div className="rounded-sm p-3 flex flex-col gap-2" style={{ background: "#f3ece0", border: "1px solid #d8cabb" }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-[.1em]" style={{ color: "#876b57" }}>追蹤五維度</p>
+                        {LINE_DIMS.filter(({ key }) => t.scores![key]).map(({ key, label }) => (
+                          <div key={key}>
+                            <p className="text-xs font-medium" style={{ color: "#6b6056" }}>{label}</p>
+                            <p className="text-sm mt-0.5" style={{ color: "#241f1b" }}>{t.scores![key] as string}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {t.content && <Field label="其他備注" value={t.content} />}
                     {t.response && <Field label="客戶回應" value={t.response} />}
                     <ScoreBadges scores={t.scores} />
                   </div>

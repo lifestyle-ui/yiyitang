@@ -844,6 +844,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [loading, setLoading] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [brandFilter, setBrandFilter] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editItems, setEditItems] = useState<{ id: string; name: string; dosage: string }[]>([]);
@@ -890,9 +891,12 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(false); setEditingId(null); onRefresh();
   };
 
-  const filteredCatalog = catalog.filter((p) =>
-    p.name.toLowerCase().includes(catSearch.toLowerCase()) || (p.category || "").toLowerCase().includes(catSearch.toLowerCase()) || (p.brand || "").toLowerCase().includes(catSearch.toLowerCase())
-  );
+  const catalogBrands = Array.from(new Set(catalog.map((p) => p.brand).filter(Boolean))) as string[];
+  const filteredCatalog = catalog.filter((p) => {
+    const matchSearch = !catSearch || p.name.toLowerCase().includes(catSearch.toLowerCase()) || (p.category || "").toLowerCase().includes(catSearch.toLowerCase()) || (p.brand || "").toLowerCase().includes(catSearch.toLowerCase());
+    const matchBrand = !brandFilter || p.brand === brandFilter;
+    return matchSearch && matchBrand;
+  });
   const grouped = filteredCatalog.reduce((acc, p) => {
     const cat = p.category || "其他"; if (!acc[cat]) acc[cat] = []; acc[cat].push(p); return acc;
   }, {} as Record<string, Product[]>);
@@ -930,10 +934,24 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                   <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", showCatalog && "rotate-180")} />
                 </button>
                 {showCatalog && (
-                  <div className="border border-slate-200 rounded-lg max-h-64 overflow-y-auto mb-2">
-                    <div className="sticky top-0 bg-white p-2 border-b border-slate-100">
-                      <input value={catSearch} onChange={(e) => setCatSearch(e.target.value)} placeholder="搜尋保健品..."
-                        className="w-full px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none" />
+                  <div className="border rounded-sm max-h-72 overflow-y-auto mb-2" style={{ borderColor: "#d8cfc3" }}>
+                    <div className="sticky top-0 p-2 flex flex-col gap-1.5" style={{ background: "#faf7f1", borderBottom: "1px solid #ece5da" }}>
+                      <input value={catSearch} onChange={(e) => { setCatSearch(e.target.value); setBrandFilter(null); }} placeholder="搜尋保健品..."
+                        className="w-full px-3 py-1.5 text-sm rounded-sm focus:outline-none" style={{ border: "1px solid #d8cfc3" }} />
+                      {catalogBrands.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {catalogBrands.map((brand) => (
+                            <button key={brand} type="button"
+                              onClick={() => setBrandFilter((prev) => prev === brand ? null : brand)}
+                              className="text-[11px] px-2 py-0.5 rounded-sm border transition-colors"
+                              style={brandFilter === brand
+                                ? { background: "#5c4638", color: "#fff", borderColor: "#5c4638" }
+                                : { background: "#fff", color: "#6b6056", borderColor: "#d8cfc3" }}>
+                              {brand}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     {Object.entries(grouped).sort().map(([cat, products]) => (
                       <div key={cat}>

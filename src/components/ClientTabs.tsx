@@ -1900,7 +1900,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const activeCycle = activeCycles[0];
   const pastCycles = cycles.filter((c) => c.status !== "active").sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
-  const nextStep = activeCycle?.steps.find((s) => !s.isCompleted);
+  const nextStep = activeCycle?.steps.find((s) => !s.isCompleted && !s.label.startsWith("§ "));
   const cycleNumber = (id: string) => cycles.length - cycles.findIndex((c) => c.id === id);
 
   const age = client.birthDate
@@ -2078,9 +2078,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                         </span>
                         {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#b3a99d" }}>{step.note}</p>}
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-sm flex-shrink-0" style={{ background: "#ece5da", color: "#8b8076" }}>
+                      <button onClick={() => cycleStep(activeCycle.id, step)}
+                        className="text-[10px] px-1.5 py-0.5 rounded-sm flex-shrink-0 transition-opacity hover:opacity-70"
+                        style={{ background: st === "completed" ? "#d4ede8" : st === "in_progress" ? "#e8f0ed" : "#ece5da", color: st === "completed" ? "#2d7a6a" : st === "in_progress" ? "#2d7a6a" : "#8b8076" }}>
                         {STEP_STATUS_STYLE[st].label}
-                      </span>
+                      </button>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setCreatingTaskForStep({ stepId: step.id, title: step.label, dueDate: "", priority: "medium" })}
                           className="p-1.5 rounded text-[10px] font-medium" style={{ color: "#5c4638" }} title="建立追蹤任務">+任務</button>

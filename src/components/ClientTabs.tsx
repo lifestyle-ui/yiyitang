@@ -1603,13 +1603,13 @@ function extractSuggestedTasks(texts: (string | null | undefined)[]): string[] {
 
 // ─── 診療週期總覽 ──────────────────────────────────────────────────────────────
 
-const CYCLE_TYPES = ["初診諮詢", "檢測型療程", "保健品方案", "AMD", "排毒10天", "回診"] as const;
+const CYCLE_TYPES = ["初診諮詢", "檢測", "健康計畫", "AMD", "排毒10天", "回診"] as const;
 type CycleType = typeof CYCLE_TYPES[number];
 
 const CYCLE_TYPE_COLORS: Record<string, string> = {
   "初診諮詢":   "text-[#5c4638]",
-  "檢測型療程": "text-[#3A4A5C]",
-  "保健品方案": "text-[#3d6b4f]",
+  "檢測":     "text-[#3A4A5C]",
+  "健康計畫": "text-[#3d6b4f]",
   "AMD":        "text-[#6B2C2C]",
   "排毒10天":   "text-[#6B2C2C]",
   "回診":       "text-[#5c4638]",
@@ -1624,7 +1624,7 @@ const CYCLE_STEPS: Record<string, string[]> = {
     "諮詢當天：完成諮詢記錄",
     "醫師確認診斷與治療方向",
   ],
-  "檢測型療程": [
+  "檢測": [
     "§ 檢測安排",
     "提供檢測報價",
     "預約檢測時間",
@@ -1638,7 +1638,7 @@ const CYCLE_STEPS: Record<string, string[]> = {
     "報告解析諮詢",
     "醫師開立後續計畫",
   ],
-  "保健品方案": [
+  "健康計畫": [
     "§ 出貨作業",
     "提供保健品報價",
     "產品打包與寄送",

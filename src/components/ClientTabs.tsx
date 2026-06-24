@@ -1956,23 +1956,37 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             </div>
           </div>
 
-          {/* 水平步驟器（跳過階段標題）*/}
+          {/* 水平步驟器：只顯示階段標題 */}
           <div className="px-4 pt-4 pb-2 overflow-x-auto">
             <div className="flex items-start pb-1">
-              {activeCycle.steps.filter((s) => !s.label.startsWith("§ ")).map((step, i, arr) => {
-                const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
+              {(activeCycle.steps.some((s) => s.label.startsWith("§ "))
+                ? activeCycle.steps.filter((s) => s.label.startsWith("§ "))
+                : activeCycle.steps
+              ).map((step, i, arr) => {
+                const sectionSteps = activeCycle.steps.filter((s) => !s.label.startsWith("§ "));
+                const headerIndex = activeCycle.steps.filter((s) => s.label.startsWith("§ ")).indexOf(step);
+                const nextHeader = activeCycle.steps.filter((s) => s.label.startsWith("§ "))[headerIndex + 1];
+                const mySteps = sectionSteps.filter((s) => {
+                  const myIdx = activeCycle.steps.indexOf(step);
+                  const nextIdx = nextHeader ? activeCycle.steps.indexOf(nextHeader) : activeCycle.steps.length;
+                  const sIdx = activeCycle.steps.indexOf(s);
+                  return sIdx > myIdx && sIdx < nextIdx;
+                });
+                const allDone = mySteps.length > 0 && mySteps.every((s) => s.isCompleted || s.status === "completed" || s.status === "skipped");
+                const anyActive = mySteps.some((s) => s.status === "in_progress");
+                const st: StepStatus = allDone ? "completed" : anyActive ? "in_progress" : "pending";
                 const sty = STEP_STATUS_STYLE[st];
+                const displayLabel = step.label.startsWith("§ ") ? step.label.slice(2) : step.label;
                 return (
                   <div key={step.id} className="flex items-start flex-shrink-0">
-                    <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, step.label.length * 7 + 8) }}>
-                      <button onClick={() => cycleStep(activeCycle.id, step)}
-                        className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2 transition-all"
+                    <div className="flex flex-col items-center" style={{ minWidth: Math.max(56, displayLabel.length * 7 + 8) }}>
+                      <div className="w-9 h-9 flex items-center justify-center text-sm font-medium border-2"
                         style={{ background: sty.bg, borderColor: sty.border, color: sty.color, borderRadius: "50%", ...(st === "in_progress" ? { boxShadow: "0 0 0 3px #ece2d6" } : {}) }}>
-                        {st === "completed" ? <Check className="w-4 h-4" /> : st === "skipped" ? "⊘" : i + 1}
-                      </button>
+                        {st === "completed" ? <Check className="w-4 h-4" /> : i + 1}
+                      </div>
                       <span className="text-[10px] mt-1 text-center leading-tight px-1"
                         style={{ color: sty.color !== "#fff" ? sty.color : "#5c4638", fontWeight: st === "in_progress" ? 500 : 400 }}>
-                        {step.label}
+                        {displayLabel}
                       </span>
                     </div>
                     {i < arr.length - 1 && (

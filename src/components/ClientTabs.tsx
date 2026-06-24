@@ -1595,11 +1595,21 @@ const CYCLE_TYPE_COLORS: Record<string, string> = {
   "緊急評估": "text-[#6B2C2C]",
 };
 
+// GO-TO-IT 六階段架構
+const GOTO_IT_STEPS = [
+  { key: "gather",   label: "Gather 收集",   hint: "收集問卷、主訴、病史、用藥、過去檢測" },
+  { key: "organize", label: "Organize 組織", hint: "整理時間表、矩陣、症狀與檢測對照" },
+  { key: "tell",     label: "Tell 重述",     hint: "重述客戶故事，確認症狀、時間、誘因" },
+  { key: "order",    label: "Order 排序",    hint: "釐清優先問題，先處理最影響生活的項目" },
+  { key: "initiate", label: "Initiate 啟動", hint: "啟動檢測、保健品、生活方案、回診計畫" },
+  { key: "track",    label: "Track 追蹤",    hint: "追蹤有效性、安全性、規律性、突發症狀" },
+] as const;
+
 const CYCLE_STEPS: Record<string, string[]> = {
-  "初診": ["健康問卷收集", "初診諮詢", "功能醫學檢測", "等待報告", "報告解讀", "開立保健品處方", "安排回診"],
-  "回診": ["回診諮詢", "狀況追蹤評估", "調整保健品處方", "安排下次回診"],
-  "專項檢測": ["諮詢說明", "安排專項檢測", "等待報告", "報告解讀", "處置與建議"],
-  "緊急評估": ["即時諮詢", "緊急檢測安排", "快速解讀", "處置方案"],
+  "初診": GOTO_IT_STEPS.map((s) => s.label),
+  "回診": ["Gather 收集", "Tell 重述", "Order 排序", "Initiate 啟動", "Track 追蹤"],
+  "專項檢測": ["Gather 收集", "Initiate 啟動", "Track 追蹤"],
+  "緊急評估": ["Gather 收集", "Order 排序", "Initiate 啟動", "Track 追蹤"],
 };
 
 const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
@@ -1620,11 +1630,17 @@ const STEP_STATUS_STYLE: Record<StepStatus, { bg: string; border: string; color:
 };
 
 function stepIcon(label: string) {
-  if (label.includes("問卷")) return <ClipboardList className="w-3.5 h-3.5" />;
+  if (label.includes("Gather"))   return <ClipboardList className="w-3.5 h-3.5" />;
+  if (label.includes("Organize")) return <FileText className="w-3.5 h-3.5" />;
+  if (label.includes("Tell"))     return <MessageSquare className="w-3.5 h-3.5" />;
+  if (label.includes("Order"))    return <Activity className="w-3.5 h-3.5" />;
+  if (label.includes("Initiate")) return <Pill className="w-3.5 h-3.5" />;
+  if (label.includes("Track"))    return <FlaskConical className="w-3.5 h-3.5" />;
+  // fallbacks for custom steps
+  if (label.includes("問卷") || label.includes("收集")) return <ClipboardList className="w-3.5 h-3.5" />;
   if (label.includes("諮詢")) return <MessageSquare className="w-3.5 h-3.5" />;
-  if (label.includes("檢測") || label.includes("檢驗")) return <FlaskConical className="w-3.5 h-3.5" />;
-  if (label.includes("報告") || label.includes("解讀")) return <FileText className="w-3.5 h-3.5" />;
-  if (label.includes("處方") || label.includes("保健品")) return <Pill className="w-3.5 h-3.5" />;
+  if (label.includes("檢測")) return <FlaskConical className="w-3.5 h-3.5" />;
+  if (label.includes("處方")) return <Pill className="w-3.5 h-3.5" />;
   if (label.includes("回診") || label.includes("安排")) return <Calendar className="w-3.5 h-3.5" />;
   return <Activity className="w-3.5 h-3.5" />;
 }

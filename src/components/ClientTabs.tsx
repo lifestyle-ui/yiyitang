@@ -1603,31 +1603,71 @@ function extractSuggestedTasks(texts: (string | null | undefined)[]): string[] {
 
 // ─── 診療週期總覽 ──────────────────────────────────────────────────────────────
 
-const CYCLE_TYPES = ["初診", "回診", "專項檢測", "緊急評估"] as const;
+const CYCLE_TYPES = ["初診諮詢", "檢測型療程", "保健品方案", "AMD", "排毒10天", "回診"] as const;
 type CycleType = typeof CYCLE_TYPES[number];
 
 const CYCLE_TYPE_COLORS: Record<string, string> = {
-  "初診": "text-[#5c4638]",
-  "回診": "text-[#5c4638]",
-  "專項檢測": "text-[#3A4A5C]",
-  "緊急評估": "text-[#6B2C2C]",
+  "初診諮詢":   "text-[#5c4638]",
+  "檢測型療程": "text-[#3A4A5C]",
+  "保健品方案": "text-[#3d6b4f]",
+  "AMD":        "text-[#6B2C2C]",
+  "排毒10天":   "text-[#6B2C2C]",
+  "回診":       "text-[#5c4638]",
 };
 
-// GO-TO-IT 六階段架構
-const GOTO_IT_STEPS = [
-  { key: "gather",   label: "Gather 收集",   hint: "收集問卷、主訴、病史、用藥、過去檢測" },
-  { key: "organize", label: "Organize 組織", hint: "整理時間表、矩陣、症狀與檢測對照" },
-  { key: "tell",     label: "Tell 重述",     hint: "重述客戶故事，確認症狀、時間、誘因" },
-  { key: "order",    label: "Order 排序",    hint: "釐清優先問題，先處理最影響生活的項目" },
-  { key: "initiate", label: "Initiate 啟動", hint: "啟動檢測、保健品、生活方案、回診計畫" },
-  { key: "track",    label: "Track 追蹤",    hint: "追蹤有效性、安全性、規律性、突發症狀" },
-] as const;
-
+// § 前綴代表「階段標題」，不可勾選、不計入進度
 const CYCLE_STEPS: Record<string, string[]> = {
-  "初診": GOTO_IT_STEPS.map((s) => s.label),
-  "回診": ["Gather 收集", "Tell 重述", "Order 排序", "Initiate 啟動", "Track 追蹤"],
-  "專項檢測": ["Gather 收集", "Initiate 啟動", "Track 追蹤"],
-  "緊急評估": ["Gather 收集", "Order 排序", "Initiate 啟動", "Track 追蹤"],
+  "初診諮詢": [
+    "§ 初診階段",
+    "問卷收集",
+    "安排諮詢時間",
+    "諮詢當天：完成諮詢記錄",
+    "醫師確認診斷與治療方向",
+  ],
+  "檢測型療程": [
+    "§ 檢測安排",
+    "提供檢測報價",
+    "預約檢測時間",
+    "檢體採集衛教",
+    "採集當天：確認狀況、完成採集",
+    "§ 等待報告",
+    "確認檢體送出",
+    "等待報告產出",
+    "§ 報告解析",
+    "預約報告解析時間",
+    "報告解析諮詢",
+    "醫師開立後續計畫",
+  ],
+  "保健品方案": [
+    "§ 出貨作業",
+    "提供保健品報價",
+    "產品打包與寄送",
+    "確認客戶收到保健品",
+    "§ 追蹤關懷",
+    "第1週追蹤關懷",
+    "第3週追蹤關懷",
+    "§ 後續安排",
+    "預約下次回診",
+  ],
+  "AMD": [],
+  "排毒10天": [
+    "§ 第一療程",
+    "第一療程開始（第1–10天）",
+    "§ 第二療程",
+    "第二療程開始（第1–10天）",
+    "§ 第三療程",
+    "第三療程開始（第1–10天）",
+    "§ 第四療程",
+    "第四療程開始（第1–10天）",
+  ],
+  "回診": [
+    "§ 回診流程",
+    "Gather 收集",
+    "Tell 重述",
+    "Order 排序",
+    "Initiate 啟動",
+    "Track 追蹤",
+  ],
 };
 
 const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
@@ -1899,10 +1939,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             </div>
           </div>
 
-          {/* 水平步驟器 */}
+          {/* 水平步驟器（跳過階段標題）*/}
           <div className="px-4 pt-4 pb-2 overflow-x-auto">
             <div className="flex items-start pb-1">
-              {activeCycle.steps.map((step, i) => {
+              {activeCycle.steps.filter((s) => !s.label.startsWith("§ ")).map((step, i, arr) => {
                 const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
                 const sty = STEP_STATUS_STYLE[st];
                 return (
@@ -1918,7 +1958,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                         {step.label}
                       </span>
                     </div>
-                    {i < activeCycle.steps.length - 1 && (
+                    {i < arr.length - 1 && (
                       <div className="mt-4 flex-shrink-0 w-6" style={{ height: "1.5px", background: st === "completed" ? "#5c4638" : "#d8cfc3" }} />
                     )}
                   </div>
@@ -1930,6 +1970,19 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           {/* 步驟列表（可編輯）*/}
           <div style={{ borderTop: "1px solid #ece5da" }}>
             {activeCycle.steps.map((step) => {
+              const isHeader = step.label.startsWith("§ ");
+              if (isHeader) return (
+                <div key={step.id} className="flex items-center gap-2 px-4 py-1.5 group" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-[.12em] flex-1" style={{ color: "#876b57" }}>
+                    {step.label.slice(2)}
+                  </span>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
+                      className="p-1 rounded" style={{ color: "#b3a99d" }}><Pencil className="w-3 h-3" /></button>
+                    <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1 rounded" style={{ color: "#b8392c" }}><Trash2 className="w-3 h-3" /></button>
+                  </div>
+                </div>
+              );
               const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
               return (
                 <div key={step.id}>
@@ -1971,7 +2024,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #ece5da" }}>
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#5c4638" : st === "in_progress" ? "#5A8A7A" : st === "skipped" ? "#d8cfc3" : "#d8cfc3" }} />
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#5c4638" : st === "in_progress" ? "#5A8A7A" : "#d8cfc3" }} />
                       <div className="flex-1 min-w-0">
                         <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8b8076" : "#241f1b", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
                           {step.label}
@@ -2081,7 +2134,8 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
           <p className="text-xs font-semibold uppercase tracking-[.08em]" style={{ color: "#b3a99d" }}>歷史週期（{pastCycles.length}）</p>
           {pastCycles.map((cycle) => {
             const num = cycleNumber(cycle.id);
-            const completedCount = cycle.steps.filter((s) => s.isCompleted).length;
+            const actionSteps = cycle.steps.filter((s) => !s.label.startsWith("§ "));
+            const completedCount = actionSteps.filter((s) => s.isCompleted).length;
             const expanded = expandedCycles.has(cycle.id);
             return (
               <div key={cycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#ece5da" }}>
@@ -2090,7 +2144,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                   <span className="text-sm font-medium" style={{ color: "#3b332c" }}>{cycle.type}</span>
                   <span className="text-xs" style={{ color: "#b3a99d" }}>{formatDate(cycle.startDate).slice(0, 7)}</span>
                   <span className="text-xs rounded-sm px-1.5 py-0.5" style={{ background: "#ece5da", color: "#8b8076" }}>
-                    {completedCount}/{cycle.steps.length} 完成
+                    {completedCount}/{actionSteps.length} 完成
                   </span>
                   <div className="ml-auto flex items-center gap-3">
                     <button onClick={() => toggleExpandCycle(cycle.id)}

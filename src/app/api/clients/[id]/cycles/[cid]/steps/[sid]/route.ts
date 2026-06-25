@@ -20,6 +20,7 @@ export async function PATCH(req: Request, { params }: Params) {
   }
   if (body.note !== undefined) update.note = body.note;
   if (body.label !== undefined) update.label = body.label;
+  if (body.sortOrder !== undefined) update.sortOrder = body.sortOrder;
 
   const { data, error } = await supabase
     .from("VisitCycleStep")

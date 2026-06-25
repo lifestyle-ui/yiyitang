@@ -1851,7 +1851,7 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const [customTypeName, setCustomTypeName] = useState("");
   const [customStepLines, setCustomStepLines] = useState("");
   const [editingCycle, setEditingCycle] = useState<{ id: string; note: string } | null>(null);
-  const [editingStep, setEditingStep] = useState<{ id: string; cycleId: string; note: string; label: string } | null>(null);
+  const [editingStep, setEditingStep] = useState<{ id: string; cycleId: string; note: string; label: string; insertAfterHeaderId?: string } | null>(null);
   const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
 
   const load = async () => {
@@ -1973,6 +1973,59 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         body: JSON.stringify({ status: nextStatus }),
       })
     ));
+  };
+
+  const moveStep = async (cycleId: string, stepId: string, direction: "up" | "down") => {
+    const cycle = cycles.find(c => c.id === cycleId);
+    if (!cycle) return;
+    const steps = [...cycle.steps]; // already sorted by sortOrder
+    const idx = steps.findIndex(s => s.id === stepId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= steps.length) return;
+    // Swap in local state
+    const newSteps = [...steps];
+    [newSteps[idx], newSteps[swapIdx]] = [newSteps[swapIdx], newSteps[idx]];
+    setCycles(prev => prev.map(c => c.id === cycleId ? { ...c, steps: newSteps } : c));
+    // Persist via bulk reorder
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/reorder`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stepIds: newSteps.map(s => s.id) }),
+    });
+  };
+
+  const addStepToSection = async (cycleId: string, headerStepId: string | null, label: string, note: string) => {
+    if (!label.trim()) return;
+    const cycle = cycles.find(c => c.id === cycleId);
+    if (!cycle) return;
+    const steps = cycle.steps;
+    let insertAfterIdx: number;
+    if (headerStepId === null) {
+      insertAfterIdx = steps.length - 1;
+    } else {
+      const headerIdx = steps.findIndex(s => s.id === headerStepId);
+      // Find last step before next header
+      let end = steps.length - 1;
+      for (let i = headerIdx + 1; i < steps.length; i++) {
+        if (steps[i].label.startsWith("§ ")) { end = i - 1; break; }
+      }
+      insertAfterIdx = end;
+    }
+    // Insert step (temporarily at end), then reorder
+    const res = await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label, note: note || null, sortOrder: 9999 }),
+    });
+    const newStep = await res.json();
+    if (!newStep.id) return;
+    // Build new ordered list with inserted step
+    const newOrder = [...steps];
+    newOrder.splice(insertAfterIdx + 1, 0, newStep);
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/reorder`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stepIds: newOrder.map(s => s.id) }),
+    });
+    await load();
   };
 
   const skipStep = async (cycleId: string, step: VisitCycleStep) => {
@@ -2135,18 +2188,37 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
           {/* 步驟列表（可編輯）*/}
           <div style={{ borderTop: "1px solid #ece5da" }}>
-            {activeCycle.steps.map((step) => {
+            {activeCycle.steps.map((step, stepIdx) => {
               const isHeader = step.label.startsWith("§ ");
               if (isHeader) return (
-                <div key={step.id} className="flex items-center gap-2 px-4 py-1.5 group" style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
-                  <span className="text-[10px] font-semibold uppercase tracking-[.12em] flex-1" style={{ color: "#876b57" }}>
-                    {step.label.slice(2)}
-                  </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div key={step.id} style={{ background: "#f3ece0", borderBottom: "1px solid #ece5da" }}>
+                  <div className="flex items-center gap-2 px-4 py-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-[.12em] flex-1" style={{ color: "#876b57" }}>
+                      {step.label.slice(2)}
+                    </span>
+                    <button onClick={() => setEditingStep({ id: "__new__", cycleId: activeCycle.id, note: "", label: "", insertAfterHeaderId: step.id })}
+                      className="text-[10px] flex items-center gap-0.5 hover:opacity-70" style={{ color: "#5c4638" }}>
+                      <Plus className="w-3 h-3" />新增
+                    </button>
                     <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
                       className="p-1 rounded" style={{ color: "#b3a99d" }}><Pencil className="w-3 h-3" /></button>
                     <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1 rounded" style={{ color: "#b8392c" }}><Trash2 className="w-3 h-3" /></button>
                   </div>
+                  {editingStep?.id === "__new__" && editingStep.cycleId === activeCycle.id && (editingStep as { insertAfterHeaderId?: string }).insertAfterHeaderId === step.id && (
+                    <div className="px-4 py-2 flex flex-col gap-2" style={{ borderTop: "1px solid #ece5da" }}>
+                      <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="步驟名稱" autoFocus />
+                      <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
+                        className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="備注（選填）" />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 border rounded-sm" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                        <button onClick={async () => {
+                          await addStepToSection(activeCycle.id, step.id, editingStep.label, editingStep.note);
+                          setEditingStep(null);
+                        }} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>新增</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
               const st: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
@@ -2202,7 +2274,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                         style={{ background: st === "completed" ? "#d4ede8" : st === "in_progress" ? "#e8f0ed" : "#ece5da", color: st === "completed" ? "#2d7a6a" : st === "in_progress" ? "#2d7a6a" : "#8b8076" }}>
                         {STEP_STATUS_STYLE[st].label}
                       </button>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
+                        <button onClick={() => moveStep(activeCycle.id, step.id, "up")} disabled={stepIdx === 0}
+                          className="p-1 rounded text-[11px] disabled:opacity-20" style={{ color: "#b3a99d" }} title="上移">↑</button>
+                        <button onClick={() => moveStep(activeCycle.id, step.id, "down")} disabled={stepIdx === activeCycle.steps.length - 1}
+                          className="p-1 rounded text-[11px] disabled:opacity-20" style={{ color: "#b3a99d" }} title="下移">↓</button>
                         <button onClick={() => setEditingStep({ id: step.id, cycleId: activeCycle.id, note: step.note ?? "", label: step.label })}
                           className="p-1.5 rounded" style={{ color: "#b3a99d" }} title="編輯"><Pencil className="w-3 h-3" /></button>
                         <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#c8574a" }} title="刪除"><Trash2 className="w-3 h-3" /></button>
@@ -2215,35 +2291,31 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             })}
           </div>
 
-          {/* 新增步驟 */}
-          <div className="px-4 py-2" style={{ borderTop: "1px solid #ece5da" }}>
-            <button onClick={() => setEditingStep({ id: "__new__", cycleId: activeCycle.id, note: "", label: "" })}
-              className="text-xs flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: "#5c4638" }}>
-              <Plus className="w-3 h-3" />新增步驟
-            </button>
-          </div>
-          {editingStep?.id === "__new__" && editingStep.cycleId === activeCycle.id && (
-            <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderTop: "1px solid #ece5da" }}>
-              <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
-                className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="步驟名稱" autoFocus />
-              <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
-                className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="備注（選填）" />
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
-                <button onClick={async () => {
-                  if (!editingStep.label.trim()) return;
-                  const cycleId = editingStep.cycleId;
-                  const cycle = cycles.find(c => c.id === cycleId);
-                  const sortOrder = cycle ? cycle.steps.length : 0;
-                  const res = await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps`, {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ label: editingStep.label, note: editingStep.note, sortOrder }),
-                  });
-                  if (res.ok) { await load(); }
-                  setEditingStep(null);
-                }} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>新增</button>
+          {/* 新增步驟（無階段標題的療程才顯示底部按鈕） */}
+          {!activeCycle.steps.some(s => s.label.startsWith("§ ")) && (
+            <>
+              <div className="px-4 py-2" style={{ borderTop: "1px solid #ece5da" }}>
+                <button onClick={() => setEditingStep({ id: "__new__", cycleId: activeCycle.id, note: "", label: "" })}
+                  className="text-xs flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: "#5c4638" }}>
+                  <Plus className="w-3 h-3" />新增步驟
+                </button>
               </div>
-            </div>
+              {editingStep?.id === "__new__" && editingStep.cycleId === activeCycle.id && !editingStep.insertAfterHeaderId && (
+                <div className="px-4 py-3 flex flex-col gap-2" style={{ background: "#f3ece0", borderTop: "1px solid #ece5da" }}>
+                  <input value={editingStep.label} onChange={(e) => setEditingStep({ ...editingStep, label: e.target.value })}
+                    className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="步驟名稱" autoFocus />
+                  <input value={editingStep.note} onChange={(e) => setEditingStep({ ...editingStep, note: e.target.value })}
+                    className="text-sm border rounded-sm px-2 py-1 w-full" style={{ borderColor: "#d8cfc3" }} placeholder="備注（選填）" />
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setEditingStep(null)} className="text-xs px-2 py-1 rounded-sm border" style={{ borderColor: "#d8cfc3", color: "#6b6056" }}>取消</button>
+                    <button onClick={async () => {
+                      await addStepToSection(activeCycle.id, null, editingStep.label, editingStep.note);
+                      setEditingStep(null);
+                    }} className="text-xs px-2 py-1 rounded-sm text-white" style={{ background: "#5c4638" }}>新增</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* 週期備注 */}

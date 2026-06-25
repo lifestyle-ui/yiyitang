@@ -921,6 +921,58 @@ const PRESCRIPTION_PRESETS: { label: string; items: { name: string; dosage: stri
   },
 ];
 
+const FREQ_OPTIONS = ["QD", "BID", "TID", "QID", "QN", "PRN", "自訂"];
+
+function DosageInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Parse "2# BID" → qty="2", freq="BID"
+  const match = value.match(/^(\d*\.?\d*)#?\s*(.*)$/);
+  const qty = match?.[1] ?? "";
+  const freqRaw = match?.[2]?.trim() ?? "";
+  const isCustom = freqRaw !== "" && !FREQ_OPTIONS.slice(0, -1).includes(freqRaw);
+  const [customFreq, setCustomFreq] = useState(isCustom ? freqRaw : "");
+  const [showCustom, setShowCustom] = useState(isCustom);
+
+  const emit = (q: string, f: string) => onChange(q && f ? `${q}# ${f}` : q ? `${q}#` : f);
+
+  return (
+    <div className="flex items-center gap-1">
+      <div className="flex items-center border rounded-sm overflow-hidden" style={{ borderColor: "#d8cfc3" }}>
+        <input
+          type="number" min="0" step="0.5" value={qty}
+          onChange={(e) => emit(e.target.value, showCustom ? customFreq : freqRaw)}
+          placeholder="顆數"
+          className="w-14 px-2 py-1 text-xs text-center focus:outline-none bg-white"
+          style={{ borderRight: "1px solid #d8cfc3" }}
+        />
+        <span className="px-1 text-xs" style={{ color: "#b3a99d" }}>#</span>
+      </div>
+      {showCustom ? (
+        <input
+          value={customFreq}
+          onChange={(e) => { setCustomFreq(e.target.value); emit(qty, e.target.value); }}
+          placeholder="輸入頻率"
+          className="w-24 px-2 py-1 text-xs border rounded-sm focus:outline-none"
+          style={{ borderColor: "#d8cfc3" }}
+          onBlur={() => { if (!customFreq) setShowCustom(false); }}
+        />
+      ) : (
+        <select
+          value={freqRaw || ""}
+          onChange={(e) => {
+            if (e.target.value === "自訂") { setShowCustom(true); setCustomFreq(""); }
+            else emit(qty, e.target.value);
+          }}
+          className="text-xs px-2 py-1 border rounded-sm focus:outline-none bg-white"
+          style={{ borderColor: "#d8cfc3" }}
+        >
+          <option value="">頻率</option>
+          {FREQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      )}
+    </div>
+  );
+}
+
 function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; dosage: string; custom?: boolean }[]>([]);
@@ -1006,8 +1058,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     {selectedItems.map((item) => (
                       <div key={item.id} className="flex items-center gap-2">
                         <span className="flex-1 text-sm font-medium text-slate-700">{item.name}</span>
-                        <input value={item.dosage} onChange={(e) => updateDosage(item.id, e.target.value)} placeholder="用法（如：每日2顆，飯後）"
-                          className="w-48 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                        <DosageInput value={item.dosage} onChange={(v) => updateDosage(item.id, v)} />
                         <button type="button" onClick={() => setSelectedItems((p) => p.filter((i) => i.id !== item.id))}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
                       </div>
                     ))}
@@ -1140,8 +1191,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                           <div key={item.id} className="flex items-center gap-2">
                             <input value={item.name} onChange={(e) => setEditItems((prev) => prev.map((i) => i.id === item.id ? { ...i, name: e.target.value } : i))}
                               className="flex-1 px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                            <input value={item.dosage} onChange={(e) => setEditItems((prev) => prev.map((i) => i.id === item.id ? { ...i, dosage: e.target.value } : i))}
-                              placeholder="用法" className="w-44 px-2 py-1.5 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                            <DosageInput value={item.dosage} onChange={(v) => setEditItems((prev) => prev.map((i) => i.id === item.id ? { ...i, dosage: v } : i))} />
                             <button type="button" onClick={() => setEditItems((prev) => prev.filter((i) => i.id !== item.id))}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
                           </div>
                         ))}

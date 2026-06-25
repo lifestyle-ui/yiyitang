@@ -49,9 +49,6 @@ const TABS = [
   { key: "labTests", label: "檢測", icon: FlaskConical },
   { key: "prescriptions", label: "保健品處方", icon: Pill },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
-  { key: "questionnaires", label: "健康問卷", icon: FileText },
-  { key: "matrix", label: "功能矩陣", icon: GitBranch },
-  { key: "complaints", label: "客訴", icon: AlertTriangle },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {

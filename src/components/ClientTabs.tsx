@@ -921,35 +921,51 @@ const PRESCRIPTION_PRESETS: { label: string; items: { name: string; dosage: stri
   },
 ];
 
-const FREQ_OPTIONS = ["QD", "BID", "TID", "QID", "QN", "PRN"];
+const FREQ_OPTIONS = ["QD", "BID", "TID", "QID", "QN"];
 
 function DosageInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const match = value.match(/^(\d*\.?\d*)#?\s*(.*)$/);
   const qty = match?.[1] ?? "";
-  const freq = FREQ_OPTIONS.includes(match?.[2]?.trim() ?? "") ? match![2].trim() : "";
+  const freqRaw = match?.[2]?.trim() ?? "";
+  const isPreset = FREQ_OPTIONS.includes(freqRaw);
+  const [custom, setCustom] = useState(!isPreset ? freqRaw : "");
+  const [useCustom, setUseCustom] = useState(!isPreset && freqRaw !== "");
   const emit = (q: string, f: string) => onChange(q && f ? `${q}# ${f}` : q ? `${q}#` : f);
 
   return (
     <div className="flex items-center gap-1">
       <div className="flex items-center border rounded-sm overflow-hidden" style={{ borderColor: "#d8cfc3" }}>
-        <input
-          type="number" min="0" step="0.5" value={qty}
-          onChange={(e) => emit(e.target.value, freq)}
+        <input type="number" min="0" step="0.5" value={qty}
+          onChange={(e) => emit(e.target.value, useCustom ? custom : freqRaw)}
           placeholder="顆數"
           className="w-14 px-2 py-1 text-xs text-center focus:outline-none bg-white"
-          style={{ borderRight: "1px solid #d8cfc3" }}
-        />
+          style={{ borderRight: "1px solid #d8cfc3" }} />
         <span className="px-1 text-xs" style={{ color: "#b3a99d" }}>#</span>
       </div>
-      <select
-        value={freq}
-        onChange={(e) => emit(qty, e.target.value)}
-        className="text-xs px-2 py-1 border rounded-sm focus:outline-none bg-white"
-        style={{ borderColor: "#d8cfc3" }}
-      >
-        <option value="">頻率</option>
-        {FREQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
+      {useCustom ? (
+        <input value={custom}
+          onChange={(e) => { setCustom(e.target.value); emit(qty, e.target.value); }}
+          placeholder="自訂頻率"
+          className="w-24 px-2 py-1 text-xs border rounded-sm focus:outline-none"
+          style={{ borderColor: "#5c4638" }}
+          autoFocus />
+      ) : (
+        <select value={freqRaw}
+          onChange={(e) => {
+            if (e.target.value === "__custom__") { setUseCustom(true); setCustom(""); emit(qty, ""); }
+            else emit(qty, e.target.value);
+          }}
+          className="text-xs px-2 py-1 border rounded-sm focus:outline-none bg-white"
+          style={{ borderColor: "#d8cfc3" }}>
+          <option value="">頻率</option>
+          {FREQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+          <option value="__custom__">自訂…</option>
+        </select>
+      )}
+      {useCustom && (
+        <button type="button" onClick={() => { setUseCustom(false); emit(qty, ""); }}
+          className="text-[10px]" style={{ color: "#b3a99d" }}>✕</button>
+      )}
     </div>
   );
 }

@@ -921,17 +921,12 @@ const PRESCRIPTION_PRESETS: { label: string; items: { name: string; dosage: stri
   },
 ];
 
-const FREQ_OPTIONS = ["QD", "BID", "TID", "QID", "QN", "PRN", "自訂"];
+const FREQ_OPTIONS = ["QD", "BID", "TID", "QID", "QN", "PRN"];
 
 function DosageInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  // Parse "2# BID" → qty="2", freq="BID"
   const match = value.match(/^(\d*\.?\d*)#?\s*(.*)$/);
   const qty = match?.[1] ?? "";
-  const freqRaw = match?.[2]?.trim() ?? "";
-  const isCustom = freqRaw !== "" && !FREQ_OPTIONS.slice(0, -1).includes(freqRaw);
-  const [customFreq, setCustomFreq] = useState(isCustom ? freqRaw : "");
-  const [showCustom, setShowCustom] = useState(isCustom);
-
+  const freq = FREQ_OPTIONS.includes(match?.[2]?.trim() ?? "") ? match![2].trim() : "";
   const emit = (q: string, f: string) => onChange(q && f ? `${q}# ${f}` : q ? `${q}#` : f);
 
   return (
@@ -939,36 +934,22 @@ function DosageInput({ value, onChange }: { value: string; onChange: (v: string)
       <div className="flex items-center border rounded-sm overflow-hidden" style={{ borderColor: "#d8cfc3" }}>
         <input
           type="number" min="0" step="0.5" value={qty}
-          onChange={(e) => emit(e.target.value, showCustom ? customFreq : freqRaw)}
+          onChange={(e) => emit(e.target.value, freq)}
           placeholder="顆數"
           className="w-14 px-2 py-1 text-xs text-center focus:outline-none bg-white"
           style={{ borderRight: "1px solid #d8cfc3" }}
         />
         <span className="px-1 text-xs" style={{ color: "#b3a99d" }}>#</span>
       </div>
-      {showCustom ? (
-        <input
-          value={customFreq}
-          onChange={(e) => { setCustomFreq(e.target.value); emit(qty, e.target.value); }}
-          placeholder="輸入頻率"
-          className="w-24 px-2 py-1 text-xs border rounded-sm focus:outline-none"
-          style={{ borderColor: "#d8cfc3" }}
-          onBlur={() => { if (!customFreq) setShowCustom(false); }}
-        />
-      ) : (
-        <select
-          value={freqRaw || ""}
-          onChange={(e) => {
-            if (e.target.value === "自訂") { setShowCustom(true); setCustomFreq(""); }
-            else emit(qty, e.target.value);
-          }}
-          className="text-xs px-2 py-1 border rounded-sm focus:outline-none bg-white"
-          style={{ borderColor: "#d8cfc3" }}
-        >
-          <option value="">頻率</option>
-          {FREQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-        </select>
-      )}
+      <select
+        value={freq}
+        onChange={(e) => emit(qty, e.target.value)}
+        className="text-xs px-2 py-1 border rounded-sm focus:outline-none bg-white"
+        style={{ borderColor: "#d8cfc3" }}
+      >
+        <option value="">頻率</option>
+        {FREQ_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 }
@@ -996,7 +977,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   };
 
   const toggleProduct = (p: Product) => {
-    setSelectedItems((prev) => prev.find((i) => i.id === p.id) ? prev.filter((i) => i.id !== p.id) : [...prev, { id: p.id, name: p.name, dosage: p.dosage || "" }]);
+    setSelectedItems((prev) => prev.find((i) => i.id === p.id) ? prev.filter((i) => i.id !== p.id) : [...prev, { id: p.id, name: p.name, dosage: "" }]);
   };
   const updateDosage = (id: string, dosage: string) => setSelectedItems((prev) => prev.map((i) => i.id === id ? { ...i, dosage } : i));
   const addCustom = () => {

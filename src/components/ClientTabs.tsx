@@ -2156,6 +2156,17 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         </div>
       </div>
 
+      {/* 下一步卡片 */}
+      {activeCycle && nextStep && (
+        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
+          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />
+          <div>
+            <p className="text-sm font-medium" style={{ color: "#241f1b" }}>下一步：{nextStep.label}</p>
+            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#876b57" }}>{nextStep.note}</p>}
+          </div>
+        </div>
+      )}
+
       {/* 進行中週期（可能多個） */}
       {activeCycles.map((activeCycle) => (
         <div key={activeCycle.id} className="border rounded-sm overflow-hidden" style={{ borderColor: "#d8cabb" }}>
@@ -2373,16 +2384,6 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         </div>
       ))}
 
-      {/* 下一步卡片（只顯示第一個進行中週期的下一步） */}
-      {activeCycle && nextStep && (
-        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
-          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />
-          <div>
-            <p className="text-sm font-medium" style={{ color: "#241f1b" }}>下一步：{nextStep.label}</p>
-            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#876b57" }}>{nextStep.note}</p>}
-          </div>
-        </div>
-      )}
 
       {/* 開啟新週期 */}
       {!showNew ? (

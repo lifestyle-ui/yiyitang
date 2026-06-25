@@ -15,6 +15,7 @@ export default function EditClientPage() {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "", medicalRecordNumber: "", gender: "", birthDate: "", phone: "",
     email: "", lineId: "", address: "", occupation: "",
@@ -54,6 +55,7 @@ export default function EditClientPage() {
     e.preventDefault();
     if (!form.name.trim()) return;
     setLoading(true);
+    setError("");
     try {
       const res = await fetch(`/api/clients/${id}`, {
         method: "PATCH",
@@ -62,7 +64,12 @@ export default function EditClientPage() {
       });
       if (res.ok) {
         window.location.href = `/clients/${id}`;
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || `儲存失敗（${res.status}）`);
       }
+    } catch {
+      setError("網路錯誤，請稍後再試");
     } finally {
       setLoading(false);
     }
@@ -164,6 +171,9 @@ export default function EditClientPage() {
           </CardContent>
         </Card>
 
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>
+        )}
         <div className="flex justify-between items-center">
           <button type="button" onClick={handleDelete}
             className="text-sm px-3 py-1.5 rounded-sm border transition-colors"

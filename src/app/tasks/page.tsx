@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import TaskStatusToggle from "@/components/TaskStatusToggle";
+import TaskDeleteButton from "@/components/TaskDeleteButton";
 
 async function getTasks() {
   const { data } = await supabase
@@ -60,6 +61,7 @@ export default async function TasksPage() {
                         {task.dueDate && <span className="text-xs text-slate-400">截止：{formatDate(task.dueDate)}</span>}
                       </div>
                     </div>
+                    <TaskDeleteButton taskId={task.id} />
                   </li>
                 ))}
               </ul>
@@ -74,7 +76,8 @@ export default async function TasksPage() {
                 {done.map((task) => (
                   <li key={task.id} className="flex items-start gap-3 px-5 py-3 opacity-60">
                     <TaskStatusToggle taskId={task.id} currentStatus={task.status} />
-                    <p className="text-sm text-slate-400 line-through">{task.title}</p>
+                    <p className="flex-1 text-sm text-slate-400 line-through">{task.title}</p>
+                    <TaskDeleteButton taskId={task.id} />
                   </li>
                 ))}
               </ul>

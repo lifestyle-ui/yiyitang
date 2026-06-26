@@ -58,6 +58,7 @@ const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
 export default function ClientTabs({ client }: { client: Client }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [showForm, setShowForm] = useState(false);
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const router = useRouter();
 
   return (
@@ -70,7 +71,7 @@ export default function ClientTabs({ client }: { client: Client }) {
           const active = activeTab === tab.key;
           return (
             <button key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setShowForm(false); }}
+              onClick={() => { setActiveTab(tab.key); setShowForm(false); setShowPrescriptionForm(false); }}
               className="flex items-center gap-1.5 px-4 py-3 text-[12.5px] border-b-2 transition-colors whitespace-nowrap tracking-[.01em]"
               style={active
                 ? { borderBottomColor: "#241f1b", color: "#241f1b", fontWeight: 500 }
@@ -89,7 +90,7 @@ export default function ClientTabs({ client }: { client: Client }) {
               <ConsultationsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />
             </div>
             <div className="w-1/2 min-w-0 border-l border-slate-200 pl-4">
-              <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />
+              <PrescriptionsTab client={client} showForm={showPrescriptionForm} setShowForm={setShowPrescriptionForm} onRefresh={() => router.refresh()} />
             </div>
           </div>
         )}
@@ -1095,7 +1096,20 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   return (
     <div className="max-w-3xl flex flex-col gap-4">
       <div className="flex justify-end">
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
+        <Button onClick={() => {
+          if (!showForm) {
+            // Pre-populate from last prescription
+            const last = client.prescriptions?.[0];
+            if (last) {
+              let items: { name: string; dosage?: string }[] = [];
+              try { items = typeof last.items === "string" ? JSON.parse(last.items) : (last.items as { name: string; dosage?: string }[]) || []; } catch { items = []; }
+              setSelectedItems(items.map((i) => ({ id: crypto.randomUUID(), name: i.name, dosage: i.dosage || "", custom: true })));
+            }
+          } else {
+            setSelectedItems([]);
+          }
+          setShowForm(!showForm);
+        }} variant={showForm ? "secondary" : "primary"}>
           {showForm ? "取消" : "+ 新增處方"}
         </Button>
       </div>

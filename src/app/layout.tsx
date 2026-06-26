@@ -14,6 +14,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW" className="h-full">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      </head>
       <body className="min-h-full flex" style={{ background: "var(--background)" }}>
         <AppShell>{children}</AppShell>
       </body>

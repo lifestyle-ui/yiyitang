@@ -621,6 +621,13 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
   const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
   const selected = Object.values(checked).filter(Boolean).length;
 
+  // Scale pages to fit viewport width (A4 = 210mm ≈ 794px + 20mm padding = ~870px total needed)
+  const [zoom, setZoom] = useState(1);
+  if (typeof window !== "undefined") {
+    const next = Math.min(1, (window.innerWidth - 48) / 870);
+    if (Math.abs(next - zoom) > 0.01) setZoom(next);
+  }
+
   return (
     <>
       <style>{`
@@ -628,6 +635,7 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
           body > * { display: none !important; }
           #hanshi-root { display: block !important; position: static !important; overflow: visible !important; background: white !important; }
           .no-print { display: none !important; }
+          .hanshi-page-wrapper { zoom: 1 !important; }
           .hanshi-page { page-break-after: always; box-shadow: none !important; }
         }
       `}</style>
@@ -648,24 +656,16 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
 
         {/* Pages */}
         <div id="hanshi-root" className="flex flex-col items-center py-6 gap-4">
-          {/* Page 1 */}
-          <div className="shadow-2xl">
-            <FormPage info={info} setInfo={setInfo} leftSecs={PAGE1_LEFT} rightSecs={PAGE1_RIGHT} checked={checked} toggle={toggle} type="pkg" />
-          </div>
-          {/* Page 2 */}
-          <div className="shadow-2xl">
-            <FormPage info={info} setInfo={setInfo} leftSecs={PAGE2_LEFT} rightSecs={PAGE2_RIGHT} checked={checked} toggle={toggle} type="pkg"
-              remarks={remarks1} setRemarks={setRemarks1} />
-          </div>
-          {/* Page 3 */}
-          <div className="shadow-2xl">
-            <FormPage info={info} setInfo={setInfo} leftSecs={PAGE3_LEFT} rightSecs={PAGE3_RIGHT} checked={checked} toggle={toggle} type="single" />
-          </div>
-          {/* Page 4 */}
-          <div className="shadow-2xl">
-            <FormPage info={info} setInfo={setInfo} leftSecs={PAGE4_LEFT} rightSecs={PAGE4_RIGHT} checked={checked} toggle={toggle} type="single"
-              remarks={remarks2} setRemarks={setRemarks2} />
-          </div>
+          {[
+            <FormPage key="p1" info={info} setInfo={setInfo} leftSecs={PAGE1_LEFT} rightSecs={PAGE1_RIGHT} checked={checked} toggle={toggle} type="pkg" />,
+            <FormPage key="p2" info={info} setInfo={setInfo} leftSecs={PAGE2_LEFT} rightSecs={PAGE2_RIGHT} checked={checked} toggle={toggle} type="pkg" remarks={remarks1} setRemarks={setRemarks1} />,
+            <FormPage key="p3" info={info} setInfo={setInfo} leftSecs={PAGE3_LEFT} rightSecs={PAGE3_RIGHT} checked={checked} toggle={toggle} type="single" />,
+            <FormPage key="p4" info={info} setInfo={setInfo} leftSecs={PAGE4_LEFT} rightSecs={PAGE4_RIGHT} checked={checked} toggle={toggle} type="single" remarks={remarks2} setRemarks={setRemarks2} />,
+          ].map((page, i) => (
+            <div key={i} className="hanshi-page-wrapper shadow-2xl" style={{ zoom }}>
+              {page}
+            </div>
+          ))}
         </div>
       </div>
     </>

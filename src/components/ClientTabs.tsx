@@ -48,7 +48,6 @@ const TABS = [
   { key: "consultations", label: "諮詢記錄", icon: MessageSquare },
   { key: "doctorNotes", label: "醫師處置", icon: Stethoscope },
   { key: "labTests", label: "檢測", icon: FlaskConical },
-  { key: "prescriptions", label: "保健品處方", icon: Pill },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
 ];
 

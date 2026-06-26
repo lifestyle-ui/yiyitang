@@ -1026,39 +1026,49 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(false); setEditingId(null); onRefresh();
   };
 
-  const exportPrescription = (p: Prescription) => {
+  const exportPrescription = async (p: Prescription) => {
     let items: { name: string; dosage?: string }[] = [];
     try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string }[]) || []; } catch { items = []; }
-    const rows = items.map(i => `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">${i.name}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${i.dosage || ""}</td></tr>`).join("");
-    const html = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>保健品處方</title>
-<style>body{font-family:"Noto Serif TC",serif;max-width:600px;margin:40px auto;padding:0 24px;color:#241f1b;}
-h1{font-size:18px;margin:0 0 4px;}h2{font-size:13px;font-weight:normal;color:#876b57;margin:0 0 24px;}
-table{width:100%;border-collapse:collapse;margin-top:16px;}
-th{background:#f3ece0;padding:8px 12px;text-align:left;font-size:12px;color:#5c4638;}
-td{font-size:14px;}
-.meta{display:flex;gap:24px;margin-bottom:8px;font-size:13px;color:#6b6056;}
-.footer{margin-top:32px;font-size:11px;color:#b3a99d;border-top:1px solid #ece5da;padding-top:12px;}
-@media print{body{margin:20px;}button{display:none;}}
-</style></head><body>
-<h1>意一堂健康管理</h1>
-<h2>保健品處方單</h2>
-<div class="meta">
-  <span>客戶：${client.name}（#${client.medicalRecordNumber || ""}）</span>
-  <span>開立日期：${new Date(p.date).toLocaleDateString("zh-TW")}</span>
-  ${p.totalDays ? `<span>共 ${p.totalDays} 天</span>` : ""}
-</div>
-<table><thead><tr><th>保健品名稱</th><th style="text-align:right;">建議用法</th></tr></thead><tbody>${rows}</tbody></table>
-${p.notes ? `<p style="margin-top:16px;font-size:13px;color:#6b6056;">備註：${p.notes}</p>` : ""}
-<div class="footer">此處方由意一堂健康管理系統產生，僅供參考，請遵醫囑使用。</div>
-<div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:8px 24px;background:#5c4638;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;">列印 / 另存 PDF</button></div>
-</body></html>`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `處方_${client.name}_${p.date.slice(0, 10)}.html`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    // Build a hidden div to render into
+    const div = document.createElement("div");
+    div.style.cssText = "position:fixed;left:-9999px;top:0;width:600px;background:#fff;padding:40px 32px;font-family:sans-serif;color:#241f1b;";
+    div.innerHTML = `
+      <div style="margin-bottom:4px;font-size:20px;font-weight:bold;">意一堂健康管理</div>
+      <div style="font-size:13px;color:#876b57;margin-bottom:20px;">保健品處方單</div>
+      <div style="display:flex;gap:24px;font-size:13px;color:#6b6056;margin-bottom:16px;flex-wrap:wrap;">
+        <span>客戶：${client.name}（#${client.medicalRecordNumber || ""}）</span>
+        <span>開立日期：${new Date(p.date).toLocaleDateString("zh-TW")}</span>
+        ${p.totalDays ? `<span>共 ${p.totalDays} 天</span>` : ""}
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr>
+          <th style="background:#f3ece0;padding:8px 12px;text-align:left;font-size:12px;color:#5c4638;border:1px solid #ece5da;">保健品名稱</th>
+          <th style="background:#f3ece0;padding:8px 12px;text-align:right;font-size:12px;color:#5c4638;border:1px solid #ece5da;">建議用法</th>
+        </tr></thead>
+        <tbody>${items.map(i => `<tr>
+          <td style="padding:8px 12px;border:1px solid #ece5da;font-size:14px;">${i.name}</td>
+          <td style="padding:8px 12px;border:1px solid #ece5da;font-size:14px;text-align:right;">${i.dosage || ""}</td>
+        </tr>`).join("")}</tbody>
+      </table>
+      ${p.notes ? `<p style="margin-top:16px;font-size:13px;color:#6b6056;">備註：${p.notes}</p>` : ""}
+      <div style="margin-top:32px;font-size:11px;color:#b3a99d;border-top:1px solid #ece5da;padding-top:12px;">
+        此處方由意一堂健康管理系統產生，僅供參考，請遵醫囑使用。
+      </div>`;
+    document.body.appendChild(div);
+
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
+    const canvas = await html2canvas(div, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+    document.body.removeChild(div);
+
+    const imgW = 190;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, imgW, imgH);
+    pdf.save(`處方_${client.name}_${p.date.slice(0, 10)}.pdf`);
   };
 
   const catalogBrands = Array.from(new Set(catalog.map((p) => p.brand).filter(Boolean))) as string[];

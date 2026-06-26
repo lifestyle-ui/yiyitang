@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Printer } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -647,11 +647,15 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
   };
 
   // Scale pages to fit viewport width (A4 = 210mm ≈ 794px + 20mm padding = ~870px total needed)
-  const [zoom, setZoom] = useState(1);
-  if (typeof window !== "undefined") {
-    const next = Math.min(1, (window.innerWidth - 48) / 870);
-    if (Math.abs(next - zoom) > 0.01) setZoom(next);
-  }
+  const [zoom, setZoom] = useState(() =>
+    typeof window !== "undefined" ? Math.min(1, (window.innerWidth - 48) / 870) : 1
+  );
+  useEffect(() => {
+    const update = () => setZoom(Math.min(1, (window.innerWidth - 48) / 870));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   return (
     <>
@@ -665,7 +669,7 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
         }
       `}</style>
 
-      <div className="fixed inset-0 z-50 overflow-auto" style={{ background: "rgba(0,0,0,0.6)" }}>
+      <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden" style={{ background: "rgba(0,0,0,0.6)" }}>
         {/* Toolbar */}
         <div className="no-print sticky top-0 z-10 flex items-center justify-between px-4 py-2" style={{ background: "#2d1f17" }}>
           <div className="flex items-center gap-3">

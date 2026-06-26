@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("Client")
-    .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate)")
+    .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate), doctorNotes:DoctorNote(nextVisit,date), labTests:LabTest(testDate,status)")
     .eq("isActive", true)
     .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
     .order("createdAt", { ascending: true });

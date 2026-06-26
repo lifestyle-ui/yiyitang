@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 type Prescription = { status: string; runOutDate: string | null };
+type DoctorNote = { nextVisit: string | null; date: string };
+type LabTestSummary = { testDate: string | null; status: string };
 
 type Client = {
   id: string;
@@ -23,6 +25,8 @@ type Client = {
   needsAttention: boolean;
   tags: string[] | null;
   prescriptions: Prescription[];
+  doctorNotes: DoctorNote[];
+  labTests: LabTestSummary[];
 };
 
 function getExpiringDays(prescriptions: Prescription[]): number | null {
@@ -32,6 +36,38 @@ function getExpiringDays(prescriptions: Prescription[]): number | null {
     .map((p) => Math.ceil((new Date(p.runOutDate!).getTime() - Date.now()) / 86400000))
     .sort((a, b) => a - b)[0];
   return days <= 14 ? days : null;
+}
+
+function getNextVisitDays(doctorNotes: DoctorNote[]): number | null {
+  const dates = (doctorNotes || [])
+    .map((n) => n.nextVisit).filter(Boolean)
+    .map((d) => Math.ceil((new Date(d!).getTime() - Date.now()) / 86400000));
+  if (dates.length === 0) return null;
+  return dates.sort((a, b) => a - b)[0];
+}
+
+function getNextLabDays(labTests: LabTestSummary[]): number | null {
+  const future = (labTests || [])
+    .filter((t) => t.status === "scheduled" && t.testDate)
+    .map((t) => Math.ceil((new Date(t.testDate!).getTime() - Date.now()) / 86400000))
+    .filter((d) => d >= -30); // show up to 30 days past
+  if (future.length === 0) return null;
+  return future.sort((a, b) => a - b)[0];
+}
+
+function TrackChip({ days, label }: { days: number | null; label: string }) {
+  if (days === null) return null;
+  const overdue = days < 0;
+  const soon = days <= 14;
+  const color = overdue ? "#DC2626" : soon ? "#D97706" : "#6b6056";
+  const bg = overdue ? "#FEF2F2" : soon ? "#FFFBEB" : "#f3ece0";
+  const text = overdue ? `${label} 已過 ${Math.abs(days)} 天` : days === 0 ? `${label} 今天` : `${label} ${days} 天後`;
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
+      style={{ background: bg, color, border: `1px solid ${color}22` }}>
+      {text}
+    </span>
+  );
 }
 
 export default function ClientsPage() {
@@ -220,13 +256,15 @@ export default function ClientsPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>姓名</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>性別 / 年齡</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>聯絡方式</th>
-                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>處方狀態</th>
+                <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>追蹤時間軸</th>
                 <th className="text-left px-4 py-3 text-xs font-medium" style={{ color: "#8b8076" }}>最後更新</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((client) => {
                 const expiringDays = getExpiringDays(client.prescriptions);
+                const nextVisitDays = getNextVisitDays(client.doctorNotes);
+                const nextLabDays = getNextLabDays(client.labTests);
                 return (
                   <tr key={client.id}
                     style={{
@@ -282,13 +320,13 @@ export default function ClientsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {expiringDays !== null && (
-                        <span className="text-xs flex items-center gap-1"
-                          style={{ color: expiringDays <= 3 ? "#DC2626" : "#D97706" }}>
-                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                          {expiringDays <= 0 ? "已用完" : `${expiringDays} 天後用完`}
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        <TrackChip days={nextVisitDays} label="回診" />
+                        <TrackChip days={nextLabDays} label="複檢" />
+                        {expiringDays !== null && (
+                          <TrackChip days={expiringDays} label="處方" />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: "#b3a99d" }}>
                       {formatDate(client.updatedAt)}

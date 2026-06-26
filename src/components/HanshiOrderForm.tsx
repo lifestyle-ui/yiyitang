@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Printer } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -652,12 +652,14 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
     onClose();
   };
 
-  // Scale pages to fit viewport width (A4 = 210mm ≈ 794px + 20mm padding = ~870px total needed)
-  const [zoom, setZoom] = useState(() =>
-    typeof window !== "undefined" ? Math.min(1, (window.innerWidth - 48) / 870) : 1
-  );
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
   useEffect(() => {
-    const update = () => setZoom(Math.min(1, (window.innerWidth - 48) / 870));
+    const update = () => {
+      const pageW = pageRef.current ? pageRef.current.offsetWidth : 870;
+      setZoom(Math.min(1, (window.innerWidth - 48) / pageW));
+    };
+    // measure after first render (zoom=1 so we get the true width)
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -702,7 +704,9 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
             <FormPage key="p3" info={info} setInfo={setInfo} leftSecs={PAGE3_LEFT} rightSecs={PAGE3_RIGHT} checked={checked} toggle={toggle} type="single" />,
             <FormPage key="p4" info={info} setInfo={setInfo} leftSecs={PAGE4_LEFT} rightSecs={PAGE4_RIGHT} checked={checked} toggle={toggle} type="single" remarks={remarks2} setRemarks={setRemarks2} />,
           ].map((page, i) => (
-            <div key={i} className="hanshi-page-wrapper shadow-2xl" style={{ zoom }}>
+            <div key={i} className="hanshi-page-wrapper shadow-2xl"
+              style={{ zoom: zoom < 1 ? zoom : undefined }}
+              ref={i === 0 ? pageRef : undefined}>
               {page}
             </div>
           ))}

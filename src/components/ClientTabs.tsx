@@ -84,7 +84,16 @@ export default function ClientTabs({ client }: { client: Client }) {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {activeTab === "consultations" && <ConsultationsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
+        {activeTab === "consultations" && (
+          <div className="flex gap-4 min-h-full">
+            <div className="w-1/2 min-w-0">
+              <ConsultationsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />
+            </div>
+            <div className="w-1/2 min-w-0 border-l border-slate-200 pl-4">
+              <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />
+            </div>
+          </div>
+        )}
         {activeTab === "doctorNotes" && <DoctorNotesTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "labTests" && <LabTestsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "prescriptions" && <PrescriptionsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}

@@ -672,20 +672,17 @@ export default function HanshiOrderForm({ client, onClose, onRefresh }: { client
 
       <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden" style={{ background: "rgba(0,0,0,0.6)" }}>
         {/* Toolbar */}
-        <div className="no-print sticky top-0 z-10 flex items-center justify-between px-4 py-2" style={{ background: "#2d1f17" }}>
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
-              <X className="w-4 h-4" /> 關閉
-            </button>
-            <span className="text-white/50 text-xs">已勾選 {selected} 項</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={saveToLabTests} disabled={saving || selected === 0}
-              className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-40"
-              style={{ background: "#2d6a3f", color: "#fff" }}>
-              {saving ? "儲存中..." : `新增至檢測記錄 (${selected})`}
-            </button>
-            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
+        <div className="no-print sticky top-0 z-10 flex items-center gap-3 px-4 py-2 flex-wrap" style={{ background: "#2d1f17" }}>
+          <button onClick={onClose} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
+            <X className="w-4 h-4" /> 關閉
+          </button>
+          <div className="w-px h-4 bg-white/20" />
+          <button onClick={saveToLabTests} disabled={saving}
+            className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
+            style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
+            {saving ? "儲存中..." : selected > 0 ? `✓ 新增至檢測記錄 (${selected} 項)` : "新增至檢測記錄（請先勾選）"}
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
             <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
           </button>
         </div>

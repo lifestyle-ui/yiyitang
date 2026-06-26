@@ -556,7 +556,7 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
   const Sec = type === "pkg" ? PkgSection : SingleSection;
   return (
     <div className="hanshi-page bg-white" style={{
-      width: "210mm", minHeight: "297mm", padding: "10mm 10mm 8mm",
+      width: "190mm", minHeight: "297mm", padding: "6mm 6mm 6mm",
       fontFamily: "'Noto Serif TC', 'Microsoft JhengHei', sans-serif",
       fontSize: "11px", boxSizing: "border-box", pageBreakAfter: "always",
     }}>

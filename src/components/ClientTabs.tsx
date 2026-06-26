@@ -25,6 +25,7 @@ type HealthQuestionnaire = { id: string; date: string; chiefComplaint: string | 
 type Client = {
   id: string; name: string; riskLevel: string | null;
   gender: string | null; birthDate: string | null;
+  medicalRecordNumber: string | null;
   referralSource: string | null;
   consultations: Consultation[]; labTests: LabTest[];
   prescriptions: Prescription[]; tasks: Task[];

@@ -598,7 +598,7 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Client = { name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
+type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
 
 export default function HanshiOrderForm({ client, onClose }: { client: Client; onClose: () => void }) {
   const [info, setInfo] = useState<PatientInfo>({
@@ -618,8 +618,33 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
   const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
   const selected = Object.values(checked).filter(Boolean).length;
+
+  // Collect all items across all pages for lookup
+  const allItems = [...PAGE1_LEFT, ...PAGE1_RIGHT, ...PAGE2_LEFT, ...PAGE2_RIGHT,
+    ...PAGE3_LEFT, ...PAGE3_RIGHT, ...PAGE4_LEFT, ...PAGE4_RIGHT].flatMap((s) => [
+    ...(s.bundleCode ? [{ code: s.bundleCode, name: s.title, nameZh: "", container: "" }] : []),
+    ...s.items,
+  ]);
+
+  const saveToLabTests = async () => {
+    const selected = allItems.filter((item) => checked[item.code]);
+    if (selected.length === 0) { alert("請先勾選檢測項目"); return; }
+    setSaving(true);
+    for (const item of selected) {
+      const label = item.nameZh ? `${item.name} ${item.nameZh}` : item.name;
+      await fetch(`/api/clients/${client.id}/lab-tests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testDate: info.sampleDate, testType: label, status: "scheduled", findings: "", doctorInterpretation: "", staffExplanation: "" }),
+      });
+    }
+    setSaving(false);
+    alert(`已新增 ${selected.length} 筆檢測項目`);
+    onClose();
+  };
 
   // Scale pages to fit viewport width (A4 = 210mm ≈ 794px + 20mm padding = ~870px total needed)
   const [zoom, setZoom] = useState(1);
@@ -647,9 +672,15 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
             <button onClick={onClose} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
               <X className="w-4 h-4" /> 關閉
             </button>
-            <span className="text-white/50 text-xs">已選 {selected} 項</span>
+            <span className="text-white/50 text-xs">已勾選 {selected} 項</span>
           </div>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
+          <div className="flex items-center gap-2">
+            <button onClick={saveToLabTests} disabled={saving || selected === 0}
+              className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-40"
+              style={{ background: "#2d6a3f", color: "#fff" }}>
+              {saving ? "儲存中..." : `新增至檢測記錄 (${selected})`}
+            </button>
+            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
             <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
           </button>
         </div>

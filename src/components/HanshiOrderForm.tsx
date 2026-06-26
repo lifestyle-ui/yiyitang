@@ -600,7 +600,7 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
 
 type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
 
-export default function HanshiOrderForm({ client, onClose }: { client: Client; onClose: () => void }) {
+export default function HanshiOrderForm({ client, onClose, onRefresh }: { client: Client; onClose: () => void; onRefresh?: () => void }) {
   const [info, setInfo] = useState<PatientInfo>({
     sendUnit: "意一堂健康管理",
     name: client.name,
@@ -643,6 +643,7 @@ export default function HanshiOrderForm({ client, onClose }: { client: Client; o
     }
     setSaving(false);
     alert(`已新增 ${selected.length} 筆檢測項目`);
+    onRefresh?.();
     onClose();
   };
 

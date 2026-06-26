@@ -632,7 +632,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      {showHanshi && <HanshiOrderForm client={client} onClose={() => setShowHanshi(false)} />}
+      {showHanshi && <HanshiOrderForm client={client} onClose={() => setShowHanshi(false)} onRefresh={onRefresh} />}
       <div className="flex justify-end gap-2">
         <Button onClick={() => setShowHanshi(true)} variant="secondary">
           瀚仕申請單

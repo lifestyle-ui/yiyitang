@@ -742,7 +742,9 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <CardActions onEdit={() => setViewingHanshi(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} />
+                  <button onClick={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="刪除">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </Card>

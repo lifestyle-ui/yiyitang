@@ -730,8 +730,8 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
           let itemCount = 0;
           try { itemCount = JSON.parse(t.findings ?? "{}").items?.length ?? 0; } catch { itemCount = 0; }
           return (
-            <Card key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setViewingHanshi(t)}>
-              <div className="flex items-center justify-between px-5 py-3">
+            <Card key={t.id}>
+              <div className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-slate-50" onClick={() => setViewingHanshi(t)}>
                 <div className="flex items-center gap-3 min-w-0">
                   <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                   <span className="text-sm font-semibold text-slate-700">瀚仕功能醫學檢測申請單</span>

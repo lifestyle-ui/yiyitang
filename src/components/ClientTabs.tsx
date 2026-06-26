@@ -637,7 +637,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
       {viewingHanshi && (() => {
         let saved: { items: { code: string }[]; info: Record<string, unknown> } | undefined;
         try { saved = JSON.parse(viewingHanshi.findings ?? ""); } catch { saved = undefined; }
-        return <HanshiOrderForm client={client} onClose={() => setViewingHanshi(null)} readOnly initialData={saved} />;
+        return <HanshiOrderForm client={client} onClose={() => setViewingHanshi(null)} onRefresh={onRefresh} existingId={viewingHanshi.id} initialData={saved} />;
       })()}
       <div className="flex justify-end gap-2">
         <Button onClick={() => setShowHanshi(true)} variant="secondary">

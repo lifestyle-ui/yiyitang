@@ -604,7 +604,7 @@ type Client = { id: string; name: string; medicalRecordNumber?: string | null; d
 
 type HanshiSavedData = { items: { code: string }[]; info: Partial<PatientInfo> };
 
-export default function HanshiOrderForm({ client, onClose, onRefresh, initialData, readOnly }: { client: Client; onClose: () => void; onRefresh?: () => void; initialData?: HanshiSavedData; readOnly?: boolean }) {
+export default function HanshiOrderForm({ client, onClose, onRefresh, initialData, existingId }: { client: Client; onClose: () => void; onRefresh?: () => void; initialData?: HanshiSavedData; existingId?: string }) {
   const [info, setInfo] = useState<PatientInfo>(() => ({
     sendUnit: initialData?.info?.sendUnit ?? "意一堂健康管理",
     name: initialData?.info?.name ?? client.name,
@@ -639,16 +639,25 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
     const checkedItems = allItems.filter((item) => checked[item.code]);
     if (checkedItems.length === 0) { alert("請先勾選檢測項目"); return; }
     setSaving(true);
-    await fetch(`/api/clients/${client.id}/lab-tests`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        testDate: info.sampleDate,
-        testType: "瀚仕功能醫學檢測申請單",
-        status: "scheduled",
-        findings: JSON.stringify({ items: checkedItems.map(i => ({ code: i.code, name: i.name, nameZh: i.nameZh })), info }),
-      }),
-    });
+    const payload = {
+      testDate: info.sampleDate,
+      testType: "瀚仕功能醫學檢測申請單",
+      status: "scheduled",
+      findings: JSON.stringify({ items: checkedItems.map(i => ({ code: i.code, name: i.name, nameZh: i.nameZh })), info }),
+    };
+    if (existingId) {
+      await fetch(`/api/clients/${client.id}/lab-tests/${existingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await fetch(`/api/clients/${client.id}/lab-tests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
     setSaving(false);
     onRefresh?.();
     onClose();
@@ -686,13 +695,13 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
             <X className="w-4 h-4" /> 關閉
           </button>
           <div className="w-px h-4 bg-white/20" />
-          {!readOnly && (
-            <button onClick={saveToLabTests} disabled={saving}
-              className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
-              style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
-              {saving ? "儲存中..." : selected > 0 ? `✓ 新增至檢測記錄 (${selected} 項)` : "新增至檢測記錄（請先勾選）"}
-            </button>
-          )}
+          <button onClick={saveToLabTests} disabled={saving}
+            className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
+            style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
+            {saving ? "儲存中..." : selected > 0
+              ? (existingId ? `✓ 儲存修改 (${selected} 項)` : `✓ 新增至檢測記錄 (${selected} 項)`)
+              : (existingId ? "儲存修改（請先勾選）" : "新增至檢測記錄（請先勾選）")}
+          </button>
           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
             <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
           </button>

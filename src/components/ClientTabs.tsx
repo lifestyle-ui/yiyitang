@@ -977,6 +977,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [customItem, setCustomItem] = useState({ name: "", dosage: "" });
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), totalDays: "", runOutDate: "", notes: "" });
   const [loading, setLoading] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
   const [showCatalog, setShowCatalog] = useState(false);
   const [catSearch, setCatSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string | null>(null);
@@ -1027,6 +1028,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   };
 
   const exportPrescription = async (p: Prescription) => {
+    setExportingId(p.id);
     let items: { name: string; dosage?: string }[] = [];
     try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string }[]) || []; } catch { items = []; }
 
@@ -1069,6 +1071,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     const pdf = new jsPDF({ unit: "mm", format: "a4" });
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 10, imgW, imgH);
     pdf.save(`處方_${client.name}_${p.date.slice(0, 10)}.pdf`);
+    setExportingId(null);
   };
 
   const catalogBrands = Array.from(new Set(catalog.map((p) => p.brand).filter(Boolean))) as string[];
@@ -1205,9 +1208,9 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => exportPrescription(p)}
-                    className="p-1.5 rounded hover:opacity-70" style={{ color: "#5c4638" }} title="匯出處方">
-                    <Download className="w-3.5 h-3.5" />
+                  <button onClick={() => exportPrescription(p)} disabled={exportingId === p.id}
+                    className="p-1.5 rounded hover:opacity-70 disabled:opacity-40" style={{ color: "#5c4638" }} title={exportingId === p.id ? "產生中…" : "匯出 PDF"}>
+                    {exportingId === p.id ? <span className="text-xs">…</span> : <Download className="w-3.5 h-3.5" />}
                   </button>
                   <CardActions onEdit={() => startEdit(p)} onDelete={() => deleteRecord(`/api/clients/${client.id}/prescriptions/${p.id}`, onRefresh)} />
                 </div>

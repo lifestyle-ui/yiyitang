@@ -450,15 +450,19 @@ function PageHeader({ info, setInfo }: { info: PatientInfo; setInfo: (fn: (p: Pa
           <span className="font-medium whitespace-nowrap">病歷號：</span>
           <input className="flex-1 focus:outline-none bg-transparent min-w-0 text-[11px]" value={info.mrn} onChange={(e) => setInfo((p) => ({ ...p, mrn: e.target.value }))} />
         </div>
-        <div className={`${cell} flex items-center gap-1 flex-wrap`} style={{ minWidth: 0 }}>
-          <span className="font-medium">性別：</span>
-          {[["M","男"],["F","女"]].map(([v,l]) => (
-            <label key={v} className="flex items-center gap-0.5 cursor-pointer">
-              <input type="radio" name="gdr" value={v} checked={info.gender === v} onChange={() => setInfo((p) => ({ ...p, gender: v }))} className="w-3 h-3" />{l}
-            </label>
-          ))}
-          <span className="font-medium whitespace-nowrap">採檢日期：</span>
-          <input type="date" className="focus:outline-none bg-transparent text-[11px]" style={{ width: 110 }} value={info.sampleDate} onChange={(e) => setInfo((p) => ({ ...p, sampleDate: e.target.value }))} />
+        <div className={`${cell} flex flex-col gap-0.5`} style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-1">
+            <span className="font-medium whitespace-nowrap">性別：</span>
+            {[["M","男"],["F","女"]].map(([v,l]) => (
+              <label key={v} className="flex items-center gap-0.5 cursor-pointer">
+                <input type="radio" name="gdr" value={v} checked={info.gender === v} onChange={() => setInfo((p) => ({ ...p, gender: v }))} className="w-3 h-3" />{l}
+              </label>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="font-medium whitespace-nowrap">採檢日期：</span>
+            <input type="date" className="focus:outline-none bg-transparent text-[11px]" style={{ width: 110 }} value={info.sampleDate} onChange={(e) => setInfo((p) => ({ ...p, sampleDate: e.target.value }))} />
+          </div>
         </div>
       </div>
       {/* Row 3 */}

@@ -38,12 +38,13 @@ function getExpiringDays(prescriptions: Prescription[]): number | null {
   return days <= 14 ? days : null;
 }
 
-function getNextVisitDays(doctorNotes: DoctorNote[]): number | null {
-  const dates = (doctorNotes || [])
-    .map((n) => n.nextVisit).filter(Boolean)
-    .map((d) => Math.ceil((new Date(d!).getTime() - Date.now()) / 86400000));
-  if (dates.length === 0) return null;
-  return dates.sort((a, b) => a - b)[0];
+function getNextVisitDays(prescriptions: Prescription[]): number | null {
+  const active = (prescriptions || []).filter((p) => p.status === "active" && p.runOutDate);
+  if (active.length === 0) return null;
+  const days = active
+    .map((p) => Math.ceil((new Date(p.runOutDate!).getTime() - Date.now()) / 86400000) - 3)
+    .sort((a, b) => a - b)[0];
+  return days;
 }
 
 function getNextLabDays(labTests: LabTestSummary[]): number | null {
@@ -63,7 +64,7 @@ function TrackChip({ days, label }: { days: number | null; label: string }) {
   const bg = overdue ? "#FEF2F2" : soon ? "#FFFBEB" : "#f3ece0";
   const text = overdue ? `${label} 已過 ${Math.abs(days)} 天` : days === 0 ? `${label} 今天` : `${label} ${days} 天後`;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
+    <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
       style={{ background: bg, color, border: `1px solid ${color}22` }}>
       {text}
     </span>
@@ -263,7 +264,7 @@ export default function ClientsPage() {
             <tbody>
               {filtered.map((client) => {
                 const expiringDays = getExpiringDays(client.prescriptions);
-                const nextVisitDays = getNextVisitDays(client.doctorNotes);
+                const nextVisitDays = getNextVisitDays(client.prescriptions);
                 const nextLabDays = getNextLabDays(client.labTests);
                 return (
                   <tr key={client.id}

@@ -571,6 +571,7 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
 
 function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [showHanshi, setShowHanshi] = useState(false);
+  const [viewingHanshi, setViewingHanshi] = useState<LabTest | null>(null);
   const [catalog, setCatalog] = useState<TestItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; notes?: string; turnaround?: string; custom?: boolean }[]>([]);
   const [customItem, setCustomItem] = useState("");
@@ -633,6 +634,11 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
   return (
     <div className="max-w-3xl flex flex-col gap-4">
       {showHanshi && <HanshiOrderForm client={client} onClose={() => setShowHanshi(false)} onRefresh={onRefresh} />}
+      {viewingHanshi && (() => {
+        let saved: { items: { code: string }[]; info: Record<string, unknown> } | undefined;
+        try { saved = JSON.parse(viewingHanshi.findings ?? ""); } catch { saved = undefined; }
+        return <HanshiOrderForm client={client} onClose={() => setViewingHanshi(null)} readOnly initialData={saved} />;
+      })()}
       <div className="flex justify-end gap-2">
         <Button onClick={() => setShowHanshi(true)} variant="secondary">
           瀚仕申請單
@@ -719,6 +725,30 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
       )}
       {client.labTests.length === 0 && !showForm && <EmptyState label="尚無檢測記錄" />}
       {client.labTests.map((t) => {
+        const isHanshi = t.testType === "瀚仕功能醫學檢測申請單";
+        if (isHanshi) {
+          let itemCount = 0;
+          try { itemCount = JSON.parse(t.findings ?? "{}").items?.length ?? 0; } catch { itemCount = 0; }
+          return (
+            <Card key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setViewingHanshi(t)}>
+              <div className="flex items-center justify-between px-5 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-slate-700">瀚仕功能醫學檢測申請單</span>
+                  {t.testDate && <span className="text-xs text-slate-400">{formatDate(t.testDate)}</span>}
+                  {itemCount > 0 && <span className="text-xs text-slate-400">{itemCount} 項</span>}
+                  <Badge variant={t.status === "completed" ? "success" : t.status === "scheduled" ? "info" : "default"} className="flex-shrink-0">
+                    {STATUS_LABELS[t.status] || t.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <CardActions onEdit={() => startEdit(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} />
+                </div>
+              </div>
+            </Card>
+          );
+        }
+
         const expanded = expandedIds.has(t.id);
         const isEditing = editingId === t.id;
         return (

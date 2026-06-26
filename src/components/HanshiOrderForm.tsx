@@ -600,24 +600,28 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
 
 type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
 
-export default function HanshiOrderForm({ client, onClose, onRefresh }: { client: Client; onClose: () => void; onRefresh?: () => void }) {
-  const [info, setInfo] = useState<PatientInfo>({
-    sendUnit: "意一堂健康管理",
-    name: client.name,
-    dob: client.dateOfBirth ? client.dateOfBirth.slice(0, 10) : "",
-    mrn: client.medicalRecordNumber || "",
-    gender: client.gender === "male" ? "M" : client.gender === "female" ? "F" : "",
-    sampleDate: new Date().toISOString().slice(0, 10),
-    sampleTime: "",
-    reportLang: "繁體",
-    isSupplement: false,
-    menstrualCycle: "",
-    lmp: "",
-    menopauseAge: "",
-  });
+type HanshiSavedData = { items: { code: string }[]; info: Partial<PatientInfo> };
+
+export default function HanshiOrderForm({ client, onClose, onRefresh, initialData, readOnly }: { client: Client; onClose: () => void; onRefresh?: () => void; initialData?: HanshiSavedData; readOnly?: boolean }) {
+  const [info, setInfo] = useState<PatientInfo>(() => ({
+    sendUnit: initialData?.info?.sendUnit ?? "意一堂健康管理",
+    name: initialData?.info?.name ?? client.name,
+    dob: initialData?.info?.dob ?? (client.dateOfBirth ? client.dateOfBirth.slice(0, 10) : ""),
+    mrn: initialData?.info?.mrn ?? client.medicalRecordNumber ?? "",
+    gender: initialData?.info?.gender ?? (client.gender === "male" ? "M" : client.gender === "female" ? "F" : ""),
+    sampleDate: initialData?.info?.sampleDate ?? new Date().toISOString().slice(0, 10),
+    sampleTime: initialData?.info?.sampleTime ?? "",
+    reportLang: initialData?.info?.reportLang ?? "繁體",
+    isSupplement: initialData?.info?.isSupplement ?? false,
+    menstrualCycle: initialData?.info?.menstrualCycle ?? "",
+    lmp: initialData?.info?.lmp ?? "",
+    menopauseAge: initialData?.info?.menopauseAge ?? "",
+  }));
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+    initialData ? Object.fromEntries(initialData.items.map(i => [i.code, true])) : {}
+  );
   const [saving, setSaving] = useState(false);
   const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
   const selected = Object.values(checked).filter(Boolean).length;
@@ -630,19 +634,20 @@ export default function HanshiOrderForm({ client, onClose, onRefresh }: { client
   ]);
 
   const saveToLabTests = async () => {
-    const selected = allItems.filter((item) => checked[item.code]);
-    if (selected.length === 0) { alert("請先勾選檢測項目"); return; }
+    const checkedItems = allItems.filter((item) => checked[item.code]);
+    if (checkedItems.length === 0) { alert("請先勾選檢測項目"); return; }
     setSaving(true);
-    for (const item of selected) {
-      const label = item.nameZh ? `${item.name} ${item.nameZh}` : item.name;
-      await fetch(`/api/clients/${client.id}/lab-tests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testDate: info.sampleDate, testType: label, status: "scheduled", findings: "", doctorInterpretation: "", staffExplanation: "" }),
-      });
-    }
+    await fetch(`/api/clients/${client.id}/lab-tests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testDate: info.sampleDate,
+        testType: "瀚仕功能醫學檢測申請單",
+        status: "scheduled",
+        findings: JSON.stringify({ items: checkedItems.map(i => ({ code: i.code, name: i.name, nameZh: i.nameZh })), info }),
+      }),
+    });
     setSaving(false);
-    alert(`已新增 ${selected.length} 筆檢測項目`);
     onRefresh?.();
     onClose();
   };
@@ -677,11 +682,13 @@ export default function HanshiOrderForm({ client, onClose, onRefresh }: { client
             <X className="w-4 h-4" /> 關閉
           </button>
           <div className="w-px h-4 bg-white/20" />
-          <button onClick={saveToLabTests} disabled={saving}
-            className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
-            style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
-            {saving ? "儲存中..." : selected > 0 ? `✓ 新增至檢測記錄 (${selected} 項)` : "新增至檢測記錄（請先勾選）"}
-          </button>
+          {!readOnly && (
+            <button onClick={saveToLabTests} disabled={saving}
+              className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
+              style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
+              {saving ? "儲存中..." : selected > 0 ? `✓ 新增至檢測記錄 (${selected} 項)` : "新增至檢測記錄（請先勾選）"}
+            </button>
+          )}
           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
             <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
           </button>

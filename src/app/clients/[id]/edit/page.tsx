@@ -53,7 +53,7 @@ export default function EditClientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) { setError("姓名為必填"); return; }
     setLoading(true);
     setError("");
     try {
@@ -62,14 +62,15 @@ export default function EditClientPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, tags }),
       });
+      const body = await res.json().catch(() => ({}));
       if (res.ok) {
-        window.location.href = `/clients/${id}`;
+        router.push(`/clients/${id}`);
+        router.refresh();
       } else {
-        const body = await res.json().catch(() => ({}));
         setError(body.error || `儲存失敗（${res.status}）`);
       }
-    } catch {
-      setError("網路錯誤，請稍後再試");
+    } catch (err) {
+      setError(`網路錯誤：${String(err)}`);
     } finally {
       setLoading(false);
     }

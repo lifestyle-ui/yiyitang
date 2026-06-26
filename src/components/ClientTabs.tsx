@@ -1053,7 +1053,7 @@ ${p.notes ? `<p style="margin-top:16px;font-size:13px;color:#6b6056;">備註：$
 <div style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:8px 24px;background:#5c4638;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;">列印 / 另存 PDF</button></div>
 </body></html>`;
     const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); }
+    if (win) { win.document.write(html); win.document.close(); win.onload = () => { win.focus(); win.print(); }; }
   };
 
   const catalogBrands = Array.from(new Set(catalog.map((p) => p.brand).filter(Boolean))) as string[];

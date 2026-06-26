@@ -11,6 +11,7 @@ import {
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import HanshiOrderForm from "@/components/HanshiOrderForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -569,6 +570,7 @@ function DoctorNotesTab({ client, showForm, setShowForm, onRefresh }: { client: 
 // ─── 檢測 ─────────────────────────────────────────────────────────────────────
 
 function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
+  const [showHanshi, setShowHanshi] = useState(false);
   const [catalog, setCatalog] = useState<TestItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; notes?: string; turnaround?: string; custom?: boolean }[]>([]);
   const [customItem, setCustomItem] = useState("");
@@ -630,7 +632,11 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      <div className="flex justify-end">
+      {showHanshi && <HanshiOrderForm client={client} onClose={() => setShowHanshi(false)} />}
+      <div className="flex justify-end gap-2">
+        <Button onClick={() => setShowHanshi(true)} variant="secondary">
+          瀚仕申請單
+        </Button>
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
           {showForm ? "取消" : "+ 新增檢測單"}
         </Button>

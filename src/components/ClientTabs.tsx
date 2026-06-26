@@ -742,7 +742,7 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <CardActions onEdit={() => startEdit(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} />
+                  <CardActions onEdit={() => setViewingHanshi(t)} onDelete={() => deleteRecord(`/api/clients/${client.id}/lab-tests/${t.id}`, onRefresh)} />
                 </div>
               </div>
             </Card>

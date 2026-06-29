@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Printer } from "lucide-react";
+import { X, Printer, FileText } from "lucide-react";
+import dynamic from "next/dynamic";
+const HanshiPdfFiller = dynamic(() => import("./HanshiPdfFiller"), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -640,6 +642,7 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
     initialData ? Object.fromEntries(initialData.items.map(i => [i.code, true])) : {}
   );
   const [saving, setSaving] = useState(false);
+  const [showPdfFiller, setShowPdfFiller] = useState(false);
   const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
   const selected = Object.values(checked).filter(Boolean).length;
 
@@ -720,6 +723,9 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
             <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
           </button>
+          <button onClick={() => setShowPdfFiller(true)} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#1a3d6b", color: "#fff" }}>
+            <FileText className="w-4 h-4" /> 原始格式 PDF
+          </button>
         </div>
 
         {/* Pages */}
@@ -738,6 +744,22 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
           ))}
         </div>
       </div>
+
+      {showPdfFiller && (
+        <HanshiPdfFiller
+          checkedCodes={Object.entries(checked).filter(([, v]) => v).map(([k]) => k)}
+          info={{
+            sendUnit: info.sendUnit,
+            name: info.name,
+            dob: info.dob,
+            mrn: info.mrn,
+            gender: info.gender,
+            sampleDate: info.sampleDate,
+            reportLang: info.reportLang,
+          }}
+          onClose={() => setShowPdfFiller(false)}
+        />
+      )}
     </>
   );
 }

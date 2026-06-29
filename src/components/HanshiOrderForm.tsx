@@ -6,17 +6,30 @@ import { X, Printer } from "lucide-react";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Item = { code: string; name: string; nameZh: string; container: string };
-type Section = { title: string; items: Item[]; bundleCode?: string; bundleNote?: string };
+type SectionColor = "blue" | "green" | "pink" | "orange" | "teal" | "brown";
+type Section = { title: string; items: Item[]; bundleCode?: string; bundleNote?: string; color?: SectionColor };
 
 // ─── Colour tokens (matching original) ───────────────────────────────────────
 
-const SEC = { bg: "#c5d8e8", color: "#1a3a4a", borderColor: "#8ab0c8" }; // blue-grey section header
+const GRADIENTS: Record<SectionColor, string> = {
+  blue:   "linear-gradient(to right, #1e3d70, #3870b5, #90b8d8, #d5e8f5)",
+  green:  "linear-gradient(to right, #1a5828, #348040, #78b878, #c0dcc0)",
+  pink:   "linear-gradient(to right, #881a24, #c04040, #de8080, #f5c0c0)",
+  orange: "linear-gradient(to right, #8b4412, #c07028, #dca050, #f5d090)",
+  teal:   "linear-gradient(to right, #1a5848, #388878, #68b0a0, #b8ddd8)",
+  brown:  "linear-gradient(to right, #6b3c10, #b06828, #cc9050, #f0c880)",
+};
+const BORDER: Record<SectionColor, string> = {
+  blue: "#3870b5", green: "#348040", pink: "#c04040", orange: "#c07028", teal: "#388878", brown: "#b06828",
+};
+const DEFAULT_COLOR: SectionColor = "blue";
+const SEC = { bg: "#c5d8e8", color: "#1a3a4a", borderColor: "#8ab0c8" };
 
 // ─── Page 1 data ──────────────────────────────────────────────────────────────
 
 const PAGE1_LEFT: Section[] = [
   {
-    title: "代謝系統",
+    title: "代謝系統", color: "blue",
     items: [
       { code: "1073", name: "Bio-META®\xa0*55", nameZh: "全套代謝評估(尿液) *55", container: "1*ONU(避光)" },
       { code: "1074", name: "Cellular-META®\xa0*27", nameZh: "細胞營養代謝評估(尿液) *27", container: "1*ONU(避光)" },
@@ -28,7 +41,7 @@ const PAGE1_LEFT: Section[] = [
     ],
   },
   {
-    title: "營養系統",
+    title: "營養系統", color: "orange",
     items: [
       { code: "1131", name: "Oxy-META®", nameZh: "氧化壓力分析(血液&尿液)", container: "1*S,2*EDTA,2*Hep,1*¹ₒMU" },
       { code: "0808", name: "Antioxidant Vitamin Analysis", nameZh: "抗氧化維生素分析(血液)", container: "1*S, 1*EDTA, 1*Hep" },
@@ -47,7 +60,7 @@ const PAGE1_LEFT: Section[] = [
 
 const PAGE1_RIGHT: Section[] = [
   {
-    title: "內分泌系統",
+    title: "內分泌系統", color: "green",
     items: [
       { code: "0829", name: "Thyroid Hormone Analysis", nameZh: "甲狀腺荷爾蒙分析(血液)", container: "1*S" },
       { code: "1274", name: "Stress Hormone Rhythm with CAR", nameZh: "壓力荷爾蒙節律與覺醒反應分析(唾液)", container: "6*Saliva" },
@@ -63,7 +76,7 @@ const PAGE1_RIGHT: Section[] = [
     ],
   },
   {
-    title: "環境毒素",
+    title: "環境毒素", color: "pink",
     items: [
       { code: "1055", name: "Xestro-TOX®", nameZh: "環境荷爾蒙分析(尿液)", container: "1*¹ₒMU(玻璃)" },
       { code: "1357", name: "Myco-TOX®", nameZh: "黴菌毒素分析(尿液)", container: "即將上市" },
@@ -78,7 +91,7 @@ const PAGE1_RIGHT: Section[] = [
 
 const PAGE2_LEFT: Section[] = [
   {
-    title: "免疫系統",
+    title: "免疫系統", color: "blue",
     items: [
       { code: "1187", name: "Histamine Intolerance Analysis", nameZh: "組織胺不耐症分析(血液+糞便)", container: "1*S, 1*Fe" },
       { code: "1402", name: "Acute Allergy IgE Analysis-40", nameZh: "急性分子過敏原 IgE 分析-40(血液)", container: "1*S" },
@@ -89,7 +102,7 @@ const PAGE2_LEFT: Section[] = [
     ],
   },
   {
-    title: "腸胃道系統",
+    title: "腸胃道系統", color: "brown",
     items: [
       { code: "0885", name: "SIBO Analysis", nameZh: "小腸細菌過度增生分析(呼氣)", container: "Gas" },
       { code: "1075", name: "Dysbiosis-META®", nameZh: "腸道菌相失衡分析(尿液)", container: "1*ONU(避光)" },
@@ -106,7 +119,7 @@ const PAGE2_LEFT: Section[] = [
 
 const PAGE2_RIGHT: Section[] = [
   {
-    title: "表觀遺傳時鐘 / 甲基化循環基因 / 疾病預測與癌症基因",
+    title: "表觀遺傳時鐘 / 甲基化循環基因 / 疾病預測與癌症基因", color: "teal",
     items: [
       { code: "1295", name: "TruAge COMPLETE", nameZh: "全套生理年齡評估", container: "1*EDTA" },
       { code: "1296", name: "TruAge PACE", nameZh: "基礎生理年齡評估", container: "1*EDTA" },
@@ -486,14 +499,16 @@ function PageHeader({ info, setInfo }: { info: PatientInfo; setInfo: (fn: (p: Pa
 // ─── Section column (for pages 1-2, package items) ───────────────────────────
 
 function PkgSection({ sec, checked, toggle }: { sec: Section; checked: Record<string, boolean>; toggle: (c: string) => void }) {
+  const col = sec.color ?? DEFAULT_COLOR;
+  const borderColor = BORDER[col];
   return (
     <div style={{ marginBottom: 4 }}>
-      <div className="px-2 py-0.5 text-[11px] font-bold" style={{ background: SEC.bg, color: SEC.color, border: `1px solid ${SEC.borderColor}` }}>
+      <div className="px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: GRADIENTS[col], border: `1px solid ${borderColor}` }}>
         {sec.title}
       </div>
-      <div style={{ border: `1px solid ${SEC.borderColor}`, borderTop: "none" }}>
-        {sec.items.map((item) => (
-          <label key={item.code} className="flex items-start gap-1 px-2 py-0.5 cursor-pointer" style={{ borderBottom: "1px solid #ddd" }}>
+      <div style={{ border: `1px solid ${borderColor}`, borderTop: "none" }}>
+        {sec.items.map((item, idx) => (
+          <label key={item.code} className="flex items-start gap-1 px-2 py-0.5 cursor-pointer" style={{ borderBottom: "1px solid #ddd", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
             <input type="checkbox" checked={!!checked[item.code]} onChange={() => toggle(item.code)} className="mt-0.5 w-3 h-3 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <span className="text-[10.5px] font-medium text-slate-700">{item.code} </span>
@@ -513,7 +528,7 @@ function PkgSection({ sec, checked, toggle }: { sec: Section; checked: Record<st
 function SingleSection({ sec, checked, toggle }: { sec: Section; checked: Record<string, boolean>; toggle: (c: string) => void }) {
   return (
     <div style={{ marginBottom: 4 }}>
-      <div className="px-2 py-0.5 text-[10.5px] font-bold" style={{ background: SEC.bg, color: SEC.color, border: `1px solid ${SEC.borderColor}` }}>
+      <div className="px-2 py-0.5 text-[10.5px] font-bold text-white" style={{ background: GRADIENTS[sec.color ?? DEFAULT_COLOR], border: `1px solid ${BORDER[sec.color ?? DEFAULT_COLOR]}` }}>
         {sec.bundleCode && (
           <label className="inline-flex items-center gap-1 mr-1 cursor-pointer">
             <input type="checkbox" checked={!!checked[sec.bundleCode]} onChange={() => toggle(sec.bundleCode!)} className="w-3 h-3" />
@@ -522,7 +537,7 @@ function SingleSection({ sec, checked, toggle }: { sec: Section; checked: Record
         )}
         {sec.title}
       </div>
-      <table className="w-full" style={{ border: `1px solid ${SEC.borderColor}`, borderTop: "none", borderCollapse: "collapse" }}>
+      <table className="w-full" style={{ border: `1px solid ${BORDER[sec.color ?? DEFAULT_COLOR]}`, borderTop: "none", borderCollapse: "collapse" }}>
         <tbody>
           {sec.items.map((item) => (
             <tr key={item.code} style={{ borderBottom: "1px solid #e5e5e5" }}>
@@ -579,10 +594,10 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
           {rightSecs.map((s) => <Sec key={s.title} sec={s} checked={checked} toggle={toggle} />)}
           {setRemarks !== undefined && (
             <div style={{ marginTop: 6 }}>
-              <div className="px-2 py-0.5 text-[10.5px] font-bold" style={{ background: SEC.bg, color: SEC.color, border: `1px solid ${SEC.borderColor}` }}>
+              <div className="px-2 py-0.5 text-[10.5px] font-bold text-white" style={{ background: GRADIENTS.blue, border: `1px solid ${BORDER.blue}` }}>
                 備註欄：與實驗室連絡專區（請註明服用營養素／藥物或其它）
               </div>
-              <textarea rows={4} className="w-full focus:outline-none resize-none text-[11px] p-1" style={{ border: `1px solid ${SEC.borderColor}`, borderTop: "none" }}
+              <textarea rows={4} className="w-full focus:outline-none resize-none text-[11px] p-1" style={{ border: `1px solid ${BORDER.blue}`, borderTop: "none" }}
                 value={remarks} onChange={(e) => setRemarks(e.target.value)} />
             </div>
           )}

@@ -2256,9 +2256,6 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
         {client.gender && <span>{client.gender}</span>}
         {age !== null && <span>{age} 歲</span>}
         {nextVisit && <span className="font-medium rounded-sm px-2 py-0.5" style={{ color: "#5c4638", background: "#ece2d6", border: "1px solid #d8cabb" }}>下次回診 {formatDate(nextVisit)}</span>}
-        {activePrescriptions.length > 0 && (
-          <span>服用中：{activePrescriptions.map((p) => p.items).join("、")}</span>
-        )}
         <div className="ml-auto">
           {editRisk ? (
             <div className="flex items-center gap-2">

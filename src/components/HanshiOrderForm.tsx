@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { X, Printer, FileText } from "lucide-react";
-import dynamic from "next/dynamic";
-const HanshiPdfFiller = dynamic(() => import("./HanshiPdfFiller"), { ssr: false });
+import { useState } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -617,8 +614,33 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
+// Flat lookup: code → { page (1-4), name }
+const CODE_INFO: Record<string, { page: number; name: string }> = {};
+[
+  { secs: [...PAGE1_LEFT, ...PAGE1_RIGHT], pg: 1 },
+  { secs: [...PAGE2_LEFT, ...PAGE2_RIGHT], pg: 2 },
+  { secs: [...PAGE3_LEFT, ...PAGE3_RIGHT], pg: 3 },
+  { secs: [...PAGE4_LEFT, ...PAGE4_RIGHT], pg: 4 },
+].forEach(({ secs, pg }) => {
+  secs.forEach((s) => {
+    if (s.bundleCode) CODE_INFO[s.bundleCode] = { page: pg, name: s.title };
+    s.items.forEach((item) => {
+      CODE_INFO[item.code] = { page: pg, name: item.name || item.nameZh };
+    });
+  });
+});
 
+const ALL_ITEMS = [
+  ...PAGE1_LEFT, ...PAGE1_RIGHT,
+  ...PAGE2_LEFT, ...PAGE2_RIGHT,
+  ...PAGE3_LEFT, ...PAGE3_RIGHT,
+  ...PAGE4_LEFT, ...PAGE4_RIGHT,
+].flatMap((s) => [
+  ...(s.bundleCode ? [{ code: s.bundleCode, name: s.title, nameZh: "", container: "" }] : []),
+  ...s.items,
+]);
+
+type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
 type HanshiSavedData = { items: { code: string }[]; info: Partial<PatientInfo> };
 
 export default function HanshiOrderForm({ client, onClose, onRefresh, initialData, existingId }: { client: Client; onClose: () => void; onRefresh?: () => void; initialData?: HanshiSavedData; existingId?: string }) {
@@ -642,19 +664,18 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
     initialData ? Object.fromEntries(initialData.items.map(i => [i.code, true])) : {}
   );
   const [saving, setSaving] = useState(false);
-  const [showPdfFiller, setShowPdfFiller] = useState(false);
-  const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
-  const selected = Object.values(checked).filter(Boolean).length;
+  const [page, setPage] = useState(0);
+  const [scale, setScale] = useState(1.0);
 
-  // Collect all items across all pages for lookup
-  const allItems = [...PAGE1_LEFT, ...PAGE1_RIGHT, ...PAGE2_LEFT, ...PAGE2_RIGHT,
-    ...PAGE3_LEFT, ...PAGE3_RIGHT, ...PAGE4_LEFT, ...PAGE4_RIGHT].flatMap((s) => [
-    ...(s.bundleCode ? [{ code: s.bundleCode, name: s.title, nameZh: "", container: "" }] : []),
-    ...s.items,
-  ]);
+  const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
+
+  const selectedList = Object.entries(checked)
+    .filter(([, v]) => v)
+    .map(([code]) => ({ code, ...(CODE_INFO[code] ?? { page: 0, name: code }) }))
+    .sort((a, b) => a.page - b.page || a.code.localeCompare(b.code));
 
   const saveToLabTests = async () => {
-    const checkedItems = allItems.filter((item) => checked[item.code]);
+    const checkedItems = ALL_ITEMS.filter((item) => checked[item.code]);
     if (checkedItems.length === 0) { alert("請先勾選檢測項目"); return; }
     setSaving(true);
     const payload = {
@@ -663,103 +684,133 @@ export default function HanshiOrderForm({ client, onClose, onRefresh, initialDat
       status: "scheduled",
       findings: JSON.stringify({ items: checkedItems.map(i => ({ code: i.code, name: i.name, nameZh: i.nameZh })), info }),
     };
-    if (existingId) {
-      await fetch(`/api/clients/${client.id}/lab-tests/${existingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch(`/api/clients/${client.id}/lab-tests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    try {
+      if (existingId) {
+        await fetch(`/api/clients/${client.id}/lab-tests/${existingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      } else {
+        await fetch(`/api/clients/${client.id}/lab-tests`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      }
+      onRefresh?.();
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onRefresh?.();
-    onClose();
   };
 
-  const pageRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-  useEffect(() => {
-    const update = () => {
-      const pageW = pageRef.current ? pageRef.current.offsetWidth : 870;
-      setZoom(Math.min(1, (window.innerWidth - 48) / pageW));
-    };
-    // measure after first render (zoom=1 so we get the true width)
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+  const TABS = ["第 1 頁", "第 2 頁", "第 3 頁", "第 4 頁"];
+  const zoomPct = Math.round(scale * 100);
+
+  const PAGES = [
+    <FormPage key="p1" info={info} setInfo={setInfo} leftSecs={PAGE1_LEFT} rightSecs={PAGE1_RIGHT} checked={checked} toggle={toggle} type="pkg" />,
+    <FormPage key="p2" info={info} setInfo={setInfo} leftSecs={PAGE2_LEFT} rightSecs={PAGE2_RIGHT} checked={checked} toggle={toggle} type="pkg" remarks={remarks1} setRemarks={setRemarks1} />,
+    <FormPage key="p3" info={info} setInfo={setInfo} leftSecs={PAGE3_LEFT} rightSecs={PAGE3_RIGHT} checked={checked} toggle={toggle} type="single" />,
+    <FormPage key="p4" info={info} setInfo={setInfo} leftSecs={PAGE4_LEFT} rightSecs={PAGE4_RIGHT} checked={checked} toggle={toggle} type="single" remarks={remarks2} setRemarks={setRemarks2} />,
+  ];
 
   return (
     <>
       <style>{`
         @media print {
           body > * { display: none !important; }
-          #hanshi-root { display: block !important; position: static !important; overflow: visible !important; background: white !important; }
-          .no-print { display: none !important; }
-          .hanshi-page-wrapper { zoom: 1 !important; }
-          .hanshi-page { page-break-after: always; box-shadow: none !important; }
+          #hanshi-print-root { display: block !important; }
         }
+        #hanshi-print-root { display: none; }
       `}</style>
 
-      <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden" style={{ background: "rgba(0,0,0,0.6)" }}>
-        {/* Toolbar */}
-        <div className="no-print sticky top-0 z-10 flex items-center gap-3 px-4 py-2 flex-wrap" style={{ background: "#2d1f17" }}>
-          <button onClick={onClose} className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm">
-            <X className="w-4 h-4" /> 關閉
-          </button>
-          <div className="w-px h-4 bg-white/20" />
-          <button onClick={saveToLabTests} disabled={saving}
-            className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium"
-            style={{ background: selected > 0 ? "#2d6a3f" : "#1a4028", color: selected > 0 ? "#fff" : "#6aaa80" }}>
-            {saving ? "儲存中..." : selected > 0
-              ? (existingId ? `✓ 儲存修改 (${selected} 項)` : `✓ 新增至檢測記錄 (${selected} 項)`)
-              : (existingId ? "儲存修改（請先勾選）" : "新增至檢測記錄（請先勾選）")}
-          </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#5c4638", color: "#fff" }}>
-            <Printer className="w-4 h-4" /> 列印 / 匯出 PDF
-          </button>
-          <button onClick={() => setShowPdfFiller(true)} className="flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium" style={{ background: "#1a3d6b", color: "#fff" }}>
-            <FileText className="w-4 h-4" /> 原始格式 PDF
-          </button>
-        </div>
-
-        {/* Pages */}
-        <div id="hanshi-root" className="flex flex-col items-center py-6 gap-4">
-          {[
-            <FormPage key="p1" info={info} setInfo={setInfo} leftSecs={PAGE1_LEFT} rightSecs={PAGE1_RIGHT} checked={checked} toggle={toggle} type="pkg" />,
-            <FormPage key="p2" info={info} setInfo={setInfo} leftSecs={PAGE2_LEFT} rightSecs={PAGE2_RIGHT} checked={checked} toggle={toggle} type="pkg" remarks={remarks1} setRemarks={setRemarks1} />,
-            <FormPage key="p3" info={info} setInfo={setInfo} leftSecs={PAGE3_LEFT} rightSecs={PAGE3_RIGHT} checked={checked} toggle={toggle} type="single" />,
-            <FormPage key="p4" info={info} setInfo={setInfo} leftSecs={PAGE4_LEFT} rightSecs={PAGE4_RIGHT} checked={checked} toggle={toggle} type="single" remarks={remarks2} setRemarks={setRemarks2} />,
-          ].map((page, i) => (
-            <div key={i} className="hanshi-page-wrapper shadow-2xl"
-              style={{ zoom: zoom < 1 ? zoom : undefined }}
-              ref={i === 0 ? pageRef : undefined}>
-              {page}
-            </div>
-          ))}
-        </div>
+      {/* Print-only: all 4 pages stacked */}
+      <div id="hanshi-print-root">
+        {PAGES}
       </div>
 
-      {showPdfFiller && (
-        <HanshiPdfFiller
-          checkedCodes={Object.entries(checked).filter(([, v]) => v).map(([k]) => k)}
-          info={{
-            sendUnit: info.sendUnit,
-            name: info.name,
-            dob: info.dob,
-            mrn: info.mrn,
-            gender: info.gender,
-            sampleDate: info.sampleDate,
-            reportLang: info.reportLang,
-          }}
-          onClose={() => setShowPdfFiller(false)}
-        />
-      )}
+      {/* Interactive UI */}
+      <div className="fixed inset-0 z-50" style={{ display: "flex", flexDirection: "column", background: "#5a5e63" }}>
+
+        {/* ── Toolbar ── */}
+        <header style={{ flex: "none", display: "flex", alignItems: "center", gap: 14, height: 52, padding: "0 16px", background: "#1f2226", color: "#eef0f2", boxShadow: "0 1px 4px rgba(0,0,0,.4)", zIndex: 5 }}>
+          {/* Title */}
+          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: ".04em", whiteSpace: "nowrap" }}>瀚仕功能醫學檢測申請單</div>
+          <div style={{ fontSize: 11, color: "#9aa0a6", whiteSpace: "nowrap" }}>點選即可勾選</div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Page tabs */}
+          <div style={{ display: "flex", gap: 3, background: "#2b2f34", padding: 3, borderRadius: 7 }}>
+            {TABS.map((label, n) => (
+              <button key={n} onClick={() => setPage(n)}
+                style={{ height: 28, padding: "0 12px", border: "none", borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", background: n === page ? "#eef0f2" : "transparent", color: n === page ? "#1f2226" : "#aeb4ba" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Zoom */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <button onClick={() => setScale(s => Math.max(0.5, +(s - 0.1).toFixed(1)))}
+              style={{ width: 28, height: 28, border: "none", borderRadius: 5, background: "#2b2f34", color: "#eef0f2", fontSize: 16, cursor: "pointer" }}>−</button>
+            <div style={{ width: 44, textAlign: "center", fontSize: 12, color: "#cfd3d7" }}>{zoomPct}%</div>
+            <button onClick={() => setScale(s => Math.min(2.0, +(s + 0.1).toFixed(1)))}
+              style={{ width: 28, height: 28, border: "none", borderRadius: 5, background: "#2b2f34", color: "#eef0f2", fontSize: 16, cursor: "pointer" }}>+</button>
+          </div>
+
+          <div style={{ width: 1, height: 24, background: "#3a3e43" }} />
+
+          {/* Selected count + clear */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 12, color: "#cfd3d7", whiteSpace: "nowrap" }}>
+              已選 <b style={{ color: "#fff", fontSize: 14 }}>{selectedList.length}</b> 項
+            </div>
+            <button onClick={() => setChecked({})}
+              style={{ height: 28, padding: "0 10px", border: "1px solid #44494f", borderRadius: 5, background: "transparent", color: "#cfd3d7", fontSize: 12, cursor: "pointer" }}>清除</button>
+          </div>
+
+          <div style={{ width: 1, height: 24, background: "#3a3e43" }} />
+
+          {/* Save */}
+          <button onClick={saveToLabTests} disabled={saving}
+            style={{ height: 30, padding: "0 14px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, background: selectedList.length > 0 ? "#2d6a3f" : "#1a3028", color: selectedList.length > 0 ? "#fff" : "#6aaa80" }}>
+            {saving ? "儲存中…" : existingId ? "儲存修改" : "新增至記錄"}
+          </button>
+
+          {/* Print */}
+          <button onClick={() => window.print()}
+            style={{ height: 30, padding: "0 14px", border: "none", borderRadius: 6, background: "#3a3020", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>列印</button>
+
+          {/* Close */}
+          <button onClick={onClose}
+            style={{ height: 30, padding: "0 12px", border: "1px solid #44494f", borderRadius: 6, background: "transparent", color: "#9aa0a6", fontSize: 12, cursor: "pointer" }}>✕ 關閉</button>
+        </header>
+
+        {/* ── Body ── */}
+        <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+
+          {/* Form area */}
+          <main style={{ flex: 1, minWidth: 0, overflow: "auto", padding: 24, display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+            <div style={{ transform: `scale(${scale})`, transformOrigin: "top center", transition: "transform .15s" }}>
+              {PAGES[page]}
+            </div>
+          </main>
+
+          {/* ── Right sidebar: selected items ── */}
+          <aside style={{ flex: "none", width: 260, borderLeft: "1px solid #3a3e43", background: "#26292e", color: "#dfe2e6", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: "none", padding: "12px 16px", borderBottom: "1px solid #34383d", fontSize: 13, fontWeight: 600, letterSpacing: ".03em" }}>已勾選項目</div>
+            <div style={{ flex: 1, overflow: "auto", padding: "4px 0" }}>
+              {selectedList.length === 0 ? (
+                <div style={{ padding: "24px 16px", fontSize: 12, color: "#7f868d", lineHeight: 1.6, textAlign: "center" }}>
+                  尚未勾選任何項目。<br />在表單上點選 □ 即可勾選。
+                </div>
+              ) : selectedList.map((item) => (
+                <div key={item.code} style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "6px 14px", borderBottom: "1px solid #2f3338" }}>
+                  <span style={{ flex: "none", fontSize: 10, color: "#7f868d", width: 28, textAlign: "right" }}>P{item.page}</span>
+                  <span style={{ flex: "none", fontFamily: "monospace", fontSize: 12, color: "#7fd1ff", minWidth: 36 }}>{item.code}</span>
+                  <span style={{ fontSize: 11, lineHeight: 1.35, color: "#e6e9ec" }}>{item.name}</span>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </div>
     </>
   );
 }

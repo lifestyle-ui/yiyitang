@@ -123,6 +123,17 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json(result);
 }
 
+function parseOffset(startDate: Date, offset: string | null | undefined): string | null {
+  if (!offset) return null;
+  const match = offset.match(/^\+(\d+)([dw])$/);
+  if (!match) return null;
+  const n = parseInt(match[1]);
+  const days = match[2] === "w" ? n * 7 : n;
+  const d = new Date(startDate);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   const { type, notes, customSteps } = await req.json();
@@ -130,6 +141,7 @@ export async function POST(req: Request, { params }: Params) {
     ? customSteps
     : await getStepsForType(type);
   const now = new Date().toISOString();
+  const startDate = new Date();
   const cycleId = crypto.randomUUID();
 
   const { error: ce } = await supabase
@@ -154,6 +166,7 @@ export async function POST(req: Request, { params }: Params) {
       deliverableDone: false,
       defaultOffset: step.defaultOffset ?? null,
       hasDueTracking: step.hasDueTracking ?? false,
+      dueDate: step.hasDueTracking ? parseOffset(startDate, step.defaultOffset) : null,
     }))
   );
 

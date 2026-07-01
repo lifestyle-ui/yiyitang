@@ -71,6 +71,7 @@ model VisitCycleStep {
   deliverableDone Boolean    @default(false)
   defaultOffset   String?
   hasDueTracking  Boolean    @default(false)
+  dueDate         DateTime?
   metadata        String?
   createdAt       DateTime   @default(now())
 

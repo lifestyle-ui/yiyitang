@@ -1968,7 +1968,8 @@ type VisitCycleStep = {
   id: string; label: string; sortOrder: number;
   isCompleted: boolean; completedAt: string | null; note: string | null; status?: StepStatus;
   role?: string | null; deliverable?: string | null; isKeyOutput?: boolean;
-  deliverableDone?: boolean; defaultOffset?: string | null; hasDueTracking?: boolean; metadata?: string | null;
+  deliverableDone?: boolean; defaultOffset?: string | null; hasDueTracking?: boolean;
+  dueDate?: string | null; metadata?: string | null;
 };
 type VisitCycle = { id: string; type: string; status: string; startDate: string; endDate: string | null; notes: string | null; steps: VisitCycleStep[] };
 
@@ -2502,6 +2503,15 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                           className="p-1.5 rounded" style={{ color: "#b3a99d" }} title="編輯"><Pencil className="w-3 h-3" /></button>
                         <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#c8574a" }} title="刪除"><Trash2 className="w-3 h-3" /></button>
                       </div>
+                      {step.hasDueTracking && step.dueDate && st !== "completed" && st !== "skipped" && (() => {
+                        const days = Math.ceil((new Date(step.dueDate).getTime() - Date.now()) / 86400000);
+                        const overdue = days < 0;
+                        return (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${overdue ? "bg-red-50 text-red-600" : days <= 3 ? "bg-amber-50 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
+                            {overdue ? `逾期 ${Math.abs(days)} 天` : days === 0 ? "今天到期" : `還有 ${days} 天`}
+                          </span>
+                        );
+                      })()}
                       {step.completedAt && <span className="text-xs flex-shrink-0" style={{ color: "#b3a99d" }}>{formatDate(step.completedAt)}</span>}
                     </div>
                   )}

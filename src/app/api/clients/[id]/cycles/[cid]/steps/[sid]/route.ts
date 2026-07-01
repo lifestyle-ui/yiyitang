@@ -3,6 +3,15 @@ import { supabase } from "@/lib/supabase";
 
 type Params = { params: Promise<{ sid: string }> };
 
+// 當這些步驟完成時，重新計算同週期內追蹤步驟的 dueDate
+const RECEIPT_TRIGGERS = ["收到保健品", "服用起始日", "記錄服用"];
+
+function addDays(base: Date, days: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
 export async function PATCH(req: Request, { params }: Params) {
   const { sid } = await params;
   const body = await req.json();
@@ -48,6 +57,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (body.isKeyOutput !== undefined) update.isKeyOutput = body.isKeyOutput;
   if (body.defaultOffset !== undefined) update.defaultOffset = body.defaultOffset;
   if (body.hasDueTracking !== undefined) update.hasDueTracking = body.hasDueTracking;
+  if (body.dueDate !== undefined) update.dueDate = body.dueDate;
   if (body.metadata !== undefined) update.metadata = body.metadata;
 
   const { data, error } = await supabase
@@ -58,6 +68,38 @@ export async function PATCH(req: Request, { params }: Params) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 當收到保健品/服用起始日步驟完成，重新從此時間點計算第1週、第3週 dueDate
+  if (wantsCompletion && data) {
+    const label: string = data.label ?? "";
+    const isReceiptStep = RECEIPT_TRIGGERS.some((t) => label.includes(t));
+    if (isReceiptStep) {
+      const receiptDate = new Date(now);
+      const cycleId: string = data.cycleId;
+
+      const { data: siblings } = await supabase
+        .from("VisitCycleStep")
+        .select("id, label")
+        .eq("cycleId", cycleId);
+
+      if (siblings) {
+        for (const s of siblings) {
+          if (s.label.includes("第1週") || s.label.includes("第 1 週")) {
+            await supabase.from("VisitCycleStep").update({
+              dueDate: addDays(receiptDate, 7),
+              hasDueTracking: true,
+            }).eq("id", s.id);
+          } else if (s.label.includes("第3週") || s.label.includes("第 3 週")) {
+            await supabase.from("VisitCycleStep").update({
+              dueDate: addDays(receiptDate, 21),
+              hasDueTracking: true,
+            }).eq("id", s.id);
+          }
+        }
+      }
+    }
+  }
+
   return NextResponse.json(data);
 }
 

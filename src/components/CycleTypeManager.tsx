@@ -19,13 +19,6 @@ type CycleStep = {
   hasDueTracking: boolean;
 };
 
-const ROLES = ["", "醫師", "健管師", "助理", "客戶"];
-const ROLE_COLORS: Record<string, string> = {
-  "醫師": "bg-purple-100 text-purple-700",
-  "健管師": "bg-blue-100 text-blue-700",
-  "助理": "bg-amber-100 text-amber-700",
-  "客戶": "bg-green-100 text-green-700",
-};
 
 function StepEditRow({ step, onSave, onCancel }: {
   step: Partial<CycleStep> & { label: string };
@@ -33,7 +26,6 @@ function StepEditRow({ step, onSave, onCancel }: {
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState(step.label);
-  const [role, setRole] = useState(step.role ?? "");
   const [deliverable, setDeliverable] = useState(step.deliverable ?? "");
   const [isKeyOutput, setIsKeyOutput] = useState(step.isKeyOutput ?? false);
   const [defaultOffset, setDefaultOffset] = useState(step.defaultOffset ?? "");
@@ -46,13 +38,6 @@ function StepEditRow({ step, onSave, onCancel }: {
       <div className="flex gap-2">
         <input value={label} onChange={e => setLabel(e.target.value)} placeholder="步驟名稱（§ 開頭為分組標題）"
           className="flex-1 text-xs px-2 py-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-400 bg-white" autoFocus />
-        {!isHeader && (
-          <select value={role} onChange={e => setRole(e.target.value)}
-            className="text-xs px-2 py-1.5 border border-slate-300 rounded focus:outline-none focus:border-blue-400 bg-white">
-            <option value="">— 負責人 —</option>
-            {ROLES.filter(Boolean).map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
-        )}
       </div>
       {!isHeader && (
         <div className="flex gap-2 flex-wrap">
@@ -71,7 +56,7 @@ function StepEditRow({ step, onSave, onCancel }: {
         </div>
       )}
       <div className="flex gap-1 justify-end">
-        <button onClick={() => onSave({ label, sortOrder: step.sortOrder ?? 0, role: role || null, deliverable: deliverable || null, isKeyOutput, defaultOffset: defaultOffset || null, hasDueTracking })}
+        <button onClick={() => onSave({ label, sortOrder: step.sortOrder ?? 0, role: null, deliverable: deliverable || null, isKeyOutput, defaultOffset: defaultOffset || null, hasDueTracking })}
           className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
           <Check className="w-3 h-3" />儲存
         </button>
@@ -156,11 +141,6 @@ function StepList({ typeName }: { typeName: string }) {
                 <>
                   {step.isKeyOutput && <Star className="w-3 h-3 text-amber-500 flex-shrink-0" fill="currentColor" />}
                   <span className="flex-1 text-xs text-slate-700">{step.label}</span>
-                  {step.role && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${ROLE_COLORS[step.role] ?? "bg-slate-100 text-slate-600"}`}>
-                      {step.role}
-                    </span>
-                  )}
                   {step.deliverable && (
                     <span className="text-[10px] text-slate-400 truncate max-w-[80px] flex-shrink-0" title={step.deliverable}>
                       📄{step.deliverable}

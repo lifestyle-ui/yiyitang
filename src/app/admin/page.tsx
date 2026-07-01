@@ -5,6 +5,7 @@ import { Settings, Users, ClipboardList, MessageSquare, ListChecks } from "lucid
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import OptionManager from "@/components/OptionManager";
 import CycleTypeManager from "@/components/CycleTypeManager";
+import PlanTemplateManager from "@/components/PlanTemplateManager";
 
 type Stats = { totalClients: number; totalTasks: number; totalConsultations: number; totalPrescriptions: number };
 
@@ -79,6 +80,15 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <CycleTypeManager />
         </div>
+      </div>
+
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ListChecks className="w-4 h-4 text-blue-600" />
+          <h2 className="text-base font-semibold text-slate-700">計畫時程範本</h2>
+          <p className="text-xs text-slate-400">— 設定每個計畫的任務項目與預計完成時數</p>
+        </div>
+        <PlanTemplateManager />
       </div>
 
       <Card>

@@ -56,17 +56,41 @@ model VisitCycle {
 }
 
 model VisitCycleStep {
-  id          String     @id @default(cuid())
-  cycleId     String
-  cycle       VisitCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  label       String
-  sortOrder   Int        @default(0)
-  isCompleted Boolean    @default(false)
-  completedAt DateTime?
-  note        String?
-  createdAt   DateTime   @default(now())
+  id              String     @id @default(cuid())
+  cycleId         String
+  cycle           VisitCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  label           String
+  sortOrder       Int        @default(0)
+  status          String     @default("pending")
+  isCompleted     Boolean    @default(false)
+  completedAt     DateTime?
+  note            String?
+  role            String?
+  deliverable     String?
+  isKeyOutput     Boolean    @default(false)
+  deliverableDone Boolean    @default(false)
+  defaultOffset   String?
+  hasDueTracking  Boolean    @default(false)
+  metadata        String?
+  createdAt       DateTime   @default(now())
 
   @@index([cycleId])
+}
+
+model CycleTypeStep {
+  id             String   @id @default(cuid())
+  cycleType      String
+  label          String
+  sortOrder      Int      @default(0)
+  role           String?
+  deliverable    String?
+  isKeyOutput    Boolean  @default(false)
+  defaultOffset  String?
+  hasDueTracking Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([cycleType])
 }
 
 model ClientChecklist {

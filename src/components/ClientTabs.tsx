@@ -1964,7 +1964,12 @@ const RISK_CONFIG: Record<string, { bg: string; border: string; text: string; do
   "低風險": { bg: "bg-green-50", border: "border-green-200", text: "text-green-700", dot: "bg-green-500", label: "✓ 低風險穩定" },
 };
 
-type VisitCycleStep = { id: string; label: string; sortOrder: number; isCompleted: boolean; completedAt: string | null; note: string | null; status?: StepStatus };
+type VisitCycleStep = {
+  id: string; label: string; sortOrder: number;
+  isCompleted: boolean; completedAt: string | null; note: string | null; status?: StepStatus;
+  role?: string | null; deliverable?: string | null; isKeyOutput?: boolean;
+  deliverableDone?: boolean; defaultOffset?: string | null; hasDueTracking?: boolean; metadata?: string | null;
+};
 type VisitCycle = { id: string; type: string; status: string; startDate: string; endDate: string | null; notes: string | null; steps: VisitCycleStep[] };
 
 const STEP_CYCLE: Record<StepStatus, StepStatus> = { pending: "in_progress", in_progress: "completed", completed: "pending", skipped: "pending" };
@@ -2034,12 +2039,19 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
   useEffect(() => {
     if (!newType) return;
-    fetch(`/api/options?category=${encodeURIComponent(`cycleStep_${newType}`)}`).then((r) => r.json()).then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setPreviewSteps(data.map((d: { label: string }) => d.label));
-      } else {
-        setPreviewSteps(CYCLE_STEPS[newType] || []);
+    // Check CycleTypeStep first, then fall back to OptionConfig, then CYCLE_STEPS
+    fetch(`/api/cycle-type-steps?cycleType=${encodeURIComponent(newType)}`).then((r) => r.json()).then((richSteps) => {
+      if (Array.isArray(richSteps) && richSteps.length > 0) {
+        setPreviewSteps(richSteps.map((d: { label: string }) => d.label));
+        return;
       }
+      fetch(`/api/options?category=${encodeURIComponent(`cycleStep_${newType}`)}`).then((r) => r.json()).then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setPreviewSteps(data.map((d: { label: string }) => d.label));
+        } else {
+          setPreviewSteps(CYCLE_STEPS[newType] || []);
+        }
+      });
     });
   }, [newType]);
 
@@ -2103,15 +2115,38 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
   const [creatingTaskForStep, setCreatingTaskForStep] = useState<{ stepId: string; title: string; dueDate: string; priority: string } | null>(null);
 
+  const [gatingError, setGatingError] = useState<string | null>(null);
+
   const cycleStep = async (cycleId: string, step: VisitCycleStep) => {
     const cur: StepStatus = step.status ?? (step.isCompleted ? "completed" : "pending");
     const next = STEP_CYCLE[cur];
+    // Optimistic update
     setCycles((prev) => prev.map((c) => c.id === cycleId
       ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, status: next, isCompleted: next === "completed", completedAt: next === "completed" ? new Date().toISOString() : null } : s) }
       : c));
-    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
+    const res = await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: next }),
+    });
+    if (res.status === 422) {
+      const json = await res.json();
+      // Revert optimistic update
+      setCycles((prev) => prev.map((c) => c.id === cycleId
+        ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, status: cur, isCompleted: cur === "completed", completedAt: s.completedAt } : s) }
+        : c));
+      setGatingError(json.message ?? "請先完成交付物再標記此步驟");
+      setTimeout(() => setGatingError(null), 4000);
+    }
+  };
+
+  const toggleDeliverableDone = async (cycleId: string, step: VisitCycleStep) => {
+    const next = !step.deliverableDone;
+    setCycles((prev) => prev.map((c) => c.id === cycleId
+      ? { ...c, steps: c.steps.map((s) => s.id === step.id ? { ...s, deliverableDone: next } : s) }
+      : c));
+    await fetch(`/api/clients/${client.id}/cycles/${cycleId}/steps/${step.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deliverableDone: next }),
     });
   };
 
@@ -2250,6 +2285,11 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
 
   return (
     <div className="max-w-2xl flex flex-col gap-4">
+      {gatingError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white bg-amber-600">
+          ⚠ {gatingError}
+        </div>
+      )}
 
       {/* 客戶摘要列 */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm pb-1" style={{ borderBottom: "1px solid #ece5da", color: "#8b8076" }}>
@@ -2429,12 +2469,31 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 px-4 py-2.5 group" style={{ borderBottom: "1px solid #ece5da" }}>
+                    <div className="flex items-center gap-2 px-4 py-2.5 group" style={{ borderBottom: "1px solid #ece5da" }}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: st === "completed" ? "#5c4638" : st === "in_progress" ? "#5A8A7A" : "#d8cfc3" }} />
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8b8076" : "#241f1b", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
-                          {step.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {step.isKeyOutput && <span className="text-amber-500 text-xs leading-none" title="關鍵交付物">★</span>}
+                          <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8b8076" : "#241f1b", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
+                            {step.label}
+                          </span>
+                          {step.role && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${{
+                              "醫師": "bg-purple-100 text-purple-700",
+                              "健管師": "bg-blue-100 text-blue-700",
+                              "助理": "bg-amber-100 text-amber-700",
+                              "客戶": "bg-green-100 text-green-700",
+                            }[step.role] ?? "bg-slate-100 text-slate-600"}`}>{step.role}</span>
+                          )}
+                        </div>
+                        {step.isKeyOutput && step.deliverable && (
+                          <button
+                            onClick={() => toggleDeliverableDone(activeCycle.id, step)}
+                            className={`mt-0.5 text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 transition-colors ${step.deliverableDone ? "bg-green-50 border-green-300 text-green-700" : "bg-white border-slate-300 text-slate-500 hover:border-amber-400 hover:text-amber-700"}`}
+                            title="點擊確認交付物完成">
+                            {step.deliverableDone ? "✓" : "○"} {step.deliverable}
+                          </button>
+                        )}
                         {step.note && <p className="text-xs mt-0.5 truncate" style={{ color: "#b3a99d" }}>{step.note}</p>}
                       </div>
                       <button onClick={() => cycleStep(activeCycle.id, step)}

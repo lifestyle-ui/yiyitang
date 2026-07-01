@@ -74,14 +74,34 @@ const DEFAULT_CYCLE_STEPS: Record<string, string[]> = {
   ],
 };
 
-async function getStepsForType(type: string): Promise<string[]> {
-  const { data } = await supabase
+type StepTemplate = {
+  label: string;
+  role?: string | null;
+  deliverable?: string | null;
+  isKeyOutput?: boolean;
+  defaultOffset?: string | null;
+  hasDueTracking?: boolean;
+};
+
+async function getStepsForType(type: string): Promise<StepTemplate[]> {
+  // 1. Check CycleTypeStep (rich templates)
+  const { data: richSteps } = await supabase
+    .from("CycleTypeStep")
+    .select("label, role, deliverable, isKeyOutput, defaultOffset, hasDueTracking")
+    .eq("cycleType", type)
+    .order("sortOrder", { ascending: true });
+  if (richSteps && richSteps.length > 0) return richSteps;
+
+  // 2. Fall back to OptionConfig (legacy)
+  const { data: optSteps } = await supabase
     .from("OptionConfig")
-    .select("label, sortOrder")
+    .select("label")
     .eq("category", `cycleStep_${type}`)
     .order("sortOrder", { ascending: true });
-  if (data && data.length > 0) return data.map((r) => r.label);
-  return DEFAULT_CYCLE_STEPS[type] ?? DEFAULT_CYCLE_STEPS["回診"];
+  if (optSteps && optSteps.length > 0) return optSteps.map((r) => ({ label: r.label }));
+
+  // 3. Fall back to hardcoded defaults
+  return (DEFAULT_CYCLE_STEPS[type] ?? DEFAULT_CYCLE_STEPS["回診"]).map((label) => ({ label }));
 }
 
 export async function GET(_req: Request, { params }: Params) {
@@ -119,9 +139,21 @@ export async function POST(req: Request, { params }: Params) {
   if (ce) return NextResponse.json({ error: ce.message }, { status: 500 });
 
   const { error: se } = await supabase.from("VisitCycleStep").insert(
-    steps.map((label, i) => ({
-      id: crypto.randomUUID(), cycleId, label, sortOrder: i,
-      isCompleted: false, completedAt: null, createdAt: now,
+    steps.map((step, i) => ({
+      id: crypto.randomUUID(),
+      cycleId,
+      label: step.label,
+      sortOrder: i,
+      status: "pending",
+      isCompleted: false,
+      completedAt: null,
+      createdAt: now,
+      role: step.role ?? null,
+      deliverable: step.deliverable ?? null,
+      isKeyOutput: step.isKeyOutput ?? false,
+      deliverableDone: false,
+      defaultOffset: step.defaultOffset ?? null,
+      hasDueTracking: step.hasDueTracking ?? false,
     }))
   );
 

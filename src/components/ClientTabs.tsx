@@ -2341,6 +2341,9 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
             <span className="text-xs font-semibold" style={{ color: "#5c4638" }}>週期 #{cycleNumber(activeCycle.id)}</span>
             <span className="text-sm font-medium" style={{ color: "#241f1b" }}>{activeCycle.type}</span>
             <span className="text-[10.5px] px-2 py-0.5 rounded-sm tracking-wide ml-1" style={{ background: "#ece2d6", color: "#5c4638", border: "1px solid #d8cabb" }}>進行中</span>
+            <span className="text-[10px]" style={{ color: "#b3a99d" }}>
+              {(() => { const d = new Date(activeCycle.startDate); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} 開始`; })()}
+            </span>
             <div className="ml-auto flex items-center gap-3">
               <button onClick={() => setEditingCycle({ id: activeCycle.id, note: activeCycle.notes ?? "" })}
                 className="text-xs flex items-center gap-1" style={{ color: "#6b6056" }}>
@@ -2504,11 +2507,22 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                         <button onClick={() => deleteStep(activeCycle.id, step.id)} className="p-1.5 rounded" style={{ color: "#c8574a" }} title="刪除"><Trash2 className="w-3 h-3" /></button>
                       </div>
                       {step.hasDueTracking && step.dueDate && st !== "completed" && st !== "skipped" && (() => {
-                        const days = Math.ceil((new Date(step.dueDate).getTime() - Date.now()) / 86400000);
-                        const overdue = days < 0;
+                        const diffMs = new Date(step.dueDate).getTime() - Date.now();
+                        const overdue = diffMs < 0;
+                        const abs = Math.abs(diffMs);
+                        const totalMins = Math.floor(abs / 60000);
+                        const hours = Math.floor(totalMins / 60);
+                        const mins = totalMins % 60;
+                        const days = Math.floor(hours / 24);
+                        const remHours = hours % 24;
+                        let label = "";
+                        if (days > 0) label = `${days} 天 ${remHours > 0 ? remHours + " 小時" : ""}`.trim();
+                        else if (hours > 0) label = `${hours} 小時 ${mins > 0 ? mins + " 分" : ""}`.trim();
+                        else label = `${totalMins} 分鐘`;
+                        const urgent = !overdue && diffMs < 6 * 3600000;
                         return (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${overdue ? "bg-red-50 text-red-600" : days <= 3 ? "bg-amber-50 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
-                            {overdue ? `逾期 ${Math.abs(days)} 天` : days === 0 ? "今天到期" : `還有 ${days} 天`}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${overdue ? "bg-red-50 text-red-600" : urgent ? "bg-amber-50 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
+                            {overdue ? `逾期 ${label}` : `還有 ${label}`}
                           </span>
                         );
                       })()}

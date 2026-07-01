@@ -125,12 +125,13 @@ export async function GET(_req: Request, { params }: Params) {
 
 function parseOffset(startDate: Date, offset: string | null | undefined): string | null {
   if (!offset) return null;
-  const match = offset.match(/^\+(\d+)([dw])$/);
+  const match = offset.match(/^\+(\d+)([hdw])$/);
   if (!match) return null;
   const n = parseInt(match[1]);
-  const days = match[2] === "w" ? n * 7 : n;
   const d = new Date(startDate);
-  d.setDate(d.getDate() + days);
+  if (match[2] === "h") d.setHours(d.getHours() + n);
+  else if (match[2] === "w") d.setDate(d.getDate() + n * 7);
+  else d.setDate(d.getDate() + n);
   return d.toISOString();
 }
 

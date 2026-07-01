@@ -2477,14 +2477,6 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
                           <span className="text-sm" style={{ color: st === "completed" || st === "skipped" ? "#8b8076" : "#241f1b", textDecoration: st === "completed" || st === "skipped" ? "line-through" : "none" }}>
                             {step.label}
                           </span>
-                          {step.role && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${{
-                              "醫師": "bg-purple-100 text-purple-700",
-                              "健管師": "bg-blue-100 text-blue-700",
-                              "助理": "bg-amber-100 text-amber-700",
-                              "客戶": "bg-green-100 text-green-700",
-                            }[step.role] ?? "bg-slate-100 text-slate-600"}`}>{step.role}</span>
-                          )}
                         </div>
                         {step.isKeyOutput && step.deliverable && (
                           <button

@@ -5,43 +5,66 @@ import JSZip from "jszip";
 
 type Params = { params: Promise<{ id: string }> };
 
-// Parse table from docx XML
+// Extract text from a single cell XML string
+function cellText(cellXml: string): string {
+  const matches = cellXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+  return matches.map((m) => m.replace(/<[^>]+>/g, "")).join("").trim();
+}
+
+// Parse prescription table from docx XML
 async function parseDocx(buffer: Buffer): Promise<{ date: string; items: string }[]> {
   const zip = await JSZip.loadAsync(buffer);
   const docXml = await zip.file("word/document.xml")?.async("string");
   if (!docXml) throw new Error("無法讀取 docx 內容");
 
-  // Extract all <w:t> text nodes in order
-  const textMatches = docXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
-  const texts = textMatches.map((m) => m.replace(/<[^>]+>/g, "").trim()).filter(Boolean);
+  // Extract rows: split by <w:tr
+  const rowMatches = docXml.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) || [];
 
-  // Find dates (pattern: month/day or month/day-month/day)
+  // Parse each row into array of cell text strings
+  const table: string[][] = rowMatches.map((rowXml) => {
+    const cellMatches = rowXml.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || [];
+    return cellMatches.map(cellText);
+  });
+
+  if (table.length === 0) throw new Error("找不到表格");
+
+  // Find the date row: contains cells matching date pattern like 10/09
   const datePattern = /^\d{1,2}\/\d{1,2}/;
-  const dateIndices: number[] = [];
-  texts.forEach((t, i) => { if (datePattern.test(t)) dateIndices.push(i); });
+  let dateRowIdx = -1;
+  for (let r = 0; r < table.length; r++) {
+    const dateCells = table[r].filter((c) => datePattern.test(c));
+    if (dateCells.length >= 1) { dateRowIdx = r; break; }
+  }
+  if (dateRowIdx === -1) throw new Error("找不到日期欄位（格式如 10/09）");
 
-  if (dateIndices.length === 0) throw new Error("找不到日期欄位（格式如 10/09）");
-
-  // For each date column, collect prescription lines until next date or row-label keywords
-  const stopKeywords = ["回診日期", "抽血日期", "保健品寄送", "備註", "處方內容"];
-  const prescriptions: { date: string; items: string }[] = [];
-
-  for (let d = 0; d < dateIndices.length; d++) {
-    const dateIdx = dateIndices[d];
-    const dateStr = texts[dateIdx];
-    const nextDateIdx = dateIndices[d + 1] ?? texts.length;
-
-    const lines: string[] = [];
-    for (let i = dateIdx + 1; i < nextDateIdx; i++) {
-      const t = texts[i];
-      if (stopKeywords.some((k) => t.startsWith(k))) break;
-      if (t && !datePattern.test(t)) lines.push(t);
-    }
-    if (lines.length > 0) {
-      prescriptions.push({ date: dateStr, items: lines.join("\n") });
-    }
+  const dateRow = table[dateRowIdx];
+  // Find columns that have dates (skip col 0 which is usually a label)
+  const colIndices: number[] = [];
+  for (let c = 0; c < dateRow.length; c++) {
+    if (datePattern.test(dateRow[c])) colIndices.push(c);
   }
 
+  // Stop collecting when hitting these row labels
+  const stopKeywords = ["回診日期", "抽血日期", "保健品寄送", "備註"];
+
+  // For each date column, collect text from rows below date row
+  const prescriptions = colIndices.map((ci) => {
+    const dateStr = dateRow[ci];
+    const lines: string[] = [];
+    for (let r = dateRowIdx + 1; r < table.length; r++) {
+      const cell = table[r][ci] ?? "";
+      if (!cell) continue;
+      // Stop at row label keywords (usually in col 0)
+      const rowLabel = table[r][0] ?? "";
+      if (stopKeywords.some((k) => rowLabel.startsWith(k))) break;
+      // Skip "處方內容:" label cells
+      if (cell === "處方內容:" || cell === "處方內容") continue;
+      lines.push(cell);
+    }
+    return { date: dateStr, items: lines.join("\n") };
+  }).filter((p) => p.items);
+
+  if (prescriptions.length === 0) throw new Error("解析不到處方內容，請確認表格格式");
   return prescriptions;
 }
 

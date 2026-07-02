@@ -1190,8 +1190,8 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
         <Card>
           <CardHeader><CardTitle className="text-base">匯入處方（Excel / .xlsx）</CardTitle></CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <p className="text-xs text-slate-500">請先將 Google Docs 的表格下載為 Excel（檔案 → 下載 → Microsoft Excel），再上傳。系統會自動識別每欄的日期與處方內容。</p>
-            <input ref={importInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportFile}
+            <p className="text-xs text-slate-500">支援上傳 <strong>.docx</strong>（Word / Google Docs 下載）或 <strong>.xlsx</strong>（Excel）。系統會自動識別每欄的日期與處方內容。</p>
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls,.docx" onChange={handleImportFile}
               className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
             {importPreviews && importPreviews.length > 0 && (
               <div className="flex flex-col gap-3">

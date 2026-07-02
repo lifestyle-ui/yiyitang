@@ -129,16 +129,27 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const now = new Date().toISOString();
-  const inserts = prescriptions.map((p) => ({
-    id: crypto.randomUUID(),
-    clientId: id,
-    date: now,
-    items: p.items,
-    notes: `匯入日期：${p.date}`,
-    status: "active",
-    createdAt: now,
-    updatedAt: now,
-  }));
+  const inserts = prescriptions.map((p) => {
+    // Convert plain text lines to JSON array format [{name, dosage}]
+    const itemsJson = JSON.stringify(
+      p.items.split("\n").filter(Boolean).map((line) => {
+        // Try to split "Name dosage" or "Name #dosage"
+        const match = line.match(/^(.+?)\s+([\d#].+)$/);
+        if (match) return { name: match[1].trim(), dosage: match[2].trim() };
+        return { name: line.trim(), dosage: "" };
+      })
+    );
+    return {
+      id: crypto.randomUUID(),
+      clientId: id,
+      date: now,
+      items: itemsJson,
+      notes: `匯入日期：${p.date}`,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 
   const { error } = await supabase.from("Prescription").insert(inserts);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

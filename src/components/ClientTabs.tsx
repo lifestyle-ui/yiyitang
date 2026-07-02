@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   MessageSquare, FlaskConical, Pill, ClipboardList,
@@ -1032,6 +1032,38 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editItems, setEditItems] = useState<{ id: string; name: string; dosage: string }[]>([]);
   const [editForm, setEditForm] = useState({ date: "", totalDays: "", runOutDate: "", status: "", notes: "" });
+  const [showImport, setShowImport] = useState(false);
+  const [importPreviews, setImportPreviews] = useState<{ date: string; items: string }[] | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("mode", "preview");
+    const res = await fetch(`/api/clients/${client.id}/import-prescriptions`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.prescriptions) setImportPreviews(data.prescriptions);
+    else alert(data.error || "解析失敗");
+  };
+
+  const confirmImport = async () => {
+    if (!importInputRef.current?.files?.[0]) return;
+    setImporting(true);
+    const fd = new FormData();
+    fd.append("file", importInputRef.current.files[0]);
+    fd.append("mode", "import");
+    const res = await fetch(`/api/clients/${client.id}/import-prescriptions`, { method: "POST", body: fd });
+    const data = await res.json();
+    setImporting(false);
+    if (data.imported) {
+      setShowImport(false); setImportPreviews(null); onRefresh();
+    } else {
+      alert(data.error || "匯入失敗");
+    }
+  };
 
   useEffect(() => {
     if (showForm) fetch("/api/products").then((r) => r.json()).then((d) => setCatalog(Array.isArray(d) ? d : []));
@@ -1133,7 +1165,10 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button onClick={() => { setShowImport(!showImport); setImportPreviews(null); }} variant="secondary">
+          {showImport ? "取消匯入" : "↑ 匯入 Excel"}
+        </Button>
         <Button onClick={() => {
           if (!showForm) {
             // Pre-populate from last prescription
@@ -1151,6 +1186,30 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
           {showForm ? "取消" : "+ 新增處方"}
         </Button>
       </div>
+      {showImport && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">匯入處方（Excel / .xlsx）</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-xs text-slate-500">請先將 Google Docs 的表格下載為 Excel（檔案 → 下載 → Microsoft Excel），再上傳。系統會自動識別每欄的日期與處方內容。</p>
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportFile}
+              className="text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
+            {importPreviews && importPreviews.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold text-slate-600">解析結果（共 {importPreviews.length} 筆）：</p>
+                {importPreviews.map((p, i) => (
+                  <div key={i} className="border border-slate-200 rounded p-3 bg-slate-50">
+                    <p className="text-xs font-semibold text-slate-700 mb-1">日期：{p.date}</p>
+                    <pre className="text-xs text-slate-600 whitespace-pre-wrap font-sans">{p.items}</pre>
+                  </div>
+                ))}
+                <Button onClick={confirmImport} disabled={importing} variant="primary">
+                  {importing ? "匯入中..." : `確認匯入 ${importPreviews.length} 筆`}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       {showForm && (
         <Card>
           <CardHeader><CardTitle>新增保健品處方</CardTitle></CardHeader>
@@ -2269,6 +2328,10 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
   const pastCycles = cycles.filter((c) => c.status !== "active").sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   const riskConf = riskLevel ? RISK_CONFIG[riskLevel] : null;
   const nextStep = activeCycle?.steps.find((s) => !s.isCompleted && !s.label.startsWith("§ "));
+  const cycleNextSteps = activeCycles.map((c) => ({
+    cycle: c,
+    step: c.steps.find((s) => !s.isCompleted && !s.label.startsWith("§ ")),
+  })).filter((x) => x.step);
   const cycleNumber = (id: string) => cycles.length - cycles.findIndex((c) => c.id === id);
 
   const age = client.birthDate
@@ -2324,13 +2387,20 @@ function OverviewTab({ client, onRefresh }: { client: Client; onRefresh: () => v
       </div>
 
       {/* 下一步卡片 */}
-      {activeCycle && nextStep && (
-        <div className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
-          <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />
-          <div>
-            <p className="text-sm font-medium" style={{ color: "#241f1b" }}>下一步：{nextStep.label}</p>
-            {nextStep.note && <p className="text-xs mt-0.5" style={{ color: "#876b57" }}>{nextStep.note}</p>}
-          </div>
+      {cycleNextSteps.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {cycleNextSteps.map(({ cycle, step }) => (
+            <div key={cycle.id} className="p-4 flex gap-3 rounded-sm" style={{ background: "#ece2d6", border: "1px solid #d8cabb" }}>
+              <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#5c4638" }} />
+              <div className="flex-1 min-w-0">
+                {activeCycles.length > 1 && (
+                  <p className="text-xs mb-0.5" style={{ color: "#876b57" }}>{cycle.type}</p>
+                )}
+                <p className="text-sm font-medium" style={{ color: "#241f1b" }}>下一步：{step!.label}</p>
+                {step!.note && <p className="text-xs mt-0.5" style={{ color: "#876b57" }}>{step!.note}</p>}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

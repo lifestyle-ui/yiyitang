@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ClipboardList, Settings, Pill, FlaskConical, LogOut,
+  LayoutDashboard, Users, ClipboardList, Settings, Pill, FlaskConical, LogOut, BotMessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,9 @@ const catalogItems = [
 ];
 const systemItems = [
   { href: "/admin", icon: Settings, label: "管理設定" },
+];
+const aiItems = [
+  { href: "/ai-reply", icon: BotMessageSquare, label: "AI 回覆助手" },
 ];
 
 function NavItem({ href, icon: Icon, label, active }: { href: string; icon: React.ElementType; label: string; active: boolean }) {
@@ -93,6 +96,11 @@ export default function Sidebar() {
           <p className="px-3 mb-1.5 text-[9px] font-semibold uppercase tracking-[.18em]"
             style={{ color: "#6f5645", fontFamily: "var(--font-sans)" }}>目錄管理</p>
           {catalogItems.map((item) => <NavItem key={item.href} {...item} active={isActive(item.href)} />)}
+        </div>
+        <div>
+          <p className="px-3 mb-1.5 text-[9px] font-semibold uppercase tracking-[.18em]"
+            style={{ color: "#6f5645", fontFamily: "var(--font-sans)" }}>AI 工具</p>
+          {aiItems.map((item) => <NavItem key={item.href} {...item} active={isActive(item.href)} />)}
         </div>
         <div>
           <p className="px-3 mb-1.5 text-[9px] font-semibold uppercase tracking-[.18em]"

@@ -15,6 +15,7 @@ export async function PATCH(req: Request, { params }: Params) {
       ...(data.runOutDate !== undefined && { runOutDate: data.runOutDate ? new Date(data.runOutDate).toISOString() : null }),
       ...(data.status !== undefined && { status: data.status }),
       ...(data.notes !== undefined && { notes: data.notes || null }),
+      ...(data.lifestyle !== undefined && { lifestyle: data.lifestyle || null }),
       ...(data.confirmedAt !== undefined && { confirmedAt: data.confirmedAt || null }),
       updatedAt: new Date().toISOString(),
     })

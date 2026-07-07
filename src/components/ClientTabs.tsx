@@ -1018,11 +1018,67 @@ function DosageInput({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
+type LifestyleState = { diet: string; bloodSugar: string; breathing: string; custom: string };
+const LIFESTYLE_FIELDS: { key: keyof LifestyleState; label: string; placeholder: string }[] = [
+  { key: "diet", label: "🥗 飲食紀錄", placeholder: "例：避免麩質、精緻糖，多攝取發酵食品..." },
+  { key: "bloodSugar", label: "📊 血糖監測", placeholder: "例：早餐前後測量，目標空腹 < 100 mg/dL..." },
+  { key: "breathing", label: "🌬️ 呼吸練習", placeholder: "例：每天早晨 4-7-8 呼吸法，10 分鐘..." },
+  { key: "custom", label: "✏️ 自訂", placeholder: "其他生活型態建議..." },
+];
+
+function LifestyleSection({ value, onChange }: { value: LifestyleState; onChange: (v: LifestyleState) => void }) {
+  const [open, setOpen] = useState(false);
+  const hasContent = Object.values(value).some(Boolean);
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50">
+        <span className="font-medium text-slate-600">🌿 生活型態處方{hasContent ? <span className="ml-1.5 text-xs text-green-600">（已填寫）</span> : ""}</span>
+        <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="border-t border-slate-100 px-3 py-3 flex flex-col gap-3 bg-slate-50">
+          {LIFESTYLE_FIELDS.map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <p className="text-xs font-medium text-slate-600 mb-1">{label}</p>
+              <textarea value={value[key]} onChange={(e) => onChange({ ...value, [key]: e.target.value })}
+                placeholder={placeholder} rows={2}
+                className="w-full text-xs px-2.5 py-2 border border-slate-200 rounded focus:outline-none focus:border-blue-400 resize-none bg-white" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LifestyleDisplay({ lifestyle }: { lifestyle?: string | null }) {
+  if (!lifestyle) return null;
+  let data: Partial<LifestyleState> = {};
+  try { data = JSON.parse(lifestyle); } catch { return null; }
+  const filled = LIFESTYLE_FIELDS.filter(({ key }) => data[key]);
+  if (filled.length === 0) return null;
+  return (
+    <div className="mt-2 border border-green-100 rounded-lg overflow-hidden">
+      <p className="px-3 py-1.5 text-xs font-semibold bg-green-50 text-green-700">🌿 生活型態處方</p>
+      <div className="px-3 py-2 flex flex-col gap-2">
+        {filled.map(({ key, label }) => (
+          <div key={key}>
+            <p className="text-xs font-medium text-slate-500">{label}</p>
+            <p className="text-xs text-slate-700 whitespace-pre-wrap">{data[key]}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client: Client; showForm: boolean; setShowForm: (v: boolean) => void; onRefresh: () => void; }) {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; dosage: string; custom?: boolean }[]>([]);
   const [customItem, setCustomItem] = useState({ name: "", dosage: "" });
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), totalDays: "", runOutDate: "", notes: "" });
+  const [lifestyle, setLifestyle] = useState({ diet: "", bloodSugar: "", breathing: "", custom: "" });
   const [loading, setLoading] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [showCatalog, setShowCatalog] = useState(false);
@@ -1032,6 +1088,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editItems, setEditItems] = useState<{ id: string; name: string; dosage: string }[]>([]);
   const [editForm, setEditForm] = useState({ date: "", totalDays: "", runOutDate: "", status: "", notes: "" });
+  const [editLifestyle, setEditLifestyle] = useState({ diet: "", bloodSugar: "", breathing: "", custom: "" });
   const [showImport, setShowImport] = useState(false);
   const [importPreviews, setImportPreviews] = useState<{ date: string; items: string }[] | null>(null);
   const [importing, setImporting] = useState(false);
@@ -1087,8 +1144,10 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     e.preventDefault();
     if (selectedItems.length === 0) { alert("請至少選擇一個保健品"); return; }
     setLoading(true);
-    await fetch(`/api/clients/${client.id}/prescriptions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, items: selectedItems.map((i) => ({ name: i.name, dosage: i.dosage })) }) });
-    setLoading(false); setShowForm(false); setSelectedItems([]); onRefresh();
+    const lifestyleJson = (lifestyle.diet || lifestyle.bloodSugar || lifestyle.breathing || lifestyle.custom)
+      ? JSON.stringify(lifestyle) : null;
+    await fetch(`/api/clients/${client.id}/prescriptions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, items: selectedItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson }) });
+    setLoading(false); setShowForm(false); setSelectedItems([]); setLifestyle({ diet: "", bloodSugar: "", breathing: "", custom: "" }); onRefresh();
   };
 
   const startEdit = (p: Prescription) => {
@@ -1096,13 +1155,18 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string; dosage?: string }[]) || []; } catch { items = []; }
     setEditItems(items.map((i) => ({ id: crypto.randomUUID(), name: i.name, dosage: i.dosage || "" })));
     setEditForm({ date: p.date.slice(0, 10), totalDays: p.totalDays?.toString() || "", runOutDate: p.runOutDate ? p.runOutDate.slice(0, 10) : "", status: p.status, notes: p.notes || "" });
+    let ls = { diet: "", bloodSugar: "", breathing: "", custom: "" };
+    try { if ((p as {lifestyle?: string}).lifestyle) ls = { ...ls, ...JSON.parse((p as {lifestyle?: string}).lifestyle!) }; } catch { /* ignore */ }
+    setEditLifestyle(ls);
     setEditingId(p.id);
     setExpandedIds((prev) => new Set([...prev, p.id]));
   };
 
   const saveEdit = async (id: string) => {
     setLoading(true);
-    await fetch(`/api/clients/${client.id}/prescriptions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, items: editItems.map((i) => ({ name: i.name, dosage: i.dosage })) }) });
+    const lifestyleJson = (editLifestyle.diet || editLifestyle.bloodSugar || editLifestyle.breathing || editLifestyle.custom)
+      ? JSON.stringify(editLifestyle) : null;
+    await fetch(`/api/clients/${client.id}/prescriptions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, items: editItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson }) });
     setLoading(false); setEditingId(null); onRefresh();
   };
 
@@ -1298,6 +1362,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                 <Input label="預計用完日" type="date" value={form.runOutDate} onChange={(e) => setForm((f) => ({ ...f, runOutDate: e.target.value }))} />
               </div>
               <Textarea label="備註" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+              <LifestyleSection value={lifestyle} onChange={setLifestyle} />
               <div className="flex justify-end">
                 <Button type="submit" disabled={loading || selectedItems.length === 0}>{loading ? "儲存中..." : `儲存 ${selectedItems.length > 0 ? `(${selectedItems.length} 項)` : ""}`}</Button>
               </div>
@@ -1373,6 +1438,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                       <Input label="預計用完日" type="date" value={editForm.runOutDate} onChange={(e) => setEditForm((f) => ({ ...f, runOutDate: e.target.value }))} />
                     </div>
                     <Textarea label="備註" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+                    <LifestyleSection value={editLifestyle} onChange={setEditLifestyle} />
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" onClick={() => setEditingId(null)}>取消</Button>
                       <Button onClick={() => saveEdit(p.id)} disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
@@ -1392,6 +1458,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     </table>
                     {p.totalDays && <p className="text-xs" style={{ color: "#b3a99d" }}>共 {p.totalDays} 天</p>}
                     {p.notes && <p className="text-xs mt-1" style={{ color: "#6b6056" }}>{p.notes}</p>}
+                    <LifestyleDisplay lifestyle={(p as {lifestyle?: string}).lifestyle} />
                     {/* 規律性追蹤 */}
                     <AdherenceSection prescription={p} clientId={client.id} />
                   </div>

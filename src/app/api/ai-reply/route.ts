@@ -74,13 +74,31 @@ export async function POST(req: Request) {
 
 ${kbContext ? `=== 知識庫 ===\n${kbContext}` : "（目前知識庫無資料，請根據一般健康知識回答）"}`;
 
-  const msg = await client.messages.create({
+  const stream = client.messages.stream({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 500,
     system: systemPrompt,
     messages: [{ role: "user", content: question }],
   });
 
-  const reply = msg.content[0].type === "text" ? msg.content[0].text : "";
-  return NextResponse.json({ reply });
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            controller.enqueue(encoder.encode(event.delta.text));
+          }
+        }
+      } catch (e) {
+        controller.enqueue(encoder.encode(`\n[錯誤] ${e instanceof Error ? e.message : "生成失敗"}`));
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(body, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }

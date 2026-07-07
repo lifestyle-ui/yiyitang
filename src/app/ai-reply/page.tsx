@@ -183,10 +183,23 @@ export default function AIReplyPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, mode: "reply" }),
     });
-    const data = await res.json();
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({}));
+      setLoading(false);
+      setError(data.error || "生成失敗，請稍後再試");
+      return;
+    }
+    // Stream text chunks as they arrive
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      setReply(text);
+    }
     setLoading(false);
-    if (data.error) { setError(data.error); return; }
-    setReply(data.reply || "");
   };
 
   const copy = async () => {
@@ -260,7 +273,7 @@ export default function AIReplyPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {loading
+              {loading && !reply
                 ? <div className="flex gap-1 items-center text-sm text-slate-400"><RefreshCw className="w-3.5 h-3.5 animate-spin" />生成中...</div>
                 : <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{reply}</div>}
             </CardContent>

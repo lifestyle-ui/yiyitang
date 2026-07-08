@@ -46,7 +46,19 @@ function KnowledgeBasePanel() {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
+    e.target.value = "";
+    let text: string;
+    if (file.name.toLowerCase().endsWith(".docx")) {
+      // .docx is a ZIP archive — parse server-side
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/knowledge-base/parse", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      text = data.text || "";
+    } else {
+      text = await file.text();
+    }
     setForm((f) => ({ ...f, title: file.name.replace(/\.[^.]+$/, ""), content: text, source: file.name }));
     setAdding(true);
   };

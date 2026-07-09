@@ -1200,6 +1200,27 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(false); setEditingId(null); onRefresh();
   };
 
+  // One-click shipping status advance: 包裝 → 打包完成 → 已寄送 → 已收到
+  const NEXT_SHIP_STEP: Record<string, { next: string; label: string }> = {
+    active: { next: "packing", label: "開始包裝" },
+    packing: { next: "packing_done", label: "打包完成" },
+    packing_done: { next: "shipped", label: "標記已寄出" },
+    shipped: { next: "received", label: "客人已收到" },
+  };
+  const [shipUpdatingId, setShipUpdatingId] = useState<string | null>(null);
+  const advanceShipStatus = async (p: Prescription) => {
+    const step = NEXT_SHIP_STEP[p.status];
+    if (!step) return;
+    setShipUpdatingId(p.id);
+    await fetch(`/api/clients/${client.id}/prescriptions/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: step.next }),
+    });
+    setShipUpdatingId(null);
+    onRefresh();
+  };
+
   const exportPrescription = async (p: Prescription) => {
     setExportingId(p.id);
     let items: { name: string; dosage?: string }[] = [];
@@ -1422,6 +1443,14 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  {NEXT_SHIP_STEP[p.status] && (
+                    <button onClick={() => advanceShipStatus(p)} disabled={shipUpdatingId === p.id}
+                      className="text-xs px-2.5 py-1 rounded-full border transition-colors flex-shrink-0 disabled:opacity-50"
+                      style={{ borderColor: "#BFDBFE", color: "#1D4ED8", background: "#EFF6FF" }}
+                      title="更新寄送進度">
+                      {shipUpdatingId === p.id ? "更新中…" : `✓ ${NEXT_SHIP_STEP[p.status].label}`}
+                    </button>
+                  )}
                   <button onClick={() => exportPrescription(p)} disabled={exportingId === p.id}
                     className="p-1.5 rounded hover:opacity-70 disabled:opacity-40" style={{ color: "#5c4638" }} title={exportingId === p.id ? "產生中…" : "匯出 PDF"}>
                     {exportingId === p.id ? <span className="text-xs">…</span> : <Download className="w-3.5 h-3.5" />}

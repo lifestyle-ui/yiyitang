@@ -33,17 +33,19 @@ export async function PATCH(_req: Request, { params }: Params) {
   const { data: client, error } = await supabase
     .from("Client")
     .update({
-      name: data.name,
-      medicalRecordNumber: data.medicalRecordNumber || null,
-      gender: data.gender || null,
-      birthDate: data.birthDate || null,
-      phone: data.phone || null,
-      email: data.email || null,
-      lineId: data.lineId || null,
-      address: data.address || null,
-      occupation: data.occupation || null,
-      referralSource: data.referralSource || null,
-      notes: data.notes || null,
+      // Only update fields that are present in the request, so partial
+      // updates (e.g. toggling needsAttention) don't wipe other columns
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.medicalRecordNumber !== undefined && { medicalRecordNumber: data.medicalRecordNumber || null }),
+      ...(data.gender !== undefined && { gender: data.gender || null }),
+      ...(data.birthDate !== undefined && { birthDate: data.birthDate || null }),
+      ...(data.phone !== undefined && { phone: data.phone || null }),
+      ...(data.email !== undefined && { email: data.email || null }),
+      ...(data.lineId !== undefined && { lineId: data.lineId || null }),
+      ...(data.address !== undefined && { address: data.address || null }),
+      ...(data.occupation !== undefined && { occupation: data.occupation || null }),
+      ...(data.referralSource !== undefined && { referralSource: data.referralSource || null }),
+      ...(data.notes !== undefined && { notes: data.notes || null }),
       ...(data.riskLevel !== undefined && { riskLevel: data.riskLevel || null }),
       ...(data.needsAttention !== undefined && { needsAttention: !!data.needsAttention }),
       updatedAt: new Date().toISOString(),

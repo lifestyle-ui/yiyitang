@@ -37,7 +37,7 @@ type Client = {
 };
 type Consultation = { id: string; date: string; visitType: string | null; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
 type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; reportUrl: string | null; price: number | null; sampleCollectedAt: string | null; reportReceivedAt: string | null; };
-type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; adherenceStatus: string | null; adherenceNotes: string | null; adherenceCheckedAt: string | null; };
+type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; adherenceStatus: string | null; adherenceNotes: string | null; adherenceCheckedAt: string | null; shippedAt?: string | null; receivedAt?: string | null; };
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
 type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, string | number> | null; };
 type DoctorNote = { id: string; date: string; diagnosis: string | null; treatment: string | null; notes: string | null; nextVisit: string | null; };
@@ -1212,10 +1212,15 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     const step = NEXT_SHIP_STEP[p.status];
     if (!step) return;
     setShipUpdatingId(p.id);
+    const now = new Date().toISOString();
     await fetch(`/api/clients/${client.id}/prescriptions/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: step.next }),
+      body: JSON.stringify({
+        status: step.next,
+        ...(step.next === "shipped" && { shippedAt: now }),
+        ...(step.next === "received" && { receivedAt: now }),
+      }),
     });
     setShipUpdatingId(null);
     onRefresh();
@@ -1440,6 +1445,8 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                 {!expanded && !isEditing && <span className="text-sm text-slate-500 truncate">{summary}</span>}
                 <Badge variant={p.status === "active" ? "success" : "default"} className="flex-shrink-0">{STATUS_LABELS[p.status] || p.status}</Badge>
                 {p.runOutDate && !expanded && <Badge variant={isExpiringSoon ? "warning" : "outline"} className="flex-shrink-0">用完 {formatDate(p.runOutDate)}</Badge>}
+                {p.shippedAt && <Badge variant="outline" className="flex-shrink-0">寄出 {formatDate(p.shippedAt)}</Badge>}
+                {p.receivedAt && <Badge variant="outline" className="flex-shrink-0">收到 {formatDate(p.receivedAt)}</Badge>}
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

@@ -17,6 +17,8 @@ export async function PATCH(req: Request, { params }: Params) {
       ...(data.notes !== undefined && { notes: data.notes || null }),
       ...(data.lifestyle !== undefined && { lifestyle: data.lifestyle || null }),
       ...(data.confirmedAt !== undefined && { confirmedAt: data.confirmedAt || null }),
+      ...(data.shippedAt !== undefined && { shippedAt: data.shippedAt || null }),
+      ...(data.receivedAt !== undefined && { receivedAt: data.receivedAt || null }),
       updatedAt: new Date().toISOString(),
     })
     .eq("id", rid)

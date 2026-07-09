@@ -5,11 +5,18 @@ import { formatDate, formatDateTime, PRIORITY_LABELS, CATEGORY_LABELS } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { Calendar, Users, ClipboardList, AlertCircle, CheckCircle2, Bell, Bookmark } from "lucide-react";
+import { Calendar, Users, ClipboardList, AlertCircle, CheckCircle2, Bell, Bookmark, Truck } from "lucide-react";
 
 type ExpiringRx = {
   id: string;
   runOutDate: string;
+  client: { id: string; name: string; needsAttention: boolean } | null;
+};
+
+type UnshippedRx = {
+  id: string;
+  date: string;
+  status: string;
   client: { id: string; name: string; needsAttention: boolean } | null;
 };
 
@@ -25,7 +32,7 @@ async function getDashboardData() {
   const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
   const monthEnd = new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0, 23, 59, 59);
 
-  const [tasksRes, overdueRes, clientsRes, totalRes, expiringRxRes, consultationsRes] = await Promise.all([
+  const [tasksRes, overdueRes, clientsRes, totalRes, expiringRxRes, consultationsRes, unshippedRxRes] = await Promise.all([
     supabase
       .from("Task")
       .select("*, client:Client(id, name)")
@@ -61,6 +68,12 @@ async function getDashboardData() {
       .select("id", { count: "exact" })
       .gte("date", monthStart.toISOString())
       .lte("date", monthEnd.toISOString()),
+    supabase
+      .from("Prescription")
+      .select("id, date, status, client:Client(id, name, needsAttention)")
+      .in("status", ["packing", "packing_done"])
+      .order("date", { ascending: true })
+      .limit(20),
   ]);
 
   return {
@@ -70,6 +83,7 @@ async function getDashboardData() {
     totalClients: totalRes.count || 0,
     expiringPrescriptions: (expiringRxRes.data || []) as unknown as ExpiringRx[],
     monthlyConsultations: consultationsRes.count || 0,
+    unshippedPrescriptions: (unshippedRxRes.data || []) as unknown as UnshippedRx[],
   };
 }
 
@@ -80,7 +94,7 @@ const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
 };
 
 export default async function DashboardPage() {
-  const { todayTasks, overdueTasks, recentClients, totalClients, expiringPrescriptions, monthlyConsultations } =
+  const { todayTasks, overdueTasks, recentClients, totalClients, expiringPrescriptions, monthlyConsultations, unshippedPrescriptions } =
     await getDashboardData();
 
   const today = new Date();
@@ -186,6 +200,47 @@ export default async function DashboardPage() {
                 {upcomingRx.map((rx) => (
                   <RxReminderRow key={rx.id} rx={rx} />
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Unshipped prescription reminders */}
+          {unshippedPrescriptions.length > 0 && (
+            <Card style={{ border: "1px solid #93C5FD" }}>
+              <CardHeader style={{ background: "#EFF6FF", borderBottom: "1px solid #BFDBFE" }}>
+                <CardTitle className="flex items-center gap-2" style={{ color: "#1D4ED8" }}>
+                  <Truck className="w-4 h-4" style={{ color: "#3B82F6" }} />
+                  保健品待寄出
+                  <span className="text-xs font-normal px-2 py-0.5 rounded-full ml-1"
+                    style={{ background: "#DBEAFE", color: "#1D4ED8" }}>
+                    {unshippedPrescriptions.length} 筆
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {unshippedPrescriptions.map((rx) => {
+                  const daysSince = Math.floor((today.getTime() - new Date(rx.date).getTime()) / 86400000);
+                  return (
+                    <Link key={rx.id} href={`/clients/${rx.client?.id}`}
+                      className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-blue-50"
+                      style={{ borderBottom: "1px solid #DBEAFE" }}>
+                      <div className="flex items-center gap-2">
+                        {rx.client?.needsAttention && (
+                          <Bookmark className="w-3 h-3 flex-shrink-0" fill="#D97706" style={{ color: "#D97706" }} />
+                        )}
+                        <span className="text-sm font-medium" style={{ color: "#241f1b" }}>
+                          {rx.client?.name ?? "—"}
+                        </span>
+                        <Badge variant={rx.status === "packing_done" ? "info" : "default"}>
+                          {rx.status === "packing_done" ? "打包完成" : "正在包裝"}
+                        </Badge>
+                      </div>
+                      <span className="text-xs font-medium" style={{ color: daysSince >= 3 ? "#DC2626" : "#1D4ED8" }}>
+                        開立 {daysSince} 天{daysSince >= 3 ? "，儘快寄出" : ""}
+                      </span>
+                    </Link>
+                  );
+                })}
               </CardContent>
             </Card>
           )}

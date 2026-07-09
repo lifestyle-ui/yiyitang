@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("Client")
-    .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate), labTests:LabTest(testDate,status)")
+    .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays,receivedAt), labTests:LabTest(testDate,status)")
     .eq("isActive", true)
     .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
     .order("createdAt", { ascending: true });
@@ -17,7 +17,19 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    // Fallback for when the receivedAt column hasn't been added yet
+    let fb = supabase
+      .from("Client")
+      .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays), labTests:LabTest(testDate,status)")
+      .eq("isActive", true)
+      .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
+      .order("createdAt", { ascending: true });
+    if (search) fb = fb.or(`name.ilike.%${search}%,phone.ilike.%${search}%,lineId.ilike.%${search}%`);
+    const { data: fbData, error: fbError } = await fb;
+    if (fbError) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(fbData);
+  }
   return NextResponse.json(data);
 }
 

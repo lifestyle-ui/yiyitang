@@ -9,7 +9,7 @@ import { Plus, Search, Users, Upload, Download, Bookmark, AlertCircle } from "lu
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type Prescription = { status: string; runOutDate: string | null };
+type Prescription = { status: string; runOutDate: string | null; date: string; totalDays: number | null; receivedAt: string | null };
 type DoctorNote = { nextVisit: string | null; date: string };
 type LabTestSummary = { testDate: string | null; status: string };
 
@@ -29,22 +29,40 @@ type Client = {
   labTests: LabTestSummary[];
 };
 
-function getExpiringDays(prescriptions: Prescription[]): number | null {
-  const active = (prescriptions || []).filter((p) => p.status === "active" && p.runOutDate);
-  if (active.length === 0) return null;
-  const days = active
-    .map((p) => Math.ceil((new Date(p.runOutDate!).getTime() - Date.now()) / 86400000))
-    .sort((a, b) => a - b)[0];
-  return days <= 14 ? days : null;
+// Statuses that mean the client is (or will be) taking this prescription
+const ONGOING_STATUSES = new Set(["active", "packing", "packing_done", "shipped", "received", "started"]);
+
+// Effective run-out date: explicit runOutDate wins; otherwise derive from
+// totalDays counted from the day the client received the shipment (or the
+// prescription date as a fallback)
+function getRunOutTime(p: Prescription): number | null {
+  if (p.runOutDate) return new Date(p.runOutDate).getTime();
+  if (p.totalDays) {
+    const start = p.receivedAt ? new Date(p.receivedAt) : new Date(p.date);
+    return start.getTime() + p.totalDays * 86400000;
+  }
+  return null;
 }
 
+function getSoonestRunOutDays(prescriptions: Prescription[]): number | null {
+  const times = (prescriptions || [])
+    .filter((p) => ONGOING_STATUSES.has(p.status))
+    .map(getRunOutTime)
+    .filter((t): t is number => t !== null);
+  if (times.length === 0) return null;
+  return Math.ceil((Math.min(...times) - Date.now()) / 86400000);
+}
+
+// 保健品準備提醒:run-out 前 14 天內
+function getExpiringDays(prescriptions: Prescription[]): number | null {
+  const days = getSoonestRunOutDays(prescriptions);
+  return days !== null && days <= 14 ? days : null;
+}
+
+// 回診提醒:run-out 前 3 天
 function getNextVisitDays(prescriptions: Prescription[]): number | null {
-  const active = (prescriptions || []).filter((p) => p.status === "active" && p.runOutDate);
-  if (active.length === 0) return null;
-  const days = active
-    .map((p) => Math.ceil((new Date(p.runOutDate!).getTime() - Date.now()) / 86400000) - 3)
-    .sort((a, b) => a - b)[0];
-  return days;
+  const days = getSoonestRunOutDays(prescriptions);
+  return days !== null ? days - 3 : null;
 }
 
 function getNextLabDays(labTests: LabTestSummary[]): number | null {
@@ -322,10 +340,10 @@ export default function ClientsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
-                        <TrackChip days={nextVisitDays} label="回診" />
+                        <TrackChip days={nextVisitDays} label="約回診" />
                         <TrackChip days={nextLabDays} label="複檢" />
                         {expiringDays !== null && (
-                          <TrackChip days={expiringDays} label="處方" />
+                          <TrackChip days={expiringDays} label="保健品用完" />
                         )}
                       </div>
                     </td>

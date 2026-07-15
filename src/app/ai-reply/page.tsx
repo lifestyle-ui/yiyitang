@@ -43,24 +43,56 @@ function KnowledgeBasePanel() {
     load();
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    let text: string;
+  const [uploadProgress, setUploadProgress] = useState("");
+
+  const readFileText = async (file: File): Promise<string> => {
     if (file.name.toLowerCase().endsWith(".docx")) {
       // .docx is a ZIP archive — parse server-side
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/knowledge-base/parse", { method: "POST", body: fd });
       const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      text = data.text || "";
-    } else {
-      text = await file.text();
+      if (data.error) throw new Error(data.error);
+      return data.text || "";
     }
-    setForm((f) => ({ ...f, title: file.name.replace(/\.[^.]+$/, ""), content: text, source: file.name }));
-    setAdding(true);
+    return file.text();
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    e.target.value = "";
+
+    // Single file: open the edit form so title/content can be adjusted
+    if (files.length === 1) {
+      try {
+        const text = await readFileText(files[0]);
+        setForm((f) => ({ ...f, title: files[0].name.replace(/\.[^.]+$/, ""), content: text, source: files[0].name }));
+        setAdding(true);
+      } catch (err) { alert(String(err instanceof Error ? err.message : err)); }
+      return;
+    }
+
+    // Multiple files: save each directly, filename as title
+    const failed: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress(`上傳中 ${i + 1}/${files.length}：${files[i].name}`);
+      try {
+        const text = await readFileText(files[i]);
+        if (!text.trim()) { failed.push(`${files[i].name}（內容為空）`); continue; }
+        const res = await fetch("/api/knowledge-base", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: files[i].name.replace(/\.[^.]+$/, ""), content: text, source: files[i].name }),
+        });
+        if (!res.ok) failed.push(files[i].name);
+      } catch {
+        failed.push(files[i].name);
+      }
+    }
+    setUploadProgress("");
+    if (failed.length > 0) alert(`以下檔案未匯入：\n${failed.join("\n")}`);
+    load();
   };
 
   return (
@@ -72,13 +104,17 @@ function KnowledgeBasePanel() {
             className="text-xs flex items-center gap-1 px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-slate-50">
             <Upload className="w-3 h-3" />上傳
           </button>
-          <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleFile} />
+          <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" multiple className="hidden" onChange={handleFile} />
           <button onClick={() => setAdding(true)}
             className="text-xs flex items-center gap-1 px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-slate-50">
             <Plus className="w-3 h-3" />新增
           </button>
         </div>
       </div>
+
+      {uploadProgress && (
+        <p className="text-xs px-2 py-1.5 rounded bg-blue-50 text-blue-700 border border-blue-100">{uploadProgress}</p>
+      )}
 
       {adding && (
         <div className="border border-blue-200 rounded-lg p-3 bg-blue-50 flex flex-col gap-2">

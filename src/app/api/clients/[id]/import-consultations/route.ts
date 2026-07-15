@@ -9,7 +9,47 @@ type ParsedConsultation = {
   visitType: string;
   chiefComplaint: string;
   content: string;
+  isoDate?: string; // set when the source contains a full YYYYMMDD date
 };
+
+// Paragraph-style 跟診檔: dates appear inline as YYYYMMDD (e.g. 20250422)
+// and each date starts a new consultation entry
+function parseParagraphs(docXml: string): ParsedConsultation[] {
+  const paras = (docXml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [])
+    .map((p) =>
+      (p.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [])
+        .map((m) => m.replace(/<[^>]+>/g, ""))
+        .join("")
+        .trim()
+    )
+    .filter(Boolean);
+  if (paras.length === 0) throw new Error("檔案內沒有文字內容");
+
+  const fullText = paras.join("\n");
+  const datePattern = /(20\d{2})(0[1-9]|1[0-2])([0-2]\d|3[01])/g;
+  const segments: { iso: string; content: string }[] = [];
+  let match: RegExpExecArray | null;
+  const positions: { idx: number; iso: string; len: number }[] = [];
+  while ((match = datePattern.exec(fullText)) !== null) {
+    positions.push({ idx: match.index, iso: `${match[1]}-${match[2]}-${match[3]}`, len: match[0].length });
+  }
+  if (positions.length === 0) throw new Error("找不到日期（格式如 20250422）或表格，請確認檔案格式");
+
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i].idx + positions[i].len;
+    const end = i + 1 < positions.length ? positions[i + 1].idx : fullText.length;
+    const content = fullText.slice(start, end).trim();
+    if (content) segments.push({ iso: positions[i].iso, content });
+  }
+
+  return segments.map((s) => ({
+    date: s.iso,
+    visitType: "follow_up",
+    chiefComplaint: "",
+    content: s.content,
+    isoDate: s.iso,
+  }));
+}
 
 function cellText(cellXml: string): string {
   const matches = cellXml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
@@ -29,7 +69,8 @@ async function parseDocx(buffer: Buffer): Promise<ParsedConsultation[]> {
     const cellMatches = rowXml.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || [];
     return cellMatches.map(cellText);
   });
-  if (table.length === 0) throw new Error("找不到表格");
+  // No table → fall back to paragraph mode: split text by full dates (YYYYMMDD)
+  if (table.length === 0) return parseParagraphs(docXml);
 
   const results: ParsedConsultation[] = [];
   const seen = new Set<string>();
@@ -112,10 +153,11 @@ export async function POST(req: Request, { params }: Params) {
   const inserts = consultations.map((c) => ({
     id: crypto.randomUUID(),
     clientId: id,
-    date: now,
+    // Use the real visit date when the source has a full YYYYMMDD date
+    date: c.isoDate ? new Date(c.isoDate).toISOString() : now,
     visitType: c.visitType,
     chiefComplaint: c.chiefComplaint || null,
-    content: [`原始日期：${c.date}`, c.content].filter(Boolean).join("\n"),
+    content: c.isoDate ? c.content : [`原始日期：${c.date}`, c.content].filter(Boolean).join("\n"),
     createdAt: now,
     updatedAt: now,
   }));

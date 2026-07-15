@@ -20,6 +20,7 @@ export async function POST(req: Request, { params }: Params) {
       status: data.status || "active",
       notes: data.notes || null,
       lifestyle: data.lifestyle || null,
+      shipments: data.shipments || null,
       confirmedAt: null,
       createdAt: now,
       updatedAt: now,

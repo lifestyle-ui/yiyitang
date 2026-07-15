@@ -37,7 +37,93 @@ type Client = {
 };
 type Consultation = { id: string; date: string; visitType: string | null; chiefComplaint: string | null; content: string | null; doctorAdvice: string | null; nextSteps: string | null; };
 type LabTest = { id: string; testDate: string | null; testType: string; status: string; findings: string | null; doctorInterpretation: string | null; staffExplanation: string | null; reportUrl: string | null; price: number | null; sampleCollectedAt: string | null; reportReceivedAt: string | null; };
-type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; adherenceStatus: string | null; adherenceNotes: string | null; adherenceCheckedAt: string | null; shippedAt?: string | null; receivedAt?: string | null; };
+type Shipment = { seq: number; days: number; shippedAt: string | null; receivedAt: string | null };
+type Prescription = { id: string; date: string; items: unknown; totalDays: number | null; runOutDate: string | null; status: string; notes: string | null; confirmedAt: string | null; adherenceStatus: string | null; adherenceNotes: string | null; adherenceCheckedAt: string | null; shippedAt?: string | null; receivedAt?: string | null; shipments?: string | null; };
+
+function parseShipments(p: Prescription): Shipment[] {
+  try { return p.shipments ? JSON.parse(p.shipments) : []; } catch { return []; }
+}
+
+// Per-batch shipping tracker for prescriptions sent in multiple shipments
+function ShipmentTracker({ prescription: p, clientId, onRefresh }: { prescription: Prescription; clientId: string; onRefresh: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const shipments = parseShipments(p);
+  if (shipments.length < 2) return null;
+
+  // Suggested ship date for a batch: previous batch's received date (or its
+  // shipped date + 3 days in transit, or the prescription date) + its days
+  const suggestedShipTime = (i: number): number | null => {
+    if (i === 0) return null;
+    const prev = shipments[i - 1];
+    const start = prev.receivedAt ? new Date(prev.receivedAt).getTime()
+      : prev.shippedAt ? new Date(prev.shippedAt).getTime() + 3 * 86400000
+      : null;
+    return start !== null ? start + prev.days * 86400000 : null;
+  };
+
+  const update = async (seq: number, field: "shippedAt" | "receivedAt") => {
+    setSaving(true);
+    const now = new Date().toISOString();
+    const next = shipments.map((s) => (s.seq === seq ? { ...s, [field]: now } : s));
+    const isFirst = seq === 1;
+    const allReceived = next.every((s) => s.receivedAt);
+    await fetch(`/api/clients/${clientId}/prescriptions/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shipments: JSON.stringify(next),
+        // First batch drives the prescription-level clock (run-out is counted
+        // from when the client starts taking, i.e. first batch received)
+        ...(isFirst && field === "shippedAt" && { status: "shipped", shippedAt: now }),
+        ...(isFirst && field === "receivedAt" && { status: "received", receivedAt: now }),
+        ...(allReceived && { status: "received" }),
+      }),
+    });
+    setSaving(false);
+    onRefresh();
+  };
+
+  return (
+    <div className="mt-2 rounded-lg border" style={{ borderColor: "#BFDBFE", background: "#F8FAFF" }}>
+      {shipments.map((s, i) => {
+        const due = suggestedShipTime(i);
+        const dueDays = due !== null ? Math.ceil((due - Date.now()) / 86400000) : null;
+        return (
+          <div key={s.seq} className="flex items-center justify-between px-3 py-2 border-b last:border-0" style={{ borderColor: "#DBEAFE" }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: "#241f1b" }}>
+              <span className="font-semibold">第 {s.seq} 批</span>
+              <span style={{ color: "#8b8076" }}>{s.days} 天份</span>
+              {s.shippedAt && <span style={{ color: "#1D4ED8" }}>寄出 {formatDate(s.shippedAt)}</span>}
+              {s.receivedAt && <span style={{ color: "#15803D" }}>收到 {formatDate(s.receivedAt)}</span>}
+              {!s.shippedAt && dueDays !== null && (
+                <span style={{ color: dueDays <= 7 ? "#DC2626" : "#D97706" }}>
+                  {dueDays <= 0 ? "建議儘快寄出" : `建議 ${dueDays} 天內寄出`}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+              {!s.shippedAt && (
+                <button onClick={() => update(s.seq, "shippedAt")} disabled={saving}
+                  className="text-xs px-2 py-0.5 rounded-full border disabled:opacity-50"
+                  style={{ borderColor: "#BFDBFE", color: "#1D4ED8", background: "#EFF6FF" }}>
+                  標記已寄出
+                </button>
+              )}
+              {s.shippedAt && !s.receivedAt && (
+                <button onClick={() => update(s.seq, "receivedAt")} disabled={saving}
+                  className="text-xs px-2 py-0.5 rounded-full border disabled:opacity-50"
+                  style={{ borderColor: "#BBF7D0", color: "#15803D", background: "#F0FDF4" }}>
+                  客人已收到
+                </button>
+              )}
+              {s.receivedAt && <span className="text-xs" style={{ color: "#15803D" }}>✓ 完成</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 type Task = { id: string; title: string; description: string | null; dueDate: string | null; priority: string; status: string; category: string | null; assignedTo: string | null; };
 type LineTracking = { id: string; date: string; content: string; response: string | null; followUpNeeded: boolean; scores: Record<string, string | number> | null; };
 type DoctorNote = { id: string; date: string; diagnosis: string | null; treatment: string | null; notes: string | null; nextVisit: string | null; };
@@ -1108,6 +1194,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [selectedItems, setSelectedItems] = useState<{ id: string; name: string; dosage: string; custom?: boolean }[]>([]);
   const [customItem, setCustomItem] = useState({ name: "", dosage: "" });
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), totalDays: "", runOutDate: "", notes: "" });
+  const [batchCount, setBatchCount] = useState(1);
   const [lifestyle, setLifestyle] = useState<LifestyleState>(EMPTY_LIFESTYLE());
   const [loading, setLoading] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
@@ -1176,8 +1263,21 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(true);
     const hasLifestyle = LIFESTYLE_FIELDS.some(({ key }) => lifestyle[key].enabled);
     const lifestyleJson = hasLifestyle ? JSON.stringify(lifestyle) : null;
-    await fetch(`/api/clients/${client.id}/prescriptions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, items: selectedItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson }) });
-    setLoading(false); setShowForm(false); setSelectedItems([]); setLifestyle(EMPTY_LIFESTYLE()); onRefresh();
+    // Split totalDays evenly across shipment batches (remainder goes to the first batch)
+    let shipmentsJson: string | null = null;
+    const total = parseInt(form.totalDays);
+    if (batchCount > 1 && total > 0) {
+      const base = Math.floor(total / batchCount);
+      const shipments = Array.from({ length: batchCount }, (_, i) => ({
+        seq: i + 1,
+        days: i === 0 ? total - base * (batchCount - 1) : base,
+        shippedAt: null,
+        receivedAt: null,
+      }));
+      shipmentsJson = JSON.stringify(shipments);
+    }
+    await fetch(`/api/clients/${client.id}/prescriptions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, items: selectedItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson, shipments: shipmentsJson }) });
+    setLoading(false); setShowForm(false); setSelectedItems([]); setLifestyle(EMPTY_LIFESTYLE()); setBatchCount(1); onRefresh();
   };
 
   const startEdit = (p: Prescription) => {
@@ -1416,6 +1516,12 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
               <div className="grid grid-cols-2 gap-4">
                 <Input label="總天數" type="number" placeholder="30" value={form.totalDays} onChange={(e) => setForm((f) => ({ ...f, totalDays: e.target.value }))} />
                 <Input label="預計用完日" type="date" value={form.runOutDate} onChange={(e) => setForm((f) => ({ ...f, runOutDate: e.target.value }))} />
+                <Select label="分批寄送" value={String(batchCount)} onChange={(e) => setBatchCount(parseInt(e.target.value))}
+                  options={[
+                    { value: "1", label: "一次寄完" },
+                    { value: "2", label: "分 2 批" },
+                    { value: "3", label: "分 3 批" },
+                  ]} />
               </div>
               <Textarea label="備註" value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
               <LifestyleSection value={lifestyle} onChange={setLifestyle} />
@@ -1447,10 +1553,11 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                 {p.runOutDate && !expanded && <Badge variant={isExpiringSoon ? "warning" : "outline"} className="flex-shrink-0">用完 {formatDate(p.runOutDate)}</Badge>}
                 {p.shippedAt && <Badge variant="outline" className="flex-shrink-0">寄出 {formatDate(p.shippedAt)}</Badge>}
                 {p.receivedAt && <Badge variant="outline" className="flex-shrink-0">收到 {formatDate(p.receivedAt)}</Badge>}
+                {(() => { const sh = parseShipments(p); const pending = sh.find((s) => !s.shippedAt); return sh.length > 1 && pending ? <Badge variant="warning" className="flex-shrink-0">第 {pending.seq} 批待寄</Badge> : null; })()}
               </div>
               {!isEditing && (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  {NEXT_SHIP_STEP[p.status] && (
+                  {NEXT_SHIP_STEP[p.status] && parseShipments(p).length < 2 && (
                     <button onClick={() => advanceShipStatus(p)} disabled={shipUpdatingId === p.id}
                       className="text-xs px-2.5 py-1 rounded-full border transition-colors flex-shrink-0 disabled:opacity-50"
                       style={{ borderColor: "#BFDBFE", color: "#1D4ED8", background: "#EFF6FF" }}
@@ -1522,7 +1629,8 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                         ))}
                       </tbody>
                     </table>
-                    {p.totalDays && <p className="text-xs" style={{ color: "#b3a99d" }}>共 {p.totalDays} 天</p>}
+                    {p.totalDays && <p className="text-xs" style={{ color: "#b3a99d" }}>共 {p.totalDays} 天{parseShipments(p).length > 1 ? `，分 ${parseShipments(p).length} 批寄送` : ""}</p>}
+                    <ShipmentTracker prescription={p} clientId={client.id} onRefresh={onRefresh} />
                     {p.notes && <p className="text-xs mt-1" style={{ color: "#6b6056" }}>{p.notes}</p>}
                     <LifestyleDisplay lifestyle={(p as {lifestyle?: string}).lifestyle} />
                     {/* 規律性追蹤 */}

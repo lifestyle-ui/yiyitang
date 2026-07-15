@@ -373,13 +373,74 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
 
   const resetForm = () => { setShowForm(false); setTaskLines(""); };
 
+  // ── 匯入舊諮詢記錄（.docx）──
+  const [showImport, setShowImport] = useState(false);
+  const [importPreviews, setImportPreviews] = useState<{ date: string; visitType: string; chiefComplaint: string; content: string }[] | null>(null);
+  const [importing, setImporting] = useState(false);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("mode", "preview");
+    const res = await fetch(`/api/clients/${client.id}/import-consultations`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.consultations) setImportPreviews(data.consultations);
+    else alert(data.error || "解析失敗");
+  };
+
+  const confirmImport = async () => {
+    if (!importInputRef.current?.files?.[0]) return;
+    setImporting(true);
+    const fd = new FormData();
+    fd.append("file", importInputRef.current.files[0]);
+    fd.append("mode", "import");
+    const res = await fetch(`/api/clients/${client.id}/import-consultations`, { method: "POST", body: fd });
+    const data = await res.json();
+    setImporting(false);
+    if (data.imported) { setShowImport(false); setImportPreviews(null); onRefresh(); }
+    else alert(data.error || "匯入失敗");
+  };
+
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" onClick={() => { setShowImport(!showImport); setImportPreviews(null); }}>
+          {showImport ? "取消匯入" : "↑ 匯入舊記錄"}
+        </Button>
         <Button onClick={() => showForm ? resetForm() : setShowForm(true)} variant={showForm ? "secondary" : "primary"}>
           {showForm ? "取消" : "+ 新增諮詢記錄"}
         </Button>
       </div>
+
+      {showImport && (
+        <Card>
+          <CardHeader><CardTitle>匯入舊諮詢記錄（.docx 跟診檔）</CardTitle></CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <input ref={importInputRef} type="file" accept=".docx" onChange={handleImportFile}
+              className="text-sm text-slate-600 file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-slate-100 file:text-slate-700 file:text-xs hover:file:bg-slate-200" />
+            {importPreviews && importPreviews.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold text-slate-600">解析結果（共 {importPreviews.length} 筆）：</p>
+                {importPreviews.map((c, i) => (
+                  <div key={i} className="border border-slate-100 rounded-lg px-3 py-2">
+                    <p className="text-xs font-semibold text-slate-700">
+                      {c.date}{c.visitType === "initial" ? "（初診）" : "（回診）"}
+                    </p>
+                    {c.chiefComplaint && <p className="text-xs text-slate-600 mt-1">主述：{c.chiefComplaint}</p>}
+                    {c.content && <pre className="text-xs text-slate-500 mt-1 whitespace-pre-wrap font-sans">{c.content}</pre>}
+                  </div>
+                ))}
+                <Button onClick={confirmImport} disabled={importing}>
+                  {importing ? "匯入中..." : `確認匯入 ${importPreviews.length} 筆`}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
 
       {showForm && (

@@ -46,8 +46,9 @@ function KnowledgeBasePanel() {
   const [uploadProgress, setUploadProgress] = useState("");
 
   const readFileText = async (file: File): Promise<string> => {
-    if (file.name.toLowerCase().endsWith(".docx")) {
-      // .docx is a ZIP archive — parse server-side
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith(".docx") || lower.endsWith(".pdf")) {
+      // .docx / .pdf need server-side parsing
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/knowledge-base/parse", { method: "POST", body: fd });
@@ -104,7 +105,7 @@ function KnowledgeBasePanel() {
             className="text-xs flex items-center gap-1 px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-slate-50">
             <Upload className="w-3 h-3" />上傳
           </button>
-          <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" multiple className="hidden" onChange={handleFile} />
+          <input ref={fileInputRef} type="file" accept=".txt,.md,.docx,.pdf" multiple className="hidden" onChange={handleFile} />
           <button onClick={() => setAdding(true)}
             className="text-xs flex items-center gap-1 px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-slate-50">
             <Plus className="w-3 h-3" />新增

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import JSZip from "jszip";
 
-// Extract plain text from an uploaded .docx (paragraph per line)
+// Extract plain text from an uploaded .docx or .pdf
 export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file");
@@ -10,6 +10,20 @@ export async function POST(req: Request) {
   }
 
   const buffer = await file.arrayBuffer();
+
+  if (file.name.toLowerCase().endsWith(".pdf")) {
+    try {
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      const result = await parser.getText();
+      const text = (result.text || "").replace(/\n{3,}/g, "\n\n").trim();
+      if (!text) return NextResponse.json({ error: "PDF 沒有可擷取的文字（可能是掃描檔）" }, { status: 422 });
+      return NextResponse.json({ text });
+    } catch (e) {
+      return NextResponse.json({ error: `PDF 解析失敗：${e instanceof Error ? e.message : e}` }, { status: 422 });
+    }
+  }
+
   const zip = await JSZip.loadAsync(buffer);
   const docXml = await zip.file("word/document.xml")?.async("string");
   if (!docXml) {

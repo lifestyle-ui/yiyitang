@@ -204,7 +204,9 @@ function FilesTab({ client }: { client: Client }) {
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [viewerIdx, setViewerIdx] = useState<number | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const images = files.filter((f) => f.isImage && f.url);
 
   const load = async () => {
     setLoading(true);
@@ -236,6 +238,31 @@ function FilesTab({ client }: { client: Client }) {
     load();
   };
 
+  const rename = async (f: ClientFile) => {
+    const newName = prompt("新檔名：", f.displayName.replace(/\.[A-Za-z0-9]+$/, ""));
+    if (!newName || !newName.trim()) return;
+    const res = await fetch(`/api/clients/${client.id}/files`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: f.name, newName: newName.trim() }),
+    });
+    const data = await res.json();
+    if (data.error) alert(data.error);
+    load();
+  };
+
+  // Keyboard navigation for the lightbox
+  useEffect(() => {
+    if (viewerIdx === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setViewerIdx(null);
+      if (e.key === "ArrowLeft") setViewerIdx((i) => (i === null ? null : (i + images.length - 1) % images.length));
+      if (e.key === "ArrowRight") setViewerIdx((i) => (i === null ? null : (i + 1) % images.length));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewerIdx, images.length]);
+
   const fmtSize = (n: number | null) => n === null ? "" : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
 
   return (
@@ -255,16 +282,17 @@ function FilesTab({ client }: { client: Client }) {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {files.map((f) => (
             <div key={f.name} className="border border-slate-200 rounded-lg overflow-hidden bg-white flex flex-col">
-              <a href={f.url || "#"} target="_blank" rel="noreferrer" className="block">
-                {f.isImage && f.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+              {f.isImage && f.url ? (
+                <button onClick={() => setViewerIdx(images.findIndex((im) => im.name === f.name))} className="block w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={f.url} alt={f.displayName} className="w-full h-32 object-cover bg-slate-50" />
-                ) : (
-                  <div className="w-full h-32 flex items-center justify-center bg-slate-50">
-                    <FileText className="w-10 h-10 text-slate-300" />
-                  </div>
-                )}
-              </a>
+                </button>
+              ) : (
+                <a href={f.url || "#"} target="_blank" rel="noreferrer"
+                  className="w-full h-32 flex items-center justify-center bg-slate-50">
+                  <FileText className="w-10 h-10 text-slate-300" />
+                </a>
+              )}
               <div className="px-3 py-2 flex items-center justify-between gap-2 border-t border-slate-100">
                 <div className="min-w-0">
                   <a href={f.url || "#"} target="_blank" rel="noreferrer"
@@ -275,12 +303,52 @@ function FilesTab({ client }: { client: Client }) {
                     {f.createdAt ? formatDate(f.createdAt) : ""}{f.size !== null ? ` · ${fmtSize(f.size)}` : ""}
                   </p>
                 </div>
-                <button onClick={() => remove(f.name)} className="p-1 text-slate-300 hover:text-red-500 flex-shrink-0">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center flex-shrink-0">
+                  <button onClick={() => rename(f)} className="p-1 text-slate-300 hover:text-blue-500" title="重新命名">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button onClick={() => remove(f.name)} className="p-1 text-slate-300 hover:text-red-500" title="刪除">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Lightbox viewer */}
+      {viewerIdx !== null && images[viewerIdx] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.85)" }}
+          onClick={() => setViewerIdx(null)}>
+          <button onClick={(e) => { e.stopPropagation(); setViewerIdx((viewerIdx + images.length - 1) % images.length); }}
+            className="absolute left-4 p-3 rounded-full text-white hover:bg-white/10 text-3xl leading-none select-none" title="上一張">
+            ‹
+          </button>
+          <div className="max-w-[85vw] max-h-[90vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={images[viewerIdx].url!} alt={images[viewerIdx].displayName}
+              className="max-w-full max-h-[80vh] object-contain rounded" />
+            <div className="flex items-center gap-3 text-white text-sm">
+              <span>{images[viewerIdx].displayName}</span>
+              <span className="text-white/50">{viewerIdx + 1} / {images.length}</span>
+              <button onClick={() => rename(images[viewerIdx])} className="px-2 py-0.5 rounded border border-white/30 text-xs hover:bg-white/10">
+                改名
+              </button>
+              <a href={images[viewerIdx].url!} target="_blank" rel="noreferrer"
+                className="px-2 py-0.5 rounded border border-white/30 text-xs hover:bg-white/10">
+                原始大小
+              </a>
+            </div>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); setViewerIdx((viewerIdx + 1) % images.length); }}
+            className="absolute right-4 p-3 rounded-full text-white hover:bg-white/10 text-3xl leading-none select-none" title="下一張">
+            ›
+          </button>
+          <button onClick={() => setViewerIdx(null)}
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white text-2xl leading-none" title="關閉">
+            ✕
+          </button>
         </div>
       )}
     </div>

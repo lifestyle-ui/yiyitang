@@ -68,6 +68,27 @@ export async function POST(req: Request, { params }: Params) {
   return NextResponse.json({ uploaded: files.length - failed.length, failed });
 }
 
+// Rename a file: { name, newName } — newName is the display name (may be Chinese)
+export async function PATCH(req: Request, { params }: Params) {
+  const { id } = await params;
+  const { name, newName } = await req.json();
+  if (!name || typeof name !== "string" || name.includes("/") || name.includes("..")) {
+    return NextResponse.json({ error: "invalid name" }, { status: 400 });
+  }
+  if (!newName || typeof newName !== "string" || !newName.trim()) {
+    return NextResponse.json({ error: "請輸入新檔名" }, { status: 400 });
+  }
+  // Keep the original timestamp prefix and extension
+  const ts = name.match(/^\d{13}_/)?.[0] || `${Date.now()}_`;
+  const ext = (name.match(/\.[A-Za-z0-9]+$/)?.[0] || "").toLowerCase();
+  const cleaned = newName.trim().replace(/\.[A-Za-z0-9]+$/, "");
+  const encoded = Buffer.from(cleaned + ext, "utf8").toString("base64url");
+  const target = `${ts}${encoded}${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).move(`${id}/${name}`, `${id}/${target}`);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, name: target });
+}
+
 // Delete a file: /api/clients/[id]/files?name=xxx
 export async function DELETE(req: Request, { params }: Params) {
   const { id } = await params;

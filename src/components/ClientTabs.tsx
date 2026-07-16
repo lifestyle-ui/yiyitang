@@ -136,6 +136,7 @@ const TABS = [
   { key: "doctorNotes", label: "醫師處置", icon: Stethoscope },
   { key: "labTests", label: "檢測", icon: FlaskConical },
   { key: "lineTrackings", label: "LINE 追蹤", icon: MessageCircle },
+  { key: "files", label: "問卷檔案", icon: FileText },
 ];
 
 const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
@@ -189,7 +190,99 @@ export default function ClientTabs({ client }: { client: Client }) {
         {activeTab === "matrix" && <FunctionalMatrixTab client={client} onRefresh={() => router.refresh()} />}
         {activeTab === "complaints" && <ComplaintsTab client={client} showForm={showForm} setShowForm={setShowForm} onRefresh={() => router.refresh()} />}
         {activeTab === "overview" && <OverviewTab client={client} onRefresh={() => router.refresh()} />}
+        {activeTab === "files" && <FilesTab client={client} />}
       </div>
+    </div>
+  );
+}
+
+// ─── 問卷檔案 ─────────────────────────────────────────────────────────────────
+
+type ClientFile = { name: string; displayName: string; size: number | null; createdAt: string | null; url: string | null; isImage: boolean };
+
+function FilesTab({ client }: { client: Client }) {
+  const [files, setFiles] = useState<ClientFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const res = await fetch(`/api/clients/${client.id}/files`);
+    const data = await res.json();
+    setFiles(Array.isArray(data) ? data : []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+    e.target.value = "";
+    setUploading(true);
+    const fd = new FormData();
+    selected.forEach((f) => fd.append("file", f));
+    const res = await fetch(`/api/clients/${client.id}/files`, { method: "POST", body: fd });
+    const data = await res.json();
+    setUploading(false);
+    if (data.error) alert(data.error);
+    else if (data.failed?.length) alert(`部分檔案上傳失敗：\n${data.failed.join("\n")}`);
+    load();
+  };
+
+  const remove = async (name: string) => {
+    if (!confirm("確定刪除這個檔案？")) return;
+    await fetch(`/api/clients/${client.id}/files?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    load();
+  };
+
+  const fmtSize = (n: number | null) => n === null ? "" : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
+
+  return (
+    <div className="max-w-3xl flex flex-col gap-4">
+      <div className="flex justify-end">
+        <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading ? "上傳中..." : "↑ 上傳檔案"}
+        </Button>
+        <input ref={inputRef} type="file" accept=".pdf,image/*" multiple className="hidden" onChange={handleUpload} />
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-slate-400 text-center py-8">載入中...</p>
+      ) : files.length === 0 ? (
+        <EmptyState label="尚無問卷檔案（可上傳 PDF 或照片，支援多選）" />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {files.map((f) => (
+            <div key={f.name} className="border border-slate-200 rounded-lg overflow-hidden bg-white flex flex-col">
+              <a href={f.url || "#"} target="_blank" rel="noreferrer" className="block">
+                {f.isImage && f.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.url} alt={f.displayName} className="w-full h-32 object-cover bg-slate-50" />
+                ) : (
+                  <div className="w-full h-32 flex items-center justify-center bg-slate-50">
+                    <FileText className="w-10 h-10 text-slate-300" />
+                  </div>
+                )}
+              </a>
+              <div className="px-3 py-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                <div className="min-w-0">
+                  <a href={f.url || "#"} target="_blank" rel="noreferrer"
+                    className="block text-xs font-medium text-slate-700 truncate hover:underline" title={f.displayName}>
+                    {f.displayName}
+                  </a>
+                  <p className="text-[10px] text-slate-400">
+                    {f.createdAt ? formatDate(f.createdAt) : ""}{f.size !== null ? ` · ${fmtSize(f.size)}` : ""}
+                  </p>
+                </div>
+                <button onClick={() => remove(f.name)} className="p-1 text-slate-300 hover:text-red-500 flex-shrink-0">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

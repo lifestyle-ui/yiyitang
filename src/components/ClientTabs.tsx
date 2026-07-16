@@ -1417,6 +1417,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [customItem, setCustomItem] = useState({ name: "", dosage: "" });
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), totalDays: "", runOutDate: "", notes: "" });
   const [batchCount, setBatchCount] = useState(1);
+  const [editBatchCount, setEditBatchCount] = useState(1);
   const [lifestyle, setLifestyle] = useState<LifestyleState>(EMPTY_LIFESTYLE());
   const [loading, setLoading] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
@@ -1506,6 +1507,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     let items: { name: string; dosage: string }[] = [];
     try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string; dosage?: string }[]) || []; } catch { items = []; }
     setEditItems(items.map((i) => ({ id: crypto.randomUUID(), name: i.name, dosage: i.dosage || "" })));
+    setEditBatchCount(Math.max(parseShipments(p).length, 1));
     setEditForm({ date: p.date.slice(0, 10), totalDays: p.totalDays?.toString() || "", runOutDate: p.runOutDate ? p.runOutDate.slice(0, 10) : "", status: p.status, notes: p.notes || "" });
     let ls = EMPTY_LIFESTYLE();
     try { if ((p as {lifestyle?: string}).lifestyle) ls = { ...ls, ...JSON.parse((p as {lifestyle?: string}).lifestyle!) }; } catch { /* ignore */ }
@@ -1518,7 +1520,27 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
     setLoading(true);
     const hasEditLifestyle = LIFESTYLE_FIELDS.some(({ key }) => editLifestyle[key].enabled);
     const lifestyleJson = hasEditLifestyle ? JSON.stringify(editLifestyle) : null;
-    await fetch(`/api/clients/${client.id}/prescriptions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, items: editItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson }) });
+    // Rebuild shipments only when the batch count actually changed
+    const prev = client.prescriptions.find((p) => p.id === id);
+    const prevCount = prev ? Math.max(parseShipments(prev).length, 1) : 1;
+    let shipmentsPatch: Record<string, string | null> = {};
+    if (editBatchCount !== prevCount) {
+      const total = parseInt(editForm.totalDays);
+      if (editBatchCount > 1 && total > 0) {
+        const base = Math.floor(total / editBatchCount);
+        shipmentsPatch = {
+          shipments: JSON.stringify(Array.from({ length: editBatchCount }, (_, i) => ({
+            seq: i + 1,
+            days: i === 0 ? total - base * (editBatchCount - 1) : base,
+            shippedAt: null,
+            receivedAt: null,
+          }))),
+        };
+      } else {
+        shipmentsPatch = { shipments: null };
+      }
+    }
+    await fetch(`/api/clients/${client.id}/prescriptions/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editForm, items: editItems.map((i) => ({ name: i.name, dosage: i.dosage })), lifestyle: lifestyleJson, ...shipmentsPatch }) });
     setLoading(false); setEditingId(null); onRefresh();
   };
 
@@ -1829,6 +1851,12 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                     <div className="grid grid-cols-2 gap-4">
                       <Input label="總天數" type="number" value={editForm.totalDays} onChange={(e) => setEditForm((f) => ({ ...f, totalDays: e.target.value }))} />
                       <Input label="預計用完日" type="date" value={editForm.runOutDate} onChange={(e) => setEditForm((f) => ({ ...f, runOutDate: e.target.value }))} />
+                      <Select label="分批寄送（變更會重設寄送進度）" value={String(editBatchCount)} onChange={(e) => setEditBatchCount(parseInt(e.target.value))}
+                        options={[
+                          { value: "1", label: "一次寄完" },
+                          { value: "2", label: "分 2 批" },
+                          { value: "3", label: "分 3 批" },
+                        ]} />
                     </div>
                     <Textarea label="備註" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
                     <LifestyleSection value={editLifestyle} onChange={setEditLifestyle} />

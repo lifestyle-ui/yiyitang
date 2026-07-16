@@ -1612,8 +1612,6 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                 {!expanded && !isEditing && <span className="text-sm text-slate-500 truncate">{summary}</span>}
                 <Badge variant={p.status === "active" ? "success" : "default"} className="flex-shrink-0">{STATUS_LABELS[p.status] || p.status}</Badge>
                 {p.runOutDate && !expanded && <Badge variant={isExpiringSoon ? "warning" : "outline"} className="flex-shrink-0">用完 {formatDate(p.runOutDate)}</Badge>}
-                {p.shippedAt && <Badge variant="outline" className="flex-shrink-0">寄出 {formatDate(p.shippedAt)}</Badge>}
-                {p.receivedAt && <Badge variant="outline" className="flex-shrink-0">收到 {formatDate(p.receivedAt)}</Badge>}
                 {(() => { const sh = parseShipments(p); const pending = sh.find((s) => !s.shippedAt); return sh.length > 1 && pending ? <Badge variant="warning" className="flex-shrink-0">第 {pending.seq} 批待寄</Badge> : null; })()}
               </div>
               {!isEditing && (

@@ -251,8 +251,13 @@ export default function AIReplyPage() {
     setLoading(false);
   };
 
+  // Split streamed output into the customer-facing message and the internal note
+  const sepIdx = reply.indexOf("===備註===");
+  const replyText = (sepIdx >= 0 ? reply.slice(0, sepIdx) : reply).trim();
+  const noteText = sepIdx >= 0 ? reply.slice(sepIdx + "===備註===".length).trim() : "";
+
   const copy = async () => {
-    await navigator.clipboard.writeText(reply);
+    await navigator.clipboard.writeText(replyText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -321,10 +326,22 @@ export default function AIReplyPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-3">
               {loading && !reply
                 ? <div className="flex gap-1 items-center text-sm text-slate-400"><RefreshCw className="w-3.5 h-3.5 animate-spin" />生成中...</div>
-                : <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{reply}</div>}
+                : (
+                  <>
+                    <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                      {replyText}
+                    </div>
+                    {noteText && (
+                      <div className="text-xs text-amber-800 whitespace-pre-wrap leading-relaxed rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+                        <p className="font-semibold mb-1">💡 給健管師的備註（客戶不會看到）</p>
+                        {noteText}
+                      </div>
+                    )}
+                  </>
+                )}
             </CardContent>
           </Card>
         )}

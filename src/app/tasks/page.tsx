@@ -22,6 +22,19 @@ const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
   high: "danger", medium: "warning", low: "info",
 };
 
+function DueInfo({ dueDate }: { dueDate: string | null }) {
+  if (!dueDate) return <span className="text-xs" style={{ color: "#D97706" }}>未設定截止日</span>;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.ceil((new Date(dueDate).getTime() - today.getTime()) / 86400000);
+  const label = days < 0 ? `已逾期 ${-days} 天` : days === 0 ? "今天截止" : `${days} 天後截止`;
+  const color = days < 0 ? "#DC2626" : days <= 2 ? "#D97706" : "#94a3b8";
+  return (
+    <span className="text-xs" style={{ color }}>
+      截止：{formatDate(dueDate)}（{label}）
+    </span>
+  );
+}
+
 export default async function TasksPage() {
   const tasks = await getTasks();
   const pending = tasks.filter((t) => t.status !== "done");
@@ -54,11 +67,12 @@ export default async function TasksPage() {
                         <Badge variant={priorityVariant[task.priority] || "default"}>{PRIORITY_LABELS[task.priority]}</Badge>
                         {task.category && <Badge variant="outline">{CATEGORY_LABELS[task.category] || task.category}</Badge>}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {task.client && (
                           <Link href={`/clients/${task.client.id}`} className="text-xs text-blue-600 hover:underline">{task.client.name}</Link>
                         )}
-                        {task.dueDate && <span className="text-xs text-slate-400">截止：{formatDate(task.dueDate)}</span>}
+                        <span className="text-xs text-slate-400">建立：{formatDate(task.createdAt)}</span>
+                        <DueInfo dueDate={task.dueDate} />
                       </div>
                     </div>
                     <TaskDeleteButton taskId={task.id} />
@@ -76,7 +90,17 @@ export default async function TasksPage() {
                 {done.map((task) => (
                   <li key={task.id} className="flex items-start gap-3 px-5 py-3 opacity-60">
                     <TaskStatusToggle taskId={task.id} currentStatus={task.status} />
-                    <p className="flex-1 text-sm text-slate-400 line-through">{task.title}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-400 line-through">{task.title}</p>
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                        {task.client && (
+                          <Link href={`/clients/${task.client.id}`} className="text-xs text-blue-400 hover:underline">{task.client.name}</Link>
+                        )}
+                        <span className="text-xs text-slate-400">建立：{formatDate(task.createdAt)}</span>
+                        {task.dueDate && <span className="text-xs text-slate-400">截止：{formatDate(task.dueDate)}</span>}
+                        <span className="text-xs" style={{ color: "#15803D" }}>完成於：{formatDate(task.updatedAt)}</span>
+                      </div>
+                    </div>
                     <TaskDeleteButton taskId={task.id} />
                   </li>
                 ))}

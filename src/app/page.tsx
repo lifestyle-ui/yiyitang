@@ -58,7 +58,7 @@ async function getDashboardData() {
     supabase
       .from("Prescription")
       .select("id, runOutDate, client:Client(id, name, needsAttention)")
-      .eq("status", "active")
+      .in("status", ["active", "packing", "packing_done", "shipped", "received", "started"])
       .not("runOutDate", "is", null)
       .lte("runOutDate", twoWeeksLater.toISOString())
       .order("runOutDate", { ascending: true })

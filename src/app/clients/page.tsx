@@ -44,19 +44,19 @@ function getRunOutTime(p: Prescription): number | null {
   return null;
 }
 
+// Only the newest prescription counts — a newer prescription supersedes
+// older ones, so stale run-out dates don't keep firing alerts
 function getSoonestRunOutDays(prescriptions: Prescription[]): number | null {
-  const times = (prescriptions || [])
-    .filter((p) => ONGOING_STATUSES.has(p.status))
-    .map(getRunOutTime)
-    .filter((t): t is number => t !== null);
-  if (times.length === 0) return null;
-  return Math.ceil((Math.min(...times) - Date.now()) / 86400000);
+  const candidates = (prescriptions || [])
+    .filter((p) => ONGOING_STATUSES.has(p.status) && getRunOutTime(p) !== null)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  if (candidates.length === 0) return null;
+  return Math.ceil((getRunOutTime(candidates[0])! - Date.now()) / 86400000);
 }
 
-// 保健品準備提醒:run-out 前 14 天內
+// 保健品用完倒數（只要能推算就顯示）
 function getExpiringDays(prescriptions: Prescription[]): number | null {
-  const days = getSoonestRunOutDays(prescriptions);
-  return days !== null && days <= 14 ? days : null;
+  return getSoonestRunOutDays(prescriptions);
 }
 
 // 回診提醒:run-out 前 3 天
@@ -77,10 +77,11 @@ function getNextLabDays(labTests: LabTestSummary[]): number | null {
 function TrackChip({ days, label }: { days: number | null; label: string }) {
   if (days === null) return null;
   const overdue = days < 0;
-  const soon = days <= 14;
-  const color = overdue ? "#DC2626" : soon ? "#D97706" : "#6b6056";
-  const bg = overdue ? "#FEF2F2" : soon ? "#FFFBEB" : "#f3ece0";
-  const text = overdue ? `${label} 已過 ${Math.abs(days)} 天` : days === 0 ? `${label} 今天` : `${label} ${days} 天後`;
+  const urgent = days >= 0 && days <= 7;
+  const soon = days > 7 && days <= 14;
+  const color = overdue || urgent ? "#DC2626" : soon ? "#D97706" : "#6b6056";
+  const bg = overdue || urgent ? "#FEF2F2" : soon ? "#FFFBEB" : "#f3ece0";
+  const text = overdue ? `${label} 已過 ${Math.abs(days)} 天` : days === 0 ? `${label} 今天` : `${label} 還有 ${days} 天`;
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
       style={{ background: bg, color, border: `1px solid ${color}22` }}>

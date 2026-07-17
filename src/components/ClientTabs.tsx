@@ -154,8 +154,6 @@ export default function ClientTabs({ client }: { client: Client }) {
       <div className="bg-white px-6 flex gap-1 overflow-x-auto" style={{ borderBottom: "1px solid #ece5da" }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const noCount = tab.key === "timeline" || tab.key === "overview";
-          const count = noCount ? 0 : (client[tab.key as keyof Client] as unknown[])?.length ?? 0;
           const active = activeTab === tab.key;
           return (
             <button key={tab.key}
@@ -165,7 +163,6 @@ export default function ClientTabs({ client }: { client: Client }) {
                 ? { borderBottomColor: "#241f1b", color: "#241f1b", fontWeight: 500 }
                 : { borderBottomColor: "transparent", color: "#b3a99d", fontWeight: 400 }}>
               <Icon className="w-3.5 h-3.5" />{tab.label}
-              {count > 0 && <span className="ml-1 text-[10.5px] rounded-sm px-1.5 py-0.5" style={{ background: "#ece5da", color: "#6b6056", border: "1px solid #d8cfc3" }}>{count}</span>}
             </button>
           );
         })}
@@ -423,7 +420,10 @@ function TaskConfirmBanner({ tasks, onConfirm, onDismiss }: { tasks: { title: st
 type InlineTask = { id: string; title: string; dueDate: string; priority: string };
 
 function emptyTask(): InlineTask {
-  return { id: crypto.randomUUID(), title: "", dueDate: "", priority: "medium" };
+  // Default due date: tomorrow — tasks without a date never surface on the
+  // 今日待辦 dashboard, so every task starts with one
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  return { id: crypto.randomUUID(), title: "", dueDate: tomorrow, priority: "medium" };
 }
 
 function InlineTaskList({ tasks, onChange }: { tasks: InlineTask[]; onChange: (tasks: InlineTask[]) => void }) {
@@ -485,7 +485,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), visitType: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
-  const [taskLines, setTaskLines] = useState("");
+  const [inlineTasks, setInlineTasks] = useState<InlineTask[]>([]);
   const [editForm, setEditForm] = useState({ date: "", visitType: "", chiefComplaint: "", content: "", doctorAdvice: "", nextSteps: "" });
   const [loading, setLoading] = useState(false);
   const [visitTypeOptions, setVisitTypeOptions] = useState<{ id: string; label: string }[]>([]);
@@ -504,14 +504,15 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
     e.preventDefault();
     setLoading(true);
     await fetch(`/api/clients/${client.id}/consultations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    const lines = taskLines.split("\n").map((l) => l.trim()).filter(Boolean);
-    for (const title of lines) {
-      await createTask(client.id, { title, category: "follow_up", priority: "medium" });
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const valid = inlineTasks.filter((t) => t.title.trim());
+    for (const t of valid) {
+      await createTask(client.id, { title: t.title.trim(), dueDate: t.dueDate || tomorrow, category: "follow_up", priority: t.priority });
     }
     const suggestions = extractSuggestedTasks([form.content, form.doctorAdvice, form.nextSteps]);
-    const manualSet = new Set(lines.map((l) => l.toLowerCase()));
+    const manualSet = new Set(valid.map((t) => t.title.trim().toLowerCase()));
     const fresh = suggestions.filter((s) => !manualSet.has(s.toLowerCase()));
-    setLoading(false); setShowForm(false); setTaskLines("");
+    setLoading(false); setShowForm(false); setInlineTasks([]);
     if (fresh.length > 0) {
       setSuggestedTasks(fresh);
       setSelectedSuggestions(new Set(fresh.map((_, i) => i)));
@@ -532,7 +533,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
     onRefresh();
   };
 
-  const resetForm = () => { setShowForm(false); setTaskLines(""); };
+  const resetForm = () => { setShowForm(false); setInlineTasks([]); };
 
   // ── 匯入舊諮詢記錄（.docx）──
   const [showImport, setShowImport] = useState(false);
@@ -625,7 +626,7 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
               <Textarea label="醫師建議" placeholder="醫師的建議與處置..." value={form.doctorAdvice} onChange={(e) => setForm((f) => ({ ...f, doctorAdvice: e.target.value }))} rows={2} />
               <Textarea label="備註" placeholder="其他備注..." value={form.nextSteps} onChange={(e) => setForm((f) => ({ ...f, nextSteps: e.target.value }))} rows={2} />
               <div>
-                <Textarea label="後續待辦任務" placeholder={"每行一個任務，存檔時自動新增到任務清單\n例如：安排下次回診\n例如：追蹤血壓數值"} value={taskLines} onChange={(e) => setTaskLines(e.target.value)} rows={3} />
+                <InlineTaskList tasks={inlineTasks} onChange={setInlineTasks} />
               </div>
               <div className="flex justify-end pt-1">
                 <Button type="submit" disabled={loading}>{loading ? "儲存中..." : "儲存"}</Button>
@@ -657,7 +658,8 @@ function ConsultationsTab({ client, showForm, setShowForm, onRefresh }: { client
           <div className="flex gap-2">
             <Button size="sm" onClick={async () => {
               const toCreate = suggestedTasks.filter((_, i) => selectedSuggestions.has(i));
-              for (const title of toCreate) await createTask(client.id, { title, category: "follow_up", priority: "medium" });
+              const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+              for (const title of toCreate) await createTask(client.id, { title, dueDate: tomorrow, category: "follow_up", priority: "medium" });
               setSuggestedTasks([]); onRefresh();
             }}>建立選取的任務</Button>
             <Button size="sm" variant="secondary" onClick={() => setSuggestedTasks([])}>略過</Button>

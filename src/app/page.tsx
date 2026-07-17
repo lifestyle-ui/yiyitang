@@ -32,7 +32,7 @@ async function getDashboardData() {
   const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
   const monthEnd = new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0, 23, 59, 59);
 
-  const [tasksRes, overdueRes, clientsRes, totalRes, expiringRxRes, consultationsRes, unshippedRxRes] = await Promise.all([
+  const [tasksRes, overdueRes, clientsRes, totalRes, expiringRxRes, consultationsRes, unshippedRxRes, upcomingRes] = await Promise.all([
     supabase
       .from("Task")
       .select("*, client:Client(id, name)")
@@ -74,6 +74,14 @@ async function getDashboardData() {
       .in("status", ["packing", "packing_done"])
       .order("date", { ascending: true })
       .limit(20),
+    supabase
+      .from("Task")
+      .select("*, client:Client(id, name)")
+      .neq("status", "done")
+      .gt("dueDate", todayEnd.toISOString())
+      .lte("dueDate", new Date(todayEnd.getTime() + 7 * 86400000).toISOString())
+      .order("dueDate", { ascending: true })
+      .limit(20),
   ]);
 
   return {
@@ -84,6 +92,7 @@ async function getDashboardData() {
     expiringPrescriptions: (expiringRxRes.data || []) as unknown as ExpiringRx[],
     monthlyConsultations: consultationsRes.count || 0,
     unshippedPrescriptions: (unshippedRxRes.data || []) as unknown as UnshippedRx[],
+    upcomingTasks: upcomingRes.data || [],
   };
 }
 
@@ -94,7 +103,7 @@ const priorityVariant: Record<string, "danger" | "warning" | "info"> = {
 };
 
 export default async function DashboardPage() {
-  const { todayTasks, overdueTasks, recentClients, totalClients, expiringPrescriptions, monthlyConsultations, unshippedPrescriptions } =
+  const { todayTasks, overdueTasks, recentClients, totalClients, expiringPrescriptions, monthlyConsultations, unshippedPrescriptions, upcomingTasks } =
     await getDashboardData();
 
   const today = new Date();
@@ -156,10 +165,13 @@ export default async function DashboardPage() {
           {/* Today tasks */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" style={{ color: "#5c4638" }} />
-                今日任務 ({todayOnly.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" style={{ color: "#5c4638" }} />
+                  今日任務 ({todayOnly.length})
+                </CardTitle>
+                <Link href="/tasks" className="text-xs hover:underline" style={{ color: "#5c4638" }}>查看全部任務</Link>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {todayOnly.length === 0 ? (
@@ -169,6 +181,21 @@ export default async function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Next 7 days */}
+          {upcomingTasks.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" style={{ color: "#5c4638" }} />
+                  接下來 7 天 ({upcomingTasks.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <TaskList tasks={upcomingTasks} />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Prescription expiry reminders */}
           {rxWithDays.length > 0 && (

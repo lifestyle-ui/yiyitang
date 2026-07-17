@@ -4,14 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, ClipboardList, Settings, Pill, FlaskConical, LogOut, BotMessageSquare,
+  LayoutDashboard, Users, Settings, Pill, FlaskConical, LogOut, BotMessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "今日待辦" },
   { href: "/clients", icon: Users, label: "客戶管理" },
-  { href: "/tasks", icon: ClipboardList, label: "任務清單" },
 ];
 const catalogItems = [
   { href: "/products", icon: Pill, label: "保健品目錄" },

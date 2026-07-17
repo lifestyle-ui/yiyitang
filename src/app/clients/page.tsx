@@ -44,25 +44,36 @@ function getRunOutTime(p: Prescription): number | null {
   return null;
 }
 
-// Only the newest prescription counts — a newer prescription supersedes
-// older ones, so stale run-out dates don't keep firing alerts
-function getSoonestRunOutDays(prescriptions: Prescription[]): number | null {
-  const candidates = (prescriptions || [])
-    .filter((p) => ONGOING_STATUSES.has(p.status) && getRunOutTime(p) !== null)
+const INFLIGHT_LABELS: Record<string, string> = {
+  packing: "正在包裝",
+  packing_done: "打包完成",
+  shipped: "已寄出",
+};
+
+// Tracking info derived from the NEWEST ongoing prescription only — a newer
+// prescription supersedes older ones, so stale run-out dates don't keep firing
+type RxTrack =
+  | { mode: "inflight"; label: string }
+  | { mode: "countdown"; days: number }
+  | null;
+
+function getRxTrack(prescriptions: Prescription[]): RxTrack {
+  const ongoing = (prescriptions || [])
+    .filter((p) => ONGOING_STATUSES.has(p.status))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  if (candidates.length === 0) return null;
-  return Math.ceil((getRunOutTime(candidates[0])! - Date.now()) / 86400000);
+  if (ongoing.length === 0) return null;
+  const latest = ongoing[0];
+  // Still on its way to the client → show logistics status, not a countdown
+  if (INFLIGHT_LABELS[latest.status]) return { mode: "inflight", label: INFLIGHT_LABELS[latest.status] };
+  const t = getRunOutTime(latest);
+  if (t === null) return null;
+  return { mode: "countdown", days: Math.ceil((t - Date.now()) / 86400000) };
 }
 
-// 保健品用完倒數（只要能推算就顯示）
-function getExpiringDays(prescriptions: Prescription[]): number | null {
-  return getSoonestRunOutDays(prescriptions);
-}
-
-// 回診提醒:run-out 前 3 天
-function getNextVisitDays(prescriptions: Prescription[]): number | null {
-  const days = getSoonestRunOutDays(prescriptions);
-  return days !== null ? days - 3 : null;
+// 回診提醒：回診日 ≈ 保健品用完日，前 7 天才顯示（該約回診了）
+function getNextVisitDays(track: RxTrack): number | null {
+  if (!track || track.mode !== "countdown") return null;
+  return track.days <= 7 ? track.days : null;
 }
 
 function getNextLabDays(labTests: LabTestSummary[]): number | null {
@@ -120,7 +131,11 @@ export default function ClientsPage() {
 
   const allTags = [...new Set(clients.flatMap((c) => c.tags || []))].sort();
   const attentionCount = clients.filter((c) => c.needsAttention).length;
-  const expiringCount = clients.filter((c) => getExpiringDays(c.prescriptions) !== null).length;
+  const isExpiring = (c: Client) => {
+    const track = getRxTrack(c.prescriptions);
+    return track?.mode === "countdown" && track.days <= 14;
+  };
+  const expiringCount = clients.filter(isExpiring).length;
 
   const filtered = clients
     .filter((c) => {
@@ -135,7 +150,7 @@ export default function ClientsPage() {
     })
     .filter((c) => {
       if (quickFilter === "attention") return c.needsAttention;
-      if (quickFilter === "expiring") return getExpiringDays(c.prescriptions) !== null;
+      if (quickFilter === "expiring") return isExpiring(c);
       return true;
     })
     .filter((c) => !tagFilter || (c.tags || []).includes(tagFilter))
@@ -282,8 +297,8 @@ export default function ClientsPage() {
             </thead>
             <tbody>
               {filtered.map((client) => {
-                const expiringDays = getExpiringDays(client.prescriptions);
-                const nextVisitDays = getNextVisitDays(client.prescriptions);
+                const rxTrack = getRxTrack(client.prescriptions);
+                const nextVisitDays = getNextVisitDays(rxTrack);
                 const nextLabDays = getNextLabDays(client.labTests);
                 return (
                   <tr key={client.id}
@@ -343,8 +358,14 @@ export default function ClientsPage() {
                       <div className="flex flex-col gap-1">
                         <TrackChip days={nextVisitDays} label="約回診" />
                         <TrackChip days={nextLabDays} label="複檢" />
-                        {expiringDays !== null && (
-                          <TrackChip days={expiringDays} label="保健品用完" />
+                        {rxTrack?.mode === "countdown" && (
+                          <TrackChip days={rxTrack.days} label="保健品用完" />
+                        )}
+                        {rxTrack?.mode === "inflight" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
+                            style={{ background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE" }}>
+                            保健品{rxTrack.label}
+                          </span>
                         )}
                       </div>
                     </td>

@@ -142,11 +142,19 @@ export default function VipDetectionPage() {
                     return (
                       <div key={d.id} className="border-b border-slate-100 last:border-0">
                         <div className="flex items-center gap-3 px-5 py-3 flex-wrap">
-                          <span className="text-sm font-bold w-10 shrink-0" style={{ color: "#241f1b" }}>{d.month}</span>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
-                            style={{ background: packageColor(d.packageType) + "18", color: packageColor(d.packageType) }}>
-                            {d.packageType}
-                          </span>
+                          {/* Clickable header: month + package + status toggles the item list */}
+                          <button onClick={() => toggleExpand(d.id)}
+                            className="flex items-center gap-2 shrink-0 hover:opacity-70 transition-opacity"
+                            title="點擊看這次檢測的項目">
+                            {items.length > 0 && (isOpen
+                              ? <ChevronDown className="w-4 h-4" style={{ color: "#a89e91" }} />
+                              : <ChevronRight className="w-4 h-4" style={{ color: "#a89e91" }} />)}
+                            <span className="text-sm font-bold w-8 text-left" style={{ color: "#241f1b" }}>{d.month}</span>
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                              style={{ background: packageColor(d.packageType) + "18", color: packageColor(d.packageType) }}>
+                              {d.packageType}
+                            </span>
+                          </button>
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0" style={{ background: st.bg, color: st.color }}>
                             {st.label}
                           </span>
@@ -181,9 +189,10 @@ export default function VipDetectionPage() {
                           </label>
                           {items.length > 0 && (
                             <button onClick={() => toggleExpand(d.id)}
-                              className="text-xs flex items-center gap-1 hover:underline" style={{ color: "#5c4638" }}>
+                              className="text-xs flex items-center gap-1 px-2.5 py-1 rounded-md border transition-colors"
+                              style={{ borderColor: "#d8cfc3", color: "#5c4638", background: isOpen ? "#f3ece0" : "#fff" }}>
                               {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                              檢測項目（{items.length} 項）
+                              {isOpen ? "收合" : "查看"}檢測項目（{items.length} 項）
                             </button>
                           )}
                         </div>

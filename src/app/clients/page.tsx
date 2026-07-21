@@ -357,7 +357,7 @@ export default function ClientsPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <TrackChip days={nextVisitDays} label="約回診" />
-                        <TrackChip days={nextLabDays} label="複檢" />
+                        <TrackChip days={nextLabDays} label="檢測" />
                         {rxTrack?.mode === "countdown" && (
                           <TrackChip days={rxTrack.days} label="保健品用完" />
                         )}

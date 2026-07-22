@@ -72,26 +72,41 @@ function getRxTrack(prescriptions: Prescription[]): RxTrack {
   return { mode: "countdown", days: Math.ceil((t - Date.now()) / 86400000) };
 }
 
-// 回診日：診所規則是每月回診一次，所以由「最近一次諮詢日 + 1 個月」推算。
-// 若醫師處置已登記明確的下次回診日，以那個為準。
-function getNextVisit(client: Client): { date: Date; days: number } | null {
+// 回診日規則（依序）：
+// 1. 醫師登記的明確下次回診日
+// 2. 客人收到保健品那天 + 1 個月  ← 診所主要規則
+// 3. 備援：最近一次諮詢日 + 1 個月（尚未按「客人已收到」的舊資料才會用到）
+function getNextVisit(client: Client): { date: Date; days: number; basis: string } | null {
+  const addMonth = (d: Date) => { const x = new Date(d); x.setMonth(x.getMonth() + 1); return x; };
+
+  let date: Date | null = null;
+  let basis = "";
+
   const explicit = (client.doctorNotes || [])
     .filter((n) => n.nextVisit)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-  let date: Date | null = null;
+  const lastReceived = (client.prescriptions || [])
+    .map((p) => p.receivedAt)
+    .filter((r): r is string => !!r)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
   if (explicit?.nextVisit) {
     date = new Date(explicit.nextVisit);
+    basis = "醫師登記的回診日";
+  } else if (lastReceived) {
+    date = addMonth(new Date(lastReceived));
+    basis = `依保健品收到日（${formatDate(lastReceived)}）+ 1 個月`;
   } else {
     const latest = (client.consultations || [])
       .map((c) => new Date(c.date))
       .sort((a, b) => b.getTime() - a.getTime())[0];
-    if (latest) { date = new Date(latest); date.setMonth(date.getMonth() + 1); }
+    if (latest) { date = addMonth(latest); basis = "尚未登記保健品收到日，暫以最近諮詢日 + 1 個月估算"; }
   }
   if (!date || isNaN(date.getTime())) return null;
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  return { date, days: Math.ceil((date.getTime() - today.getTime()) / 86400000) };
+  return { date, days: Math.ceil((date.getTime() - today.getTime()) / 86400000), basis };
 }
 
 function getNextLabDays(labTests: LabTestSummary[]): number | null {
@@ -103,7 +118,7 @@ function getNextLabDays(labTests: LabTestSummary[]): number | null {
   return future.sort((a, b) => a - b)[0];
 }
 
-function TrackChip({ days, label, date }: { days: number | null; label: string; date?: string }) {
+function TrackChip({ days, label, date, title }: { days: number | null; label: string; date?: string; title?: string }) {
   if (days === null) return null;
   const overdue = days < 0;
   const urgent = days >= 0 && days <= 7;
@@ -113,7 +128,7 @@ function TrackChip({ days, label, date }: { days: number | null; label: string; 
   const when = overdue ? `已過 ${Math.abs(days)} 天` : days === 0 ? "今天" : `還有 ${days} 天`;
   const text = date ? `${label} ${date}（${when}）` : `${label} ${when}`;
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
+    <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap" title={title}
       style={{ background: bg, color, border: `1px solid ${color}22` }}>
       {text}
     </span>
@@ -376,7 +391,8 @@ export default function ClientsPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         <TrackChip days={nextVisit?.days ?? null} label="回診"
-                          date={nextVisit ? formatDate(nextVisit.date.toISOString()) : undefined} />
+                          date={nextVisit ? formatDate(nextVisit.date.toISOString()) : undefined}
+                          title={nextVisit?.basis} />
                         <TrackChip days={nextLabDays} label="檢測" />
                         {rxTrack?.mode === "countdown" && (
                           <TrackChip days={rxTrack.days} label="保健品用完" />

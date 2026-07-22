@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("Client")
-    .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays,receivedAt), labTests:LabTest(testDate,status)")
+    .select("*, consultations:Consultation(date), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays,receivedAt), labTests:LabTest(testDate,status)")
     .eq("isActive", true)
     .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
     .order("createdAt", { ascending: true });
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     // Fallback for when the receivedAt column hasn't been added yet
     let fb = supabase
       .from("Client")
-      .select("*, consultations:Consultation(count), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays), labTests:LabTest(testDate,status)")
+      .select("*, consultations:Consultation(date), tasks:Task(count), prescriptions:Prescription(status,runOutDate,date,totalDays), labTests:LabTest(testDate,status)")
       .eq("isActive", true)
       .order("medicalRecordNumber", { ascending: true, nullsFirst: false })
       .order("createdAt", { ascending: true });

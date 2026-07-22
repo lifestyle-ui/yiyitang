@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 type Prescription = { status: string; runOutDate: string | null; date: string; totalDays: number | null; receivedAt: string | null };
 type DoctorNote = { nextVisit: string | null; date: string };
+type ConsultationSummary = { date: string };
 type LabTestSummary = { testDate: string | null; status: string };
 
 type Client = {
@@ -26,6 +27,7 @@ type Client = {
   tags: string[] | null;
   prescriptions: Prescription[];
   doctorNotes: DoctorNote[];
+  consultations: ConsultationSummary[];
   labTests: LabTestSummary[];
 };
 
@@ -70,10 +72,26 @@ function getRxTrack(prescriptions: Prescription[]): RxTrack {
   return { mode: "countdown", days: Math.ceil((t - Date.now()) / 86400000) };
 }
 
-// 回診提醒：回診日 ≈ 保健品用完日，前 7 天才顯示（該約回診了）
-function getNextVisitDays(track: RxTrack): number | null {
-  if (!track || track.mode !== "countdown") return null;
-  return track.days <= 7 ? track.days : null;
+// 回診日：診所規則是每月回診一次，所以由「最近一次諮詢日 + 1 個月」推算。
+// 若醫師處置已登記明確的下次回診日，以那個為準。
+function getNextVisit(client: Client): { date: Date; days: number } | null {
+  const explicit = (client.doctorNotes || [])
+    .filter((n) => n.nextVisit)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+  let date: Date | null = null;
+  if (explicit?.nextVisit) {
+    date = new Date(explicit.nextVisit);
+  } else {
+    const latest = (client.consultations || [])
+      .map((c) => new Date(c.date))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    if (latest) { date = new Date(latest); date.setMonth(date.getMonth() + 1); }
+  }
+  if (!date || isNaN(date.getTime())) return null;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return { date, days: Math.ceil((date.getTime() - today.getTime()) / 86400000) };
 }
 
 function getNextLabDays(labTests: LabTestSummary[]): number | null {
@@ -85,14 +103,15 @@ function getNextLabDays(labTests: LabTestSummary[]): number | null {
   return future.sort((a, b) => a - b)[0];
 }
 
-function TrackChip({ days, label }: { days: number | null; label: string }) {
+function TrackChip({ days, label, date }: { days: number | null; label: string; date?: string }) {
   if (days === null) return null;
   const overdue = days < 0;
   const urgent = days >= 0 && days <= 7;
   const soon = days > 7 && days <= 14;
   const color = overdue || urgent ? "#DC2626" : soon ? "#D97706" : "#6b6056";
   const bg = overdue || urgent ? "#FEF2F2" : soon ? "#FFFBEB" : "#f3ece0";
-  const text = overdue ? `${label} 已過 ${Math.abs(days)} 天` : days === 0 ? `${label} 今天` : `${label} 還有 ${days} 天`;
+  const when = overdue ? `已過 ${Math.abs(days)} 天` : days === 0 ? "今天" : `還有 ${days} 天`;
+  const text = date ? `${label} ${date}（${when}）` : `${label} ${when}`;
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded-sm whitespace-nowrap"
       style={{ background: bg, color, border: `1px solid ${color}22` }}>
@@ -298,7 +317,7 @@ export default function ClientsPage() {
             <tbody>
               {filtered.map((client) => {
                 const rxTrack = getRxTrack(client.prescriptions);
-                const nextVisitDays = getNextVisitDays(rxTrack);
+                const nextVisit = getNextVisit(client);
                 const nextLabDays = getNextLabDays(client.labTests);
                 return (
                   <tr key={client.id}
@@ -356,7 +375,8 @@ export default function ClientsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
-                        <TrackChip days={nextVisitDays} label="約回診" />
+                        <TrackChip days={nextVisit?.days ?? null} label="回診"
+                          date={nextVisit ? formatDate(nextVisit.date.toISOString()) : undefined} />
                         <TrackChip days={nextLabDays} label="檢測" />
                         {rxTrack?.mode === "countdown" && (
                           <TrackChip days={rxTrack.days} label="保健品用完" />

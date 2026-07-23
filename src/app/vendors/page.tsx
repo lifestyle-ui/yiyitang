@@ -2,8 +2,8 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
-import { Building2, Plus, Pencil, Trash2, Phone, Mail, MapPin, User, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Building2, Plus, Pencil, Trash2, Phone, Mail, MapPin, User, ChevronDown, ChevronRight, Search, Upload, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,6 +179,7 @@ export default function VendorsPage() {
                     {v.cooperation && <Section title="合作方式" text={v.cooperation} />}
                     {v.bookingFlow && <Section title="預約流程" text={v.bookingFlow} />}
                     {v.notes && <Section title="備註" text={v.notes} />}
+                    <VendorFiles vendorId={v.id} />
                   </CardContent>
                 )}
               </Card>
@@ -195,6 +196,101 @@ function Section({ title, text }: { title: string; text: string }) {
     <div className="mt-4">
       <p className="text-xs font-semibold mb-1" style={{ color: "#8b8076" }}>{title}</p>
       <p className="text-sm whitespace-pre-wrap leading-relaxed rounded-lg px-3 py-2" style={{ color: "#4b4239", background: "#faf7f1", border: "1px solid #ece5da" }}>{text}</p>
+    </div>
+  );
+}
+
+type VFile = { name: string; displayName: string; size: number | null; createdAt: string | null; url: string | null; isImage: boolean };
+
+function VendorFiles({ vendorId }: { vendorId: string }) {
+  const [files, setFiles] = useState<VFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const load = async () => {
+    const res = await fetch(`/api/vendors/${vendorId}/files`);
+    const data = await res.json();
+    setFiles(Array.isArray(data) ? data : []);
+  };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+    e.target.value = "";
+    setUploading(true);
+    const fd = new FormData();
+    selected.forEach((f) => fd.append("file", f));
+    const res = await fetch(`/api/vendors/${vendorId}/files`, { method: "POST", body: fd });
+    const data = await res.json();
+    setUploading(false);
+    if (data.error) alert(data.error);
+    else if (data.failed?.length) alert(`部分檔案上傳失敗：\n${data.failed.join("\n")}`);
+    load();
+  };
+
+  const rename = async (f: VFile) => {
+    const newName = prompt("新檔名：", f.displayName.replace(/\.[^.]+$/, ""));
+    if (!newName || !newName.trim()) return;
+    const res = await fetch(`/api/vendors/${vendorId}/files`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: f.name, newName: newName.trim() }),
+    });
+    const data = await res.json();
+    if (data.error) alert(data.error);
+    load();
+  };
+
+  const remove = async (name: string) => {
+    if (!confirm("確定刪除這個檔案？")) return;
+    await fetch(`/api/vendors/${vendorId}/files?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    load();
+  };
+
+  const fmtSize = (n: number | null) => n === null ? "" : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-semibold" style={{ color: "#8b8076" }}>檔案（價目單、合約等）</p>
+        <button onClick={() => inputRef.current?.click()} disabled={uploading}
+          className="text-xs flex items-center gap-1 px-2 py-1 rounded border transition-colors disabled:opacity-50"
+          style={{ borderColor: "#d8cfc3", color: "#5c4638" }}>
+          <Upload className="w-3 h-3" />{uploading ? "上傳中..." : "上傳檔案"}
+        </button>
+        <input ref={inputRef} type="file" accept=".pdf,image/*,.xlsx,.xls,.doc,.docx,.txt" multiple className="hidden" onChange={upload} />
+      </div>
+      {files.length === 0 ? (
+        <p className="text-xs px-3 py-3 text-center rounded-lg" style={{ color: "#b3a99d", background: "#faf7f1", border: "1px solid #ece5da" }}>
+          尚無檔案，可上傳價目單、合約、DM 等（PDF／圖片／Excel／Word）
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {files.map((f) => (
+            <div key={f.name} className="border rounded-lg overflow-hidden bg-white flex flex-col" style={{ borderColor: "#ece5da" }}>
+              {f.isImage && f.url ? (
+                <a href={f.url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={f.url} alt={f.displayName} className="w-full h-24 object-cover bg-slate-50" />
+                </a>
+              ) : (
+                <a href={f.url || "#"} target="_blank" rel="noreferrer" className="w-full h-24 flex items-center justify-center bg-slate-50">
+                  <FileText className="w-8 h-8 text-slate-300" />
+                </a>
+              )}
+              <div className="px-2 py-1.5 flex items-center justify-between gap-1 border-t" style={{ borderColor: "#f0ece5" }}>
+                <a href={f.url || "#"} target="_blank" rel="noreferrer" className="text-[11px] font-medium truncate hover:underline" style={{ color: "#4b4239" }} title={f.displayName}>
+                  {f.displayName}
+                </a>
+                <div className="flex items-center shrink-0">
+                  <button onClick={() => rename(f)} className="p-0.5 text-slate-300 hover:text-blue-500" title="重新命名"><Pencil className="w-3 h-3" /></button>
+                  <button onClick={() => remove(f.name)} className="p-0.5 text-slate-300 hover:text-red-500" title="刪除"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, Settings, Pill, FlaskConical, LogOut, BotMessageSquare, Crown,
+  LayoutDashboard, Users, Settings, Pill, FlaskConical, LogOut, BotMessageSquare, Crown, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ const navItems = [
 const catalogItems = [
   { href: "/products", icon: Pill, label: "保健品目錄" },
   { href: "/test-items", icon: FlaskConical, label: "檢測項目" },
+  { href: "/vendors", icon: Building2, label: "廠商合作" },
 ];
 const systemItems = [
   { href: "/admin", icon: Settings, label: "管理設定" },

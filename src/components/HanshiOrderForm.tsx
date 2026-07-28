@@ -614,8 +614,8 @@ function FormPage({ info, setInfo, leftSecs, rightSecs, checked, toggle, type, r
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-// Flat lookup: code → { page (1-4), name }
-const CODE_INFO: Record<string, { page: number; name: string }> = {};
+// Flat lookup: code → { page (1-4), name } — exported for the image-overlay form
+export const CODE_INFO: Record<string, { page: number; name: string }> = {};
 [
   { secs: [...PAGE1_LEFT, ...PAGE1_RIGHT], pg: 1 },
   { secs: [...PAGE2_LEFT, ...PAGE2_RIGHT], pg: 2 },

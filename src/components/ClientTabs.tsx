@@ -11,7 +11,7 @@ import {
 import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import HanshiOrderForm from "@/components/HanshiOrderForm";
+import HanshiFormV2 from "@/components/HanshiFormV2";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -943,11 +943,11 @@ function LabTestsTab({ client, showForm, setShowForm, onRefresh }: { client: Cli
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
-      {showHanshi && <HanshiOrderForm client={client} onClose={() => setShowHanshi(false)} onRefresh={onRefresh} />}
+      {showHanshi && <HanshiFormV2 client={client} onClose={() => setShowHanshi(false)} onRefresh={onRefresh} />}
       {viewingHanshi && (() => {
         let saved: { items: { code: string }[]; info: Record<string, unknown> } | undefined;
         try { saved = JSON.parse(viewingHanshi.findings ?? ""); } catch { saved = undefined; }
-        return <HanshiOrderForm client={client} onClose={() => setViewingHanshi(null)} onRefresh={onRefresh} existingId={viewingHanshi.id} initialData={saved} />;
+        return <HanshiFormV2 client={client} onClose={() => setViewingHanshi(null)} onRefresh={onRefresh} existingId={viewingHanshi.id} initialData={saved} />;
       })()}
       <div className="flex justify-end gap-2">
         <Button onClick={() => setShowHanshi(true)} variant="secondary">

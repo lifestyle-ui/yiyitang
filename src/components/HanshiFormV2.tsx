@@ -29,8 +29,6 @@ export type HanshiInfo = {
 type Client = { id: string; name: string; medicalRecordNumber?: string | null; dateOfBirth?: string | null; gender?: string | null };
 type SavedData = { items: { code: string }[]; info: Partial<HanshiInfo> };
 
-const pct = (v: number, total: number) => `${(v / total) * 100}%`;
-
 export default function HanshiFormV2({ client, onClose, onRefresh, initialData, existingId }: {
   client: Client; onClose: () => void; onRefresh?: () => void; initialData?: SavedData; existingId?: string;
 }) {
@@ -119,33 +117,36 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
   });
 
   const ready = pagesBoxes && headers;
+  const PRINT_SCALE = 730 / PAGE_W; // A4 content width (210mm − 8mm margins) ≈ 730px @96dpi
 
   const renderPage = (i: number, forPrint: boolean) => {
     const pb = pagesBoxes![i];
     const hdr = headers![`p${i + 1}`] || {};
     const fields = FIELDS[i] || [];
-    const width = forPrint ? "190mm" : `${PAGE_W * scale}px`;
-    return (
-      <div key={i} className="hanshi-page" style={{ position: "relative", width, containerType: "inline-size", background: "#fff", boxShadow: forPrint ? "none" : "0 4px 24px rgba(0,0,0,.3)" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/hanshi-page${i + 1}.png`} alt={`第${i + 1}頁`} style={{ display: "block", width: "100%", height: "auto" }} />
+    const s = forPrint ? PRINT_SCALE : scale;
+    const BOX = 10; // □ glyph size in logical px
 
-        {/* Item checkboxes */}
+    return (
+      <div key={i} className="hanshi-page" style={{ position: "relative", width: PAGE_W * s, height: PAGE_H * s, background: "#fff", boxShadow: forPrint ? "none" : "0 4px 24px rgba(0,0,0,.3)", flex: "none" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={`/hanshi-page${i + 1}.png`} alt={`第${i + 1}頁`} style={{ display: "block", width: PAGE_W * s, height: PAGE_H * s }} />
+
+        {/* Item checkboxes — box sits at (x,y); center the ✓ inside it */}
         {pb.boxes.map((b) => (
           <div key={b.code} onClick={forPrint ? undefined : () => toggle(b.code)}
             title={`${b.code} ${CODE_INFO[b.code]?.name || ""}`}
-            style={{ position: "absolute", left: pct(b.x - 2.5, PAGE_W), top: pct(b.y - 2.5, PAGE_H), width: "2.6cqw", height: "2.6cqw", cursor: forPrint ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontWeight: 700, fontSize: "2.2cqw", lineHeight: 1, borderRadius: 2, background: !forPrint && checked[b.code] ? "rgba(37,99,235,.10)" : "transparent" }}>
+            style={{ position: "absolute", left: (b.x - 1) * s, top: (b.y - 1) * s, width: BOX * s, height: BOX * s, cursor: forPrint ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontWeight: 700, fontSize: 10 * s, lineHeight: 1, background: !forPrint && checked[b.code] ? "rgba(37,99,235,.12)" : "transparent" }}>
             {checked[b.code] ? "✓" : ""}
           </div>
         ))}
 
         {/* Header checkboxes */}
         {(["male", "female"] as const).map((g) => hdr[g] && (
-          <HdrCheck key={g} pos={hdr[g]!} on={info.gender === (g === "male" ? "M" : "F")}
+          <HdrCheck key={g} pos={hdr[g]!} s={s} on={info.gender === (g === "male" ? "M" : "F")}
             onClick={forPrint ? undefined : () => setInfo((p) => ({ ...p, gender: g === "male" ? "M" : "F" }))} forPrint={forPrint} />
         ))}
         {([["trad", "繁體"], ["simp", "簡體"], ["eng", "英文"]] as const).map(([k, lang]) => hdr[k] && (
-          <HdrCheck key={k} pos={hdr[k]!} on={info.reportLang === lang}
+          <HdrCheck key={k} pos={hdr[k]!} s={s} on={info.reportLang === lang}
             onClick={forPrint ? undefined : () => setInfo((p) => ({ ...p, reportLang: lang }))} forPrint={forPrint} />
         ))}
 
@@ -153,7 +154,7 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
         {fields.map((f) => (
           <input key={f.id} value={fieldVal(f.id)} readOnly={forPrint}
             onChange={(e) => setField(f.id, e.target.value)}
-            style={{ position: "absolute", left: pct(f.x, PAGE_W), top: pct(f.y - 9, PAGE_H), width: pct(f.w, PAGE_W), height: "2.4cqw", border: forPrint ? "none" : "1px solid rgba(37,99,235,.25)", borderRadius: 2, background: forPrint ? "transparent" : "rgba(37,99,235,.04)", fontSize: "1.9cqw", lineHeight: 1, padding: "0 1px", color: "#111", outline: "none", fontFamily: "'Noto Serif TC', sans-serif" }} />
+            style={{ position: "absolute", left: f.x * s, top: (f.y - 10) * s, width: f.w * s, height: 12 * s, border: forPrint ? "none" : "1px solid rgba(37,99,235,.25)", borderRadius: 2, background: forPrint ? "transparent" : "rgba(37,99,235,.04)", fontSize: 9.5 * s, lineHeight: 1, padding: 0, color: "#111", outline: "none", textAlign: "center", fontFamily: "'Noto Serif TC', sans-serif" }} />
         ))}
       </div>
     );
@@ -210,10 +211,10 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
   );
 }
 
-function HdrCheck({ pos, on, onClick, forPrint }: { pos: HeaderPos; on: boolean; onClick?: () => void; forPrint: boolean }) {
+function HdrCheck({ pos, s, on, onClick, forPrint }: { pos: HeaderPos; s: number; on: boolean; onClick?: () => void; forPrint: boolean }) {
   return (
     <div onClick={onClick}
-      style={{ position: "absolute", left: pct(pos.x - 2.5, PAGE_W), top: pct(pos.y - 2.5, PAGE_H), width: "2.6cqw", height: "2.6cqw", cursor: forPrint ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontWeight: 700, fontSize: "2.2cqw", lineHeight: 1 }}>
+      style={{ position: "absolute", left: (pos.x - 1) * s, top: (pos.y - 1) * s, width: 10 * s, height: 10 * s, cursor: forPrint ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontWeight: 700, fontSize: 10 * s, lineHeight: 1 }}>
       {on ? "✓" : ""}
     </div>
   );

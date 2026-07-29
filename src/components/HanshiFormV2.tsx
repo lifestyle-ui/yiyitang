@@ -34,6 +34,8 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
 }) {
   const [pagesBoxes, setPagesBoxes] = useState<PageBoxes[] | null>(null);
   const [headers, setHeaders] = useState<Record<string, PageHeader> | null>(null);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const nameOf = (code: string) => names[code] || CODE_INFO[code]?.name || code;
   const [checked, setChecked] = useState<Record<string, boolean>>(() =>
     initialData ? Object.fromEntries(initialData.items.map((i) => [i.code, true])) : {});
   const [page, setPage] = useState(0);
@@ -58,7 +60,8 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
     Promise.all([
       fetch("/hanshi-boxes.json").then((r) => r.json()),
       fetch("/hanshi-header.json").then((r) => r.json()),
-    ]).then(([b, h]) => { setPagesBoxes(b); setHeaders(h); }).catch(() => {});
+      fetch("/hanshi-names.json").then((r) => r.json()).catch(() => ({})),
+    ]).then(([b, h, n]) => { setPagesBoxes(b); setHeaders(h); setNames(n || {}); }).catch(() => {});
   }, []);
 
   const toggle = (code: string) => setChecked((p) => ({ ...p, [code]: !p[code] }));
@@ -72,7 +75,7 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
       testDate: info.sampleDate,
       testType: "瀚仕功能醫學檢測申請單",
       status: "scheduled",
-      findings: JSON.stringify({ items: codes.map((c) => ({ code: c, name: CODE_INFO[c]?.name || c })), info }),
+      findings: JSON.stringify({ items: codes.map((c) => ({ code: c, name: nameOf(c) })), info }),
     };
     try {
       if (existingId) await fetch(`/api/clients/${client.id}/lab-tests/${existingId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -134,7 +137,7 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
         {/* Item checkboxes — box sits at (x,y); center the ✓ inside it */}
         {pb.boxes.map((b) => (
           <div key={b.code} onClick={forPrint ? undefined : () => toggle(b.code)}
-            title={`${b.code} ${CODE_INFO[b.code]?.name || ""}`}
+            title={`${b.code} ${nameOf(b.code)}`}
             style={{ position: "absolute", left: (b.x - 1) * s, top: (b.y - 1) * s, width: BOX * s, height: BOX * s, cursor: forPrint ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontWeight: 700, fontSize: 10 * s, lineHeight: 1, background: !forPrint && checked[b.code] ? "rgba(37,99,235,.12)" : "transparent" }}>
             {checked[b.code] ? "✓" : ""}
           </div>

@@ -167,9 +167,11 @@ export default function HanshiFormV2({ client, onClose, onRefresh, initialData, 
     <>
       <style>{`
         @media print {
-          body > *:not(#hanshi-v2-print) { display: none !important; }
-          #hanshi-v2-print { display: block !important; }
-          #hanshi-v2-print .hanshi-page { page-break-after: always; box-shadow: none !important; }
+          body * { visibility: hidden !important; }
+          #hanshi-v2-print, #hanshi-v2-print * { visibility: visible !important; }
+          #hanshi-v2-print { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+          #hanshi-v2-print .hanshi-page { page-break-after: always; break-after: page; box-shadow: none !important; }
+          #hanshi-v2-print .hanshi-page:last-child { page-break-after: auto; break-after: auto; }
           @page { size: A4; margin: 8mm; }
         }
         #hanshi-v2-print { display: none; }

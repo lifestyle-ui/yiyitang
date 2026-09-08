@@ -12,6 +12,7 @@ import { cn, formatDate, STATUS_LABELS, PRIORITY_LABELS, CATEGORY_LABELS } from 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import HanshiFormV2 from "@/components/HanshiFormV2";
+import QuoteEditor, { buildLinesFromPrescription, genOrderNo, todayISO, type QuoteData } from "@/components/QuoteEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1425,6 +1426,23 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [showCatalog, setShowCatalog] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const [quote, setQuote] = useState<{ data: QuoteData; unmatched: string[] } | null>(null);
+
+  // 從處方產生報價單：對照價目表，配對到的帶入單顆價，未配對的略過
+  const openQuote = async (p: Prescription) => {
+    let items: { name: string; dosage?: string }[] = [];
+    try { items = typeof p.items === "string" ? JSON.parse(p.items) : (p.items as { name: string }[]) || []; } catch { items = []; }
+    const products = await fetch("/api/products").then((r) => r.json()).catch(() => []);
+    const { lines, unmatched } = buildLinesFromPrescription(items, Array.isArray(products) ? products : []);
+    setQuote({
+      data: {
+        orderNo: genOrderNo(), orderDate: todayISO(), orderType: "一般訂單",
+        clientId: client.id, clientName: client.name,
+        items: lines, shipping: 0, notes: "", prescriptionId: p.id,
+      },
+      unmatched,
+    });
+  };
   const [brandFilter, setBrandFilter] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -1631,6 +1649,7 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
 
   return (
     <div className="max-w-3xl flex flex-col gap-4">
+      {quote && <QuoteEditor initial={quote.data} unmatched={quote.unmatched} onClose={() => setQuote(null)} onSaved={onRefresh} />}
       <div className="flex justify-end gap-2">
         <Button onClick={() => { setShowImport(!showImport); setImportPreviews(null); }} variant="secondary">
           {showImport ? "取消匯入" : "↑ 匯入 Excel"}
@@ -1809,6 +1828,11 @@ function PrescriptionsTab({ client, showForm, setShowForm, onRefresh }: { client
                       {shipUpdatingId === p.id ? "更新中…" : `✓ ${NEXT_SHIP_STEP[p.status].label}`}
                     </button>
                   )}
+                  <button onClick={() => openQuote(p)}
+                    className="text-xs px-2.5 py-1 rounded-full border transition-colors flex-shrink-0"
+                    style={{ borderColor: "#d8cfc3", color: "#5c4638", background: "#faf7f1" }} title="依此處方產生報價單">
+                    報價單
+                  </button>
                   <button onClick={() => exportPrescription(p)} disabled={exportingId === p.id}
                     className="p-1.5 rounded hover:opacity-70 disabled:opacity-40" style={{ color: "#5c4638" }} title={exportingId === p.id ? "產生中…" : "匯出 PDF"}>
                     {exportingId === p.id ? <span className="text-xs">…</span> : <Download className="w-3.5 h-3.5" />}

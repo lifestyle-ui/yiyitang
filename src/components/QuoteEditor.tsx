@@ -134,60 +134,63 @@ export default function QuoteEditor({ initial, unmatched, onClose, onSaved }: {
 
   const exportPDF = async () => {
     setExporting(true);
-    const rows = q.items.map((l, i) => `<tr>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;">${i + 1}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;color:#6b6056;">${l.code || ""}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;">${l.name}${l.unitType === "整罐" ? " (整罐)" : ""}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">$${l.unitPrice.toLocaleString()}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">${l.qty}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">$${(l.unitPrice * l.qty).toLocaleString()}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:12px;color:#8b8076;">${l.note || ""}</td></tr>`).join("");
-    const shipRow = q.shipping ? `<tr>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;">${q.items.length + 1}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;"></td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;">運費</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">$${q.shipping.toLocaleString()}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">1</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;font-size:13px;text-align:right;">$${q.shipping.toLocaleString()}</td>
-      <td style="padding:7px 10px;border-bottom:1px solid #ece5da;"></td></tr>` : "";
+    // Grey label chip matching the sample 訂單總表 style
+    const chip = (t: string) =>
+      `<span style="display:inline-block;min-width:52px;text-align:center;background:#ececec;color:#909090;font-size:12.5px;padding:7px 9px;border-radius:2px;line-height:1.15;">${t}</span>`;
+    const td = (c: string, extra = "") => `<td style="padding:11px 10px;font-size:13.5px;color:#3a3a3a;${extra}">${c}</td>`;
+    const bodyRows = q.items.map((l, i) =>
+      `<tr>${td(String(i + 1))}${td(l.code || "", "color:#8a8a8a;")}${td(l.name + (l.unitType === "整罐" ? " (整罐)" : ""))}` +
+      `${td("$" + l.unitPrice.toLocaleString(), "text-align:right;")}${td(String(l.qty), "text-align:right;")}` +
+      `${td("$" + (l.unitPrice * l.qty).toLocaleString(), "text-align:right;")}${td(l.note || "", "color:#9a9a9a;font-size:12px;")}</tr>`
+    ).join("");
+    const shipRow = q.shipping
+      ? `<tr>${td(String(q.items.length + 1))}${td("")}${td("運費")}${td("$" + q.shipping.toLocaleString(), "text-align:right;")}${td("1", "text-align:right;")}${td("$" + q.shipping.toLocaleString(), "text-align:right;")}${td("")}</tr>`
+      : "";
+
+    // Embed the brand emblem as a data URL so html2canvas captures it reliably
+    let logo = "";
+    try {
+      const blob = await fetch("/emblem-ink.png").then((r) => r.blob());
+      logo = await new Promise<string>((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(blob); });
+    } catch { /* logo optional */ }
+
+    const th = (t: string, align = "left") => `<th style="padding:9px 10px;text-align:${align};font-size:12.5px;color:#9a9a9a;font-weight:normal;">${t}</th>`;
 
     const div = document.createElement("div");
-    div.style.cssText = "position:fixed;left:-9999px;top:0;width:720px;background:#fff;padding:44px 40px;font-family:'Noto Serif TC',sans-serif;color:#241f1b;";
+    div.style.cssText = "position:fixed;left:-9999px;top:0;width:760px;background:#fff;padding:40px 44px;font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;color:#3a3a3a;";
     div.innerHTML = `
-      <div style="text-align:center;font-size:24px;font-weight:bold;margin-bottom:24px;">意一堂健康管理</div>
-      <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#5c4638;">訂單總表</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13px;color:#4b4239;margin-bottom:24px;">
-        <div><span style="color:#8b8076;">訂單編號　</span>${q.orderNo || ""}</div>
-        <div><span style="color:#8b8076;">訂單單別　</span>${q.orderType || "一般訂單"}</div>
-        <div><span style="color:#8b8076;">訂單日期　</span>${q.orderDate || ""}</div>
-        <div><span style="color:#8b8076;">客戶名稱　</span>${q.clientName || ""}</div>
+      ${logo ? `<img src="${logo}" style="height:46px;display:block;margin-bottom:6px;" />` : ""}
+      <div style="text-align:center;font-size:28px;font-weight:700;color:#3a3a3a;margin:4px 0 26px;">意一堂健康管理</div>
+
+      <div style="font-size:16px;font-weight:700;color:#3a3a3a;margin-bottom:12px;">訂單總表</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;margin-bottom:34px;">
+        <div style="display:flex;align-items:center;">${chip("訂單編號")}<span style="margin-left:14px;font-size:14px;">${q.orderNo || ""}</span></div>
+        <div style="display:flex;align-items:center;">${chip("訂單單別")}<span style="margin-left:14px;font-size:14px;">${q.orderType || "一般訂單"}</span></div>
+        <div style="display:flex;align-items:center;">${chip("訂單日期")}<span style="margin-left:14px;font-size:14px;">${q.orderDate || ""}</span></div>
+        <div style="display:flex;align-items:center;">${chip("客戶名稱")}<span style="margin-left:14px;font-size:14px;">${q.clientName || ""}</span></div>
       </div>
-      <div style="font-size:14px;font-weight:bold;margin-bottom:8px;color:#5c4638;">項目</div>
+
+      <div style="font-size:16px;font-weight:700;color:#3a3a3a;margin-bottom:10px;">項目</div>
       <table style="width:100%;border-collapse:collapse;">
-        <thead><tr style="background:#f3ece0;">
-          <th style="padding:8px 10px;text-align:left;font-size:12px;color:#5c4638;">項次</th>
-          <th style="padding:8px 10px;text-align:left;font-size:12px;color:#5c4638;">商品代碼</th>
-          <th style="padding:8px 10px;text-align:left;font-size:12px;color:#5c4638;">商品名稱</th>
-          <th style="padding:8px 10px;text-align:right;font-size:12px;color:#5c4638;">單價</th>
-          <th style="padding:8px 10px;text-align:right;font-size:12px;color:#5c4638;">數量</th>
-          <th style="padding:8px 10px;text-align:right;font-size:12px;color:#5c4638;">金額</th>
-          <th style="padding:8px 10px;text-align:left;font-size:12px;color:#5c4638;">備註</th>
+        <thead><tr style="background:#f2f2f2;">
+          ${th("項次")}${th("商品代碼")}${th("商品名稱")}${th("單價", "right")}${th("數量", "right")}${th("金額", "right")}${th("備註")}
         </tr></thead>
-        <tbody>${rows}${shipRow}</tbody>
+        <tbody style="border-bottom:0;">
+          <tr><td colspan="7" style="border-bottom:2.5px solid #7a7a7a;padding:0;"></td></tr>
+          ${bodyRows}${shipRow}
+        </tbody>
       </table>
-      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-        <div style="min-width:220px;">
-          <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 10px;background:#f7f4ef;">
-            <span style="color:#8b8076;">合計</span><span>$${subtotal.toLocaleString()}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold;padding:8px 10px;background:#f3ece0;">
-            <span>總金額</span><span>$${total.toLocaleString()}</span></div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-end;">
+          <div style="display:flex;align-items:center;">${chip("合計")}<span style="margin-left:14px;font-size:15px;min-width:88px;text-align:right;">$${subtotal.toLocaleString()}</span></div>
+          <div style="display:flex;align-items:center;">${chip("總金額")}<span style="margin-left:14px;font-size:16px;font-weight:700;min-width:88px;text-align:right;">$${total.toLocaleString()}</span></div>
         </div>
       </div>
-      <div style="display:flex;gap:24px;font-size:12px;color:#6b6056;margin-top:20px;">
-        <span>匯率　1</span>${q.notes ? `<span>備註　${q.notes}</span>` : ""}
-      </div>
-      <div style="margin-top:28px;font-size:11px;color:#b3a99d;border-top:1px solid #ece5da;padding-top:12px;">
-        此報價單由意一堂健康管理系統產生。單顆價 = 建議售價 ÷ 顆數（無條件進位）。
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:26px;">
+        <div style="display:flex;align-items:center;">${chip("匯率")}<span style="margin-left:14px;font-size:14px;">1</span></div>
+        <div style="display:flex;align-items:center;">${chip("備註")}<span style="margin-left:14px;font-size:14px;color:#6a6a6a;">${q.notes || ""}</span></div>
       </div>`;
     document.body.appendChild(div);
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);

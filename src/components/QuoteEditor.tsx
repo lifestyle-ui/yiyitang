@@ -35,6 +35,10 @@ function matchProduct(rxName: string, products: Product[]): Product | null {
     const pTokens = new Set([...norm(p.name), ...(p.code ? [p.code.toLowerCase()] : [])]);
     let score = 0;
     for (const t of rxTokens) if (pTokens.has(t)) score += t.length;
+    if (score < 3) continue;
+    // Prefer priced products so auto-quotes carry real prices, not the
+    // price-less legacy catalog entries
+    if (p.price) score += 0.5;
     if (score > bestScore) { bestScore = score; best = p; }
   }
   return bestScore >= 3 ? best : null;

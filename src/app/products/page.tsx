@@ -25,10 +25,10 @@ type Product = {
 const CATEGORIES = ["Omega 脂肪酸", "維生素", "礦物質", "益生菌", "草本植物", "酵素", "胺基酸", "抗氧化", "其他"];
 const VENDORS = ["亞星 Xymogen", "中華生醫", "營養品", "瀚仕", "其他"];
 
-// 單顆價 = 建議售價 ÷ 顆數，無條件進位
+// 單顆價 = 建議售價 ÷ 顆數 × 1.2（零售加成），無條件進位
 export function perPillPrice(price: number | null, pillCount: number | null): number | null {
   if (!price || !pillCount || pillCount <= 0) return null;
-  return Math.ceil(price / pillCount);
+  return Math.ceil((price / pillCount) * 1.2);
 }
 
 const SYNONYM_MAP: Record<string, string[]> = {

@@ -3,39 +3,36 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard, Users, Settings, Pill, FlaskConical, LogOut, BotMessageSquare, Crown, Building2, FileText,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "今日待辦" },
-  { href: "/clients", icon: Users, label: "客戶管理" },
-  { href: "/vip-detection", icon: Crown, label: "VIP 檢測" },
+  { href: "/", label: "今日待辦" },
+  { href: "/clients", label: "客戶管理" },
+  { href: "/vip-detection", label: "VIP 檢測" },
 ];
 const catalogItems = [
-  { href: "/products", icon: Pill, label: "保健品目錄" },
-  { href: "/test-items", icon: FlaskConical, label: "檢測項目" },
-  { href: "/vendors", icon: Building2, label: "廠商合作" },
-  { href: "/quotes", icon: FileText, label: "報價單" },
+  { href: "/products", label: "保健品目錄" },
+  { href: "/test-items", label: "檢測項目" },
+  { href: "/vendors", label: "廠商合作" },
+  { href: "/quotes", label: "報價單" },
 ];
 const systemItems = [
-  { href: "/admin", icon: Settings, label: "管理設定" },
+  { href: "/admin", label: "管理設定" },
 ];
 const aiItems = [
-  { href: "/ai-reply", icon: BotMessageSquare, label: "AI 回覆助手" },
+  { href: "/ai-reply", label: "AI 回覆助手" },
 ];
 
-function NavItem({ href, icon: Icon, label, active }: { href: string; icon: React.ElementType; label: string; active: boolean }) {
+function NavItem({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
     <Link href={href}
-      className={cn("flex items-center gap-3 px-3 py-2.5 text-sm transition-colors")}
+      className={cn("flex items-center px-3 py-2.5 text-sm transition-colors")}
       style={active
         ? { background: "rgba(255,255,255,0.10)", color: "#faf7f1", fontWeight: 500, borderRadius: "var(--radius-sm)" }
         : { color: "#b3a99d", borderRadius: "var(--radius-sm)" }}
       onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "#d8cabb"; }}
       onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "#b3a99d"; }}>
-      <Icon className="w-4 h-4 shrink-0" />{label}
+      {label}
     </Link>
   );
 }
@@ -49,11 +46,11 @@ function LogoutButton() {
   };
   return (
     <button onClick={handleLogout}
-      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors"
+      className="w-full flex items-center px-3 py-2.5 text-sm transition-colors"
       style={{ color: "#b3a99d", borderRadius: "var(--radius-sm)" }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#d8cabb"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#b3a99d"; }}>
-      <LogOut className="w-4 h-4 shrink-0" />登出
+      登出
     </button>
   );
 }
